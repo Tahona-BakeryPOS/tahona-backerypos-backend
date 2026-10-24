@@ -6,7 +6,7 @@ namespace BakeryPOS.Domain.Common;
 /// </summary>
 public abstract class AuditableEntity
 {
-    public Guid Id { get; protected set; } = Guid.CreateVersion7();
+    public Guid Id { get; init; } = Guid.CreateVersion7();
 
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;

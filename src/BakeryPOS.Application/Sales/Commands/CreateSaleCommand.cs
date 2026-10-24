@@ -30,4 +30,5 @@ public sealed record CreatePaymentDto(
 public sealed record SaleCreatedResponse(
     Guid SaleId,
     string DocumentNumber,
-    decimal Total);
+    decimal Total,
+    decimal ChangeAmount);

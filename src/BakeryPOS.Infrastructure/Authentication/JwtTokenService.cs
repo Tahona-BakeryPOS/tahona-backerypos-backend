@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using BakeryPOS.Application.Common.Interfaces;
+using BakeryPOS.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -24,18 +25,18 @@ public sealed class JwtTokenService : IJwtTokenService
         _expirationMinutes = int.TryParse(jwtSection["ExpirationMinutes"], out var mins) ? mins : 480; // 8 horas por defecto (turno completo)
     }
 
-    public string GenerateToken(Guid userId, Guid organizationId, Guid branchId, string fullName, IReadOnlyList<string> permissions)
+    public string GenerateToken(AppUser user, Guid organizationId, Guid branchId, IEnumerable<string> permissions)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new("org_id", organizationId.ToString()),
             new("branch_id", branchId.ToString()),
-            new("full_name", fullName),
+            new("full_name", user.FullName),
         };
 
         // Agregar cada permiso como claim individual

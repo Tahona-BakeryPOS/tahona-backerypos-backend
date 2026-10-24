@@ -46,7 +46,9 @@ public static class ResultExtensions
             "CONFLICTO_VERSION" => StatusCodes.Status409Conflict,
             "VALIDACION" => StatusCodes.Status400BadRequest,
             "TURNO_YA_ABIERTO" or "TURNO_CERRADO" or "VENTA_DUPLICADA_DISTINTA"
-                or "PAGOS_NO_CUBREN_TOTAL" or "LIMITE_EXCEDIDO" => StatusCodes.Status422UnprocessableEntity,
+                or "PAGOS_NO_CUBREN_TOTAL" or "LIMITE_EXCEDIDO" or "PAGO_EXCEDE_TOTAL"
+                or "REFERENCIA_REQUERIDA" or "RETIRO_EXCEDE_SALDO" or "CODIGO_DUPLICADO"
+                or "VENTA_RECHAZADA_SYNC" => StatusCodes.Status422UnprocessableEntity,
             _ => StatusCodes.Status500InternalServerError
         };
 

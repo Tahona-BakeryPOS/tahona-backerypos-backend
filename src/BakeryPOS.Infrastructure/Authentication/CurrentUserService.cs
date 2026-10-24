@@ -26,10 +26,16 @@ public sealed class CurrentUserService : ICurrentUserService
         Guid.TryParse(_httpContextAccessor.HttpContext?.User.FindFirstValue("branch_id"), out var id)
             ? id : Guid.Empty;
 
+    public string FullName =>
+        _httpContextAccessor.HttpContext?.User.FindFirstValue("full_name") ?? string.Empty;
+
     public IReadOnlyList<string> Permissions =>
         _httpContextAccessor.HttpContext?.User.FindAll("permission")
             .Select(c => c.Value)
             .ToList()
             .AsReadOnly()
         ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+    public bool HasPermission(string permissionCode) =>
+        Permissions.Contains(permissionCode, StringComparer.OrdinalIgnoreCase);
 }

@@ -17,12 +17,22 @@ public class GenericRepository<T> : IRepository<T> where T : AuditableEntity
 
     public async Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await DbSet.FindAsync(new object[] { id }, ct);
+        return await DbSet.FindAsync([id], ct);
     }
 
-    public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<T>> GetAllAsync(Guid organizationId, CancellationToken ct = default)
     {
-        return await DbSet.ToListAsync(ct);
+        var orgProperty = typeof(T).GetProperty("OrganizationId");
+        if (orgProperty is null)
+            return await DbSet.ToListAsync(ct);
+
+        var parameter = Expression.Parameter(typeof(T), "e");
+        var property = Expression.Property(parameter, orgProperty);
+        var constant = Expression.Constant(organizationId);
+        var equal = Expression.Equal(property, constant);
+        var lambda = Expression.Lambda<Func<T, bool>>(equal, parameter);
+
+        return await DbSet.Where(lambda).ToListAsync(ct);
     }
 
     public async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken ct = default)
@@ -47,9 +57,10 @@ public class GenericRepository<T> : IRepository<T> where T : AuditableEntity
             : await DbSet.CountAsync(predicate, ct);
     }
 
-    public async Task AddAsync(T entity, CancellationToken ct = default)
+    public async Task<T> AddAsync(T entity, CancellationToken ct = default)
     {
         await DbSet.AddAsync(entity, ct);
+        return entity;
     }
 
     public async Task AddRangeAsync(IEnumerable<T> entities, CancellationToken ct = default)
@@ -62,11 +73,16 @@ public class GenericRepository<T> : IRepository<T> where T : AuditableEntity
         DbSet.Update(entity);
     }
 
-    public void Remove(T entity)
+    public void SoftDelete(T entity, string deletedBy)
     {
-        // Soft delete — marcar DeletedAt en vez de eliminar físicamente
         entity.DeletedAt = DateTime.UtcNow;
+        entity.DeletedBy = deletedBy;
         DbSet.Update(entity);
+    }
+
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
+    {
+        return await DbSet.AnyAsync(e => e.Id == id, ct);
     }
 }
 

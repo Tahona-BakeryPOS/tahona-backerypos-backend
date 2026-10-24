@@ -24,6 +24,19 @@ public sealed record Error(string Code, string Message)
     public static readonly Error Validacion = new("VALIDACION", "Los datos proporcionados no son válidos.");
     public static readonly Error LimiteExcedido = new("LIMITE_EXCEDIDO", "Se ha excedido el límite permitido.");
 
+    // Payment errors (CU-04)
+    public static readonly Error PagoExcedeTotal = new("PAGO_EXCEDE_TOTAL", "Un pago distinto a efectivo no puede exceder el monto pendiente.");
+    public static readonly Error ReferenciaRequerida = new("REFERENCIA_REQUERIDA", "El medio de pago seleccionado requiere número de referencia.");
+
+    // Cash movement errors (CU-06)
+    public static readonly Error RetiroExcedeSaldo = new("RETIRO_EXCEDE_SALDO", "El retiro excede el efectivo esperado en el turno.");
+
+    // Catalog errors (CU-09)
+    public static readonly Error CodigoDuplicado = new("CODIGO_DUPLICADO", "Ya existe un registro con ese código dentro de la organización.");
+
+    // Sync errors (CU-11)
+    public static readonly Error VentaRechazadaSync = new("VENTA_RECHAZADA_SYNC", "La venta fue rechazada durante la sincronización.");
+
     public static Error NotFound(string entity, Guid id) =>
         new("NO_ENCONTRADO", $"{entity} con ID '{id}' no fue encontrado.");
 

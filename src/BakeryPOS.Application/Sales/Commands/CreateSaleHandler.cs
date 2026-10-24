@@ -9,6 +9,8 @@ namespace BakeryPOS.Application.Sales.Commands;
 
 public sealed class CreateSaleHandler : IRequestHandler<CreateSaleCommand, Result<SaleCreatedResponse>>
 {
+    private const string CashPaymentMethodCode = "EFECTIVO";
+
     private readonly IApplicationDbContext _db;
     private readonly ICurrentUserService _currentUser;
 
@@ -25,7 +27,7 @@ public sealed class CreateSaleHandler : IRequestHandler<CreateSaleCommand, Resul
         if (existing is not null)
         {
             if (existing.Status == SaleStatus.Completed)
-                return Result.Success(new SaleCreatedResponse(existing.Id, existing.DocumentNumber!, existing.Total));
+                return Result.Success(new SaleCreatedResponse(existing.Id, existing.DocumentNumber!, existing.Total, 0m));
 
             return Result.Failure<SaleCreatedResponse>(Error.VentaDuplicadaDistinta);
         }
@@ -86,9 +88,30 @@ public sealed class CreateSaleHandler : IRequestHandler<CreateSaleCommand, Resul
             sale.Lines.Add(line);
         }
 
-        // Add payments
+        // Calculate sale totals before validating payments (CU-04 needs the total to compare against)
+        sale.Calculate();
+
+        // CU-04: validar reglas de cobro por medio de pago
+        decimal cashTotal = 0m;
+        decimal nonCashTotal = 0m;
+
         foreach (var paymentDto in request.Payments)
         {
+            var method = await _db.PaymentMethods
+                .FirstOrDefaultAsync(pm => pm.Id == paymentDto.PaymentMethodId && pm.OrganizationId == _currentUser.OrganizationId, ct);
+
+            if (method is null)
+                return Result.Failure<SaleCreatedResponse>(Error.NotFound("Medio de pago", paymentDto.PaymentMethodId));
+
+            if (method.RequiresReference && string.IsNullOrWhiteSpace(paymentDto.Reference))
+                return Result.Failure<SaleCreatedResponse>(Error.ReferenciaRequerida);
+
+            var isCash = string.Equals(method.Code, CashPaymentMethodCode, StringComparison.OrdinalIgnoreCase);
+            if (isCash)
+                cashTotal += paymentDto.Amount;
+            else
+                nonCashTotal += paymentDto.Amount;
+
             sale.Payments.Add(new Payment
             {
                 OrganizationId = _currentUser.OrganizationId,
@@ -100,12 +123,24 @@ public sealed class CreateSaleHandler : IRequestHandler<CreateSaleCommand, Resul
             });
         }
 
-        // Calculate and validate
+        // Un medio distinto a efectivo no puede recibir más de lo que falta por cubrir con ese medio.
+        // Regla simplificada: la suma de medios no-efectivo no puede superar el total de la venta
+        // (el efectivo es el único que puede generar excedente/cambio).
+        if (nonCashTotal > sale.Total)
+            return Result.Failure<SaleCreatedResponse>(Error.PagoExcedeTotal);
+
+        var totalPaid = cashTotal + nonCashTotal;
+        if (totalPaid < sale.Total)
+            return Result.Failure<SaleCreatedResponse>(Error.PagosNoCubrenTotal);
+
+        var changeAmount = totalPaid - sale.Total; // Solo puede provenir de efectivo, ya validado arriba.
+
+        // Finalize sale (re-valida y dispara evento de dominio)
         sale.Complete();
 
         await _db.Sales.AddAsync(sale, ct);
         await _db.SaveChangesAsync(ct);
 
-        return Result.Success(new SaleCreatedResponse(sale.Id, documentNumber, sale.Total));
+        return Result.Success(new SaleCreatedResponse(sale.Id, documentNumber, sale.Total, changeAmount));
     }
 }

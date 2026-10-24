@@ -39,7 +39,12 @@ public class CashShift : AuditableEntity
         AddDomainEvent(new CashShiftOpenedEvent(Id, CashRegisterId, userId));
     }
 
-    public void Close(decimal closingAmount, Guid userId, string? notes = null)
+    /// <summary>
+    /// Cierra el turno. <paramref name="cashSalesTotal"/> es la suma de pagos en efectivo
+    /// de las ventas completadas en este turno (CU-07: efectivo esperado = apertura + ventas en
+    /// efectivo + ingresos − retiros); se calcula fuera del dominio (Dapper) y se inyecta aquí.
+    /// </summary>
+    public void Close(decimal closingAmount, Guid userId, decimal cashSalesTotal, string? notes = null)
     {
         if (Status == CashShiftStatus.Closed)
             throw new InvalidOperationException("El turno ya fue cerrado.");
@@ -50,15 +55,14 @@ public class CashShift : AuditableEntity
         Notes = notes;
         Status = CashShiftStatus.Closed;
 
-        // Calculate expected from movements
         var totalIncome = CashMovements
-            .Where(m => m.Type == CashMovementType.Income || m.Type == CashMovementType.Opening)
+            .Where(m => m.Type == CashMovementType.Income)
             .Sum(m => m.Amount);
         var totalExpense = CashMovements
             .Where(m => m.Type == CashMovementType.Expense)
             .Sum(m => m.Amount);
 
-        ExpectedAmount = OpeningAmount + totalIncome - totalExpense;
+        ExpectedAmount = OpeningAmount + cashSalesTotal + totalIncome - totalExpense;
         Difference = closingAmount - ExpectedAmount;
 
         AddDomainEvent(new CashShiftClosedEvent(Id, CashRegisterId, userId));

@@ -1,0 +1,25 @@
+# Bundle de migraciones (D-10, fase 10): las migraciones nunca se aplican al arrancar la API fuera de desarrollo;
+# se ejecutan como paso del despliegue con este contenedor (deploy/docker-compose.yml, perfil "migrate").
+# La cadena llega en ConnectionStrings__DefaultConnection (la lee DesignTimeDbContextFactory).
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY dotnet-tools.json ./
+RUN dotnet tool restore
+
+COPY Tahona.BakeryPOS.sln ./
+COPY src/Tahona.BakeryPOS.Api/Tahona.BakeryPOS.Api.csproj src/Tahona.BakeryPOS.Api/
+COPY src/Tahona.BakeryPOS.Application/Tahona.BakeryPOS.Application.csproj src/Tahona.BakeryPOS.Application/
+COPY src/Tahona.BakeryPOS.Domain/Tahona.BakeryPOS.Domain.csproj src/Tahona.BakeryPOS.Domain/
+COPY src/Tahona.BakeryPOS.Infrastructure/Tahona.BakeryPOS.Infrastructure.csproj src/Tahona.BakeryPOS.Infrastructure/
+COPY src/Tahona.BakeryPOS.SharedKernel/Tahona.BakeryPOS.SharedKernel.csproj src/Tahona.BakeryPOS.SharedKernel/
+RUN dotnet restore src/Tahona.BakeryPOS.Infrastructure/Tahona.BakeryPOS.Infrastructure.csproj
+
+COPY src/ src/
+RUN dotnet ef migrations bundle --project src/Tahona.BakeryPOS.Infrastructure --startup-project src/Tahona.BakeryPOS.Infrastructure \
+    --self-contained -r linux-x64 -o /out/efbundle
+
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /out/efbundle .
+USER $APP_UID
+ENTRYPOINT ["./efbundle"]

@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BakeryPOS Mock</title>
+<style>
+:root{--bg:#f6f1ea;--surface:#fff;--surface2:#efe7db;--text:#2b2118;--muted:#7a6a5a;--line:#e0d4c3;--brand:#b4651f;--brand-ink:#fff;--ok:#2e7d4f;--warn:#b7791f;--err:#c0392b;--info:#2b6cb0;--shadow:0 1px 3px rgba(60,40,10,.12)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#1c1712;--surface:#272019;--surface2:#352c22;--text:#f3ebe0;--muted:#a8998a;--line:#40362a;--brand:#e0883a;--brand-ink:#1c1712;--ok:#5cc08a;--warn:#e4b04f;--err:#f08070;--info:#7fb4ee;--shadow:none}}
+:root[data-theme=dark]{--bg:#1c1712;--surface:#272019;--surface2:#352c22;--text:#f3ebe0;--muted:#a8998a;--line:#40362a;--brand:#e0883a;--brand-ink:#1c1712;--ok:#5cc08a;--warn:#e4b04f;--err:#f08070;--info:#7fb4ee;--shadow:none}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:48px;padding:0 16px}
+button:active{transform:scale(.97)}
+button.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:700}
+button.danger{background:var(--err);color:#fff;border-color:var(--err)}
+button.ghost{background:transparent}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;min-height:48px;padding:0 12px;width:100%}
+.hide{display:none!important}
+.muted{color:var(--muted)}.small{font-size:13px}.right{text-align:right}.bold{font-weight:700}
+.ok{color:var(--ok)}.err{color:var(--err)}.warn{color:var(--warn)}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700;background:var(--surface2)}
+.badge.ok{background:color-mix(in srgb,var(--ok) 20%,transparent)}
+.badge.err{background:color-mix(in srgb,var(--err) 20%,transparent)}
+.badge.warn{background:color-mix(in srgb,var(--warn) 22%,transparent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.center{min-height:100%;display:grid;place-items:center;padding:16px}
+.panel{width:min(420px,100%);padding:24px}
+h1,h2,h3{margin:0 0 8px}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.keypad button{min-height:64px;font-size:24px;font-weight:600}
+.dots{display:flex;gap:12px;justify-content:center;margin:14px 0;min-height:18px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--brand)}.dots i.on{background:var(--brand)}
+.field{margin:10px 0}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.hint{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+.cu{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+/* shell */
+#pos{height:100%;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top .brand{font-weight:800;color:var(--brand)}
+.nav{display:flex;gap:6px;flex:1;overflow-x:auto}
+.nav button{min-height:40px;padding:0 12px;white-space:nowrap}
+.nav button.active{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.status{display:flex;gap:8px;align-items:center}
+.net{min-height:40px;padding:0 12px;border-radius:99px}
+.net.off{background:color-mix(in srgb,var(--warn) 25%,transparent);border-color:var(--warn)}
+.net.on{border-color:var(--ok)}
+.main{flex:1;min-height:0;display:flex}
+.sell{flex:1;display:grid;grid-template-columns:1fr 360px;min-height:0}
+.catalog{display:flex;flex-direction:column;min-height:0;padding:12px;gap:10px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chips button{min-height:42px;border-radius:99px;white-space:nowrap}
+.chips button.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.grid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;align-content:start}
+.prod{display:flex;flex-direction:column;justify-content:space-between;text-align:left;padding:10px;min-height:104px;border-radius:14px}
+.prod .emoji{font-size:30px}.prod .nm{font-weight:600;font-size:14px;line-height:1.2}
+.prod .pr{color:var(--brand);font-weight:800}
+.ticket{border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.ticket h3{padding:12px 14px 0}
+.lines{flex:1;overflow:auto;padding:6px 14px}
+.line{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{min-height:34px;width:34px;padding:0;border-radius:10px}
+.totals{padding:10px 14px;border-top:1px solid var(--line);background:var(--surface2)}
+.totals .row{display:flex;justify-content:space-between}
+.totals .total{font-size:26px;font-weight:800}
+.pad{padding:12px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.page{flex:1;overflow:auto;padding:16px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;color:var(--muted);text-transform:uppercase}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.kpi{padding:14px}.kpi b{display:block;font-size:24px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:12px;z-index:20}
+.modal{width:min(560px,100%);max-height:94vh;overflow:auto;padding:20px}
+.modal .actions{display:flex;gap:10px;margin-top:16px}.modal .actions>*{flex:1}
+.methods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.methods button.active{border-color:var(--brand);outline:2px solid var(--brand)}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.quick button{min-height:40px}
+.pay-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.receipt{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:#fff;color:#222;padding:16px;border-radius:8px;border:1px dashed #aaa}
+.receipt .r{display:flex;justify-content:space-between}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;z-index:40;max-width:92vw}
+.theme{position:fixed;right:10px;bottom:10px;z-index:15;min-height:36px;padding:0 10px;border-radius:99px;opacity:.8}
+@media (max-width:900px){.sell{grid-template-columns:1fr;grid-template-rows:1fr 46%}.ticket{border-left:0;border-top:1px solid var(--line)}.two{grid-template-columns:1fr}.methods{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<button class="theme ghost" id="themeBtn" title="Cambiar tema">☀/☾</button>
+
+<script>
+const $ = (s, el=document) => el.querySelector(s);
+const cop = n => '$' + Math.round(n).toLocaleString('es-CO');
+const num = n => Number(n).toLocaleString('es-CO', {maximumFractionDigits:3});
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random())).slice(0,8);
+const nowT = () => new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+
+const CATS = [['todo','Todo'],['pan','Panes'],['hoj','Hojaldres'],['beb','Bebidas'],['tor','Tortas'],['otr','Otros']];
+const P = [
+ ['PAN-001','Pan francés','🥖','pan',500,0,0],['PAN-002','Pan de bono','🧀','pan',2200,0,0],['PAN-003','Almojábana','🫓','pan',2500,0,0],
+ ['PAN-004','Pan integral','🍞','pan',3500,0,0],['PAN-005','Pan tajado','🍞','pan',6800,0,0],['PAN-006','Roscón','🍩','pan',3200,0,0],
+ ['HOJ-001','Croissant','🥐','hoj',4200,8,0],['HOJ-002','Palito de queso','🥨','hoj',2800,0,0],['HOJ-003','Pastel de pollo','🥟','hoj',4800,8,0],
+ ['HOJ-004','Empanada','🥟','hoj',3000,8,0],['HOJ-005','Milhoja','🍰','hoj',4500,19,0],['HOJ-006','Pastel de guayaba','🥧','hoj',3200,8,0],
+ ['BEB-001','Tinto','☕','beb',1500,19,0],['BEB-002','Café con leche','☕','beb',2800,19,0],['BEB-003','Jugo natural','🧃','beb',4500,19,0],
+ ['BEB-004','Chocolate','🍫','beb',3500,19,0],['BEB-005','Agua','💧','beb',2000,19,0],['BEB-006','Gaseosa','🥤','beb',3000,19,0],
+ ['TOR-001','Torta tres leches (porción)','🍰','tor',6500,19,0],['TOR-002','Torta chocolate (porción)','🎂','tor',6500,19,0],
+ ['TOR-003','Torta por peso (kg)','🎂','tor',38000,19,1],['OTR-001','Mantequilla (kg)','🧈','otr',22000,0,1],
+ ['OTR-002','Huevos (unidad)','🥚','otr',700,0,0],['OTR-003','Galletas (kg)','🍪','otr',18000,19,1]
+].map(([code,name,emoji,cat,price,tax,weight])=>({id:code,code,name,emoji,cat,price,tax,weight}));
+
+const BRANCHES = {'Sede Centro':['Caja 1','Caja 2'],'Sede Norte':['Caja 1']};
+const METHODS = [{k:'EFECTIVO',n:'Efectivo',i:'💵',ref:false,cash:true},{k:'TARJETA',n:'Tarjeta',i:'💳',ref:true},{k:'TRANSF',n:'Transferencia',i:'🏦',ref:true},{k:'BILLETERA',n:'Billetera',i:'📱',ref:true}];
+const VOID_REASONS = ['Error del cajero','Cliente se arrepintió','Producto no disponible','Cobro duplicado'];
+const CASH_REASONS = {ingreso:['Cambio inicial adicional','Aporte del dueño'],retiro:['Pago a proveedor','Retiro de seguridad','Gastos menores']};
+const USERS = {'1111':{name:'Laura Gómez',role:'Cajero',perms:['venta']},'9999':{name:'Carlos Pérez',role:'Propietario',perms:['venta','anular','retiro','descuento']}};
+const OWNER_PIN = '9999';
+
+const S = {
+  screen:'login', user:null, branch:'Sede Centro', register:'Caja 1', pin:'', attempts:0,
+  shift:null, view:'sell', cat:'todo', q:'', cart:[], online:true, consec:0,
+  sales:[
+    {id:'a1b2c3d4',no:'C1-0001',time:'07:12',items:[['Pan francés',10,500],['Tinto',1,1500]],total:6500,pays:[['EFECTIVO',10000]],change:3500,status:'completada',sync:'aceptada'},
+    {id:'e5f6a7b8',no:'C1-0002',time:'07:31',items:[['Croissant',2,4200]],total:8400,pays:[['TARJETA',8400]],change:0,status:'completada',sync:'aceptada'}
+  ],
+  modal:null, bo:'reporte'
+};
+S.consec = S.sales.length;
+const cashSales = () => S.sales.filter(s=>s.status==='completada').reduce((a,s)=>a+s.pays.filter(p=>p[0]==='EFECTIVO').reduce((x,p)=>x+p[1],0)-s.change,0);
+const movSum = t => (S.shift?.movs||[]).filter(m=>m.type===t).reduce((a,m)=>a+m.amount,0);
+const expected = () => S.shift.initial + cashSales() + movSum('ingreso') - movSum('retiro');
+const cartTotal = () => S.cart.reduce((a,l)=>a+Math.round(l.qty*l.p.price)-l.disc,0);
+const cartTax = () => S.cart.reduce((a,l)=>{const t=Math.round(l.qty*l.p.price)-l.disc;return a+(t-t/(1+l.p.tax/100))},0);
+
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),2600)}
+function render(){
+  const r=$('#root');
+  r.innerHTML = S.screen==='login'?loginV():S.screen==='shift'?shiftV():S.screen==='bo'?boV():posV();
+  if(S.modal) r.insertAdjacentHTML('beforeend',S.modal.html());
+  bind();
+}
+const go=(o)=>{Object.assign(S,o);render()};
+
+/* ---------- 1. Login PIN (CU-01) ---------- */
+function loginV(){
+  return `<div class="center"><div class="card panel">
+  <div class="cu">CU-01 · POST /auth/login-pin</div><h1>🥐 BakeryPOS</h1>
+  <div class="field"><label>Sucursal</label><select id="branch">${Object.keys(BRANCHES).map(b=>`<option ${b===S.branch?'selected':''}>${b}</option>`).join('')}</select></div>
+  <div class="dots">${[0,1,2,3,4,5].map(i=>`<i class="${i<S.pin.length?'on':''}"></i>`).join('')}</div>
+  <div id="loginErr" class="center err small" style="min-height:20px;padding:0">${S.attempts>=3?'Usuario bloqueado por intentos fallidos. Llama al propietario.':S.attempts?`PIN incorrecto (${S.attempts}/3)`:''}</div>
+  ${keypad('pin')}
+  <div class="hint">Demo: PIN <b>1111</b> = Cajero · <b>9999</b> = Propietario</div></div></div>`;
+}
+function keypad(t){return `<div class="keypad">${[1,2,3,4,5,6,7,8,9,'⌫',0,'OK'].map(k=>`<button data-key="${k}" data-t="${t}" class="${k==='OK'?'primary':''}">${k}</button>`).join('')}</div>`}
+function pinKey(k){
+  if(S.attempts>=3) return;
+  if(k==='⌫') S.pin=S.pin.slice(0,-1); else if(k==='OK'){
+    const u=USERS[S.pin];
+    if(u){S.user=u;S.pin='';S.attempts=0;S.screen='shift'}else{S.attempts++;S.pin=''}
+  } else if(S.pin.length<6) S.pin+=k;
+  render();
+}
+
+/* ---------- 2. Abrir turno (CU-02) ---------- */
+function shiftV(){
+  const regs=BRANCHES[S.branch];
+  return `<div class="center"><div class="card panel">
+  <div class="cu">CU-02 · POST /cash-shifts/open</div><h2>Abrir turno</h2>
+  <p class="muted">Hola, <b>${S.user.name}</b> (${S.user.role}) · ${S.branch}</p>
+  <div class="field"><label>Caja</label><select id="reg">${regs.map(c=>`<option>${c}</option>`).join('')}</select></div>
+  <div class="field"><label>Efectivo inicial</label><input id="init" inputmode="numeric" value="100000"></div>
+  <div class="quick">${[50000,100000,200000].map(v=>`<button data-init="${v}">${cop(v)}</button>`).join('')}</div>
+  <div id="shiftErr" class="err small" style="min-height:20px"></div>
+  <div class="actions" style="display:flex;gap:10px"><button class="ghost" id="logout" style="flex:1">Salir</button><button class="primary" id="openShift" style="flex:2">Abrir turno</button></div>
+  <div class="hint">Regla: efectivo inicial ≥ 0 · un solo turno abierto por caja (TURNO_YA_ABIERTO)</div></div></div>`;
+}
+
+/* ---------- POS shell ---------- */
+function posV(){
+  const pend=S.sales.filter(s=>s.sync==='pendiente').length;
+  const tabs=[['sell','Venta'],['sales','Ventas del turno'],['cash','Caja'],['sync','Sincronización']];
+  return `<div id="pos"><div class="top"><span class="brand">🥐 BakeryPOS</span>
+   <div class="small"><b>${S.branch} · ${S.register}</b><br><span class="muted">${S.user.name} · ${S.user.role}</span></div>
+   <div class="nav">${tabs.map(([k,n])=>`<button data-view="${k}" class="${S.view===k?'active':''}">${n}${k==='sync'&&pend?` <span class="badge warn">${pend}</span>`:''}</button>`).join('')}
+     <button data-act="close">Cerrar turno</button><button data-act="bo">Backoffice</button></div>
+   <div class="status"><button class="net ${S.online?'on':'off'}" id="net">${S.online?'● En línea':'○ Sin conexión'}${pend?` · ${pend} pendientes`:''}</button><button class="ghost" id="exit">Salir</button></div></div>
+   <div class="main">${S.view==='sell'?sellV():S.view==='sales'?salesV():S.view==='cash'?cashV():syncV()}</div></div>`;
+}
+
+/* ---------- 3. Venta (CU-03) ---------- */
+function sellV(){
+  const list=P.filter(p=>(S.cat==='todo'||p.cat===S.cat)&&(!S.q||(p.name+p.code).toLowerCase().includes(S.q.toLowerCase())));
+  return `<div class="sell"><div class="catalog">
+   <input id="search" placeholder="🔍 Buscar o escanear código de barras…" value="${S.q}">
+   <div class="chips">${CATS.map(([k,n])=>`<button data-cat="${k}" class="${S.cat===k?'active':''}">${n}</button>`).join('')}</div>
+   <div class="grid">${list.map(p=>`<button class="prod" data-p="${p.id}"><span class="emoji">${p.emoji}</span><span class="nm">${p.name}</span><span class="pr">${cop(p.price)}${p.weight?' /kg':''}</span></button>`).join('')||'<div class="empty">Sin resultados</div>'}</div></div>
+   <div class="ticket"><h3>Venta actual <span class="muted small">· Cliente: Consumidor final</span></h3>
+   <div class="lines">${S.cart.length?S.cart.map((l,i)=>`<div class="line"><div><b>${l.p.name}</b><div class="small muted">${cop(l.p.price)} · IVA ${l.p.tax}%${l.disc?` · <span class="warn">desc −${cop(l.disc)} (${l.reason})</span>`:''}</div></div>
+     <div class="bold right">${cop(Math.round(l.qty*l.p.price)-l.disc)}</div>
+     <div class="qty"><button data-dec="${i}">−</button><b>${num(l.qty)}${l.p.weight?' kg':''}</b><button data-inc="${i}">+</button><button class="ghost" data-disc="${i}" title="Descuento">％</button><button class="ghost" data-del="${i}" title="Quitar">🗑</button></div></div>`).join(''):'<div class="empty">Toca un producto para agregarlo</div>'}</div>
+   <div class="totals"><div class="row muted small"><span>Impuesto incluido</span><span>${cop(cartTax())}</span></div><div class="row"><span>Total</span><span class="total">${cop(cartTotal())}</span></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button data-act="clear" ${S.cart.length?'':'disabled'}>Vaciar</button><button class="primary" data-act="pay" style="flex:1;min-height:56px;font-size:18px" ${S.cart.length?'':'disabled'}>Cobrar ${cop(cartTotal())}</button></div></div></div></div>`;
+}
+function addProd(id){
+  const p=P.find(x=>x.id===id);
+  if(p.weight){return go({modal:weightM(p)})}
+  const l=S.cart.find(x=>x.p.id===id&&!x.disc); if(l) l.qty++; else S.cart.push({p,qty:1,disc:0}); render();
+}
+function weightM(p){return {html:()=>`<div class="scrim"><div class="card modal"><div class="cu">Producto por peso · decimales permitidos</div><h2>${p.emoji} ${p.name}</h2>
+  <div class="field"><label>Peso (kg)</label><input id="kg" inputmode="decimal" value="0.5" autofocus></div>
+  <div class="quick">${[0.25,0.5,1,1.5].map(v=>`<button data-kg="${v}">${v} kg</button>`).join('')}</div>
+  <p>Subtotal: <b id="kgSub">${cop(0.5*p.price)}</b></p><div class="actions"><button data-act="cancel">Cancelar</button><button class="primary" id="kgOk">Agregar</button></div></div></div>`,p}}
+
+/* ---------- 4. Cobro (CU-04) ---------- */
+function payM(){
+  const m=S.modal; const total=cartTotal(); const paid=m.pays.reduce((a,p)=>a+p.amount,0); const left=total-paid;
+  const meth=METHODS.find(x=>x.k===m.method);
+  return {...m,html:()=>`<div class="scrim"><div class="card modal"><div class="cu">CU-04 · POST /sales (idempotente, id ${m.saleId})</div><h2>Cobrar ${cop(total)}</h2>
+   <div class="methods">${METHODS.map(x=>`<button data-m="${x.k}" class="${m.method===x.k?'active':''}">${x.i}<br><span class="small">${x.n}</span></button>`).join('')}</div>
+   <div class="field"><label>${meth.cash?'Monto recibido':'Monto'}</label><input id="amt" inputmode="numeric" value="${m.amt??Math.max(left,0)}"></div>
+   ${meth.cash?`<div class="quick">${[left,2000,5000,10000,20000,50000,100000].filter((v,i,a)=>v>0&&a.indexOf(v)===i).map((v,i)=>`<button data-amt="${v}">${i===0?'Exacto ':''}${cop(v)}</button>`).join('')}</div>`:`<div class="field"><label>Referencia / voucher (obligatoria)</label><input id="ref" value="${m.ref||''}"></div>`}
+   <div id="payErr" class="err small" style="min-height:18px">${m.err||''}</div>
+   <button id="addPay" style="width:100%">Agregar pago</button>
+   <div style="margin-top:10px">${m.pays.map((p,i)=>`<div class="pay-row"><span>${p.name}${p.ref?` · ${p.ref}`:''}</span><span>${cop(p.amount)} <button class="ghost" data-rm="${i}" style="min-height:32px">✕</button></span></div>`).join('')}
+    <div class="pay-row"><b>${left>0?'Falta por cubrir':'Cambio'}</b><b class="${left>0?'err':'ok'}">${cop(Math.abs(left)>0&&left<0?-left:left>0?left:0)}</b></div></div>
+   <div class="actions"><button data-act="cancel">Volver</button><button class="primary" id="confirmPay" ${left>0||!m.pays.length?'disabled':''}>Confirmar venta</button></div></div></div>`};
+}
+function confirmSale(m){
+  const total=cartTotal();
+  const pays=m.pays.map(p=>[p.k,p.amount]); const paid=m.pays.reduce((a,p)=>a+p.amount,0);
+  S.consec++;
+  const sale={id:m.saleId,no:'C1-'+String(S.consec).padStart(4,'0'),time:nowT(),items:S.cart.map(l=>[l.p.name,l.qty,l.p.price]),total,pays,change:Math.max(paid-total,0),status:'completada',sync:S.online?'aceptada':'pendiente'};
+  S.sales.push(sale); S.cart=[]; S.modal=receiptM(sale); render();
+}
+function receiptM(s){return {html:()=>`<div class="scrim"><div class="card modal"><h2>✅ Venta registrada</h2><p class="muted small">Se confirma en el dispositivo sin esperar al servidor${s.sync==='pendiente'?' — <b class="warn">en cola para sincronizar</b>':''}.</p>
+  <div class="receipt"><div style="text-align:center"><b>PANADERÍA DEMO</b><br>${S.branch} · ${S.register}<br>${s.no} · ${s.time}</div><hr>
+  ${s.items.map(i=>`<div class="r"><span>${num(i[1])} ${i[0]}</span><span>${cop(i[1]*i[2])}</span></div>`).join('')}<hr>
+  <div class="r"><b>TOTAL</b><b>${cop(s.total)}</b></div>${s.pays.map(p=>`<div class="r"><span>${p[0]}</span><span>${cop(p[1])}</span></div>`).join('')}${s.change?`<div class="r"><span>CAMBIO</span><span>${cop(s.change)}</span></div>`:''}
+  <div style="text-align:center;margin-top:8px">¡Gracias por su compra!</div></div>
+  <div class="actions"><button onclick="toast('🖨 Impresión simulada')">Imprimir</button><button class="primary" data-act="cancel">Nueva venta</button></div></div></div>`}}
+
+/* ---------- 5. Ventas del turno / anular (CU-05) ---------- */
+function salesV(){
+  return `<div class="page"><div class="cu">CU-05 · POST /sales/{id}/void</div><h2>Ventas del turno</h2><div class="card" style="overflow:auto"><table>
+  <tr><th>N°</th><th>Hora</th><th>Detalle</th><th>Pago</th><th class="num">Total</th><th>Estado</th><th>Sync</th><th></th></tr>
+  ${[...S.sales].reverse().map(s=>`<tr><td>${s.no}</td><td>${s.time}</td><td>${s.items.map(i=>num(i[1])+'× '+i[0]).join(', ')}</td><td>${s.pays.map(p=>p[0]).join('+')}</td>
+   <td class="num">${cop(s.total)}</td><td><span class="badge ${s.status==='anulada'?'err':'ok'}">${s.status}</span></td>
+   <td><span class="badge ${s.sync==='pendiente'?'warn':s.sync==='rechazada'?'err':'ok'}">${s.sync}</span></td>
+   <td>${s.status==='completada'?`<button data-void="${s.id}" style="min-height:36px">Anular</button>`:''}</td></tr>`).join('')}</table></div></div>`;
+}
+function voidM(id,needOwner){return {id,needOwner,html:()=>`<div class="scrim"><div class="card modal"><h2>Anular venta</h2><p class="muted small">La venta y sus pagos quedan anulados, no se borran. Exige motivo${needOwner?' y autorización del propietario':''}.</p>
+  <div class="field"><label>Motivo (obligatorio)</label><select id="vr"><option value="">— elegir —</option>${VOID_REASONS.map(r=>`<option>${r}</option>`).join('')}</select></div>
+  ${needOwner?`<div class="field"><label>PIN del propietario</label><input id="ownerPin" type="password" inputmode="numeric" maxlength="6"></div>`:''}
+  <div id="vErr" class="err small" style="min-height:18px"></div><div class="actions"><button data-act="cancel">Cancelar</button><button class="danger" id="vOk">Anular venta</button></div></div></div>`}}
+
+/* ---------- 6. Caja (CU-06) ---------- */
+function cashV(){
+  const movs=S.shift.movs;
+  return `<div class="page"><div class="cu">CU-06 · POST /cash-shifts/{id}/movimientos</div><h2>Caja</h2>
+  <div class="kpis"><div class="card kpi"><span class="muted small">Efectivo inicial</span><b>${cop(S.shift.initial)}</b></div><div class="card kpi"><span class="muted small">Ventas en efectivo</span><b>${cop(cashSales())}</b></div>
+  <div class="card kpi"><span class="muted small">Ingresos / Retiros</span><b>${cop(movSum('ingreso'))} / ${cop(movSum('retiro'))}</b></div><div class="card kpi"><span class="muted small">Efectivo esperado</span><b class="ok">${cop(expected())}</b></div></div>
+  <div style="display:flex;gap:10px;margin-bottom:12px"><button class="primary" data-mov="ingreso">＋ Ingreso de efectivo</button><button data-mov="retiro">－ Retiro de efectivo</button></div>
+  <div class="card" style="overflow:auto"><table><tr><th>Hora</th><th>Tipo</th><th>Motivo</th><th>Autorizó</th><th class="num">Monto</th></tr>
+  ${movs.length?movs.map(m=>`<tr><td>${m.time}</td><td><span class="badge ${m.type==='retiro'?'warn':'ok'}">${m.type}</span></td><td>${m.reason}</td><td>${m.auth||'—'}</td><td class="num">${m.type==='retiro'?'−':'+'}${cop(m.amount)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">Sin movimientos</td></tr>'}</table></div></div>`;
+}
+function movM(type){return {type,html:()=>`<div class="scrim"><div class="card modal"><h2>${type==='ingreso'?'Ingreso':'Retiro'} de efectivo</h2>
+  <div class="field"><label>Monto (> 0)</label><input id="mAmt" inputmode="numeric"></div>
+  <div class="field"><label>Motivo</label><select id="mReason">${CASH_REASONS[type].map(r=>`<option>${r}</option>`).join('')}</select></div>
+  ${type==='retiro'?`<div class="field"><label>PIN del propietario (autoriza el retiro)</label><input id="mPin" type="password" inputmode="numeric" maxlength="6"></div><div class="small muted">No puede superar el efectivo esperado: ${cop(expected())}</div>`:''}
+  <div id="mErr" class="err small" style="min-height:18px"></div><div class="actions"><button data-act="cancel">Cancelar</button><button class="primary" id="mOk">Registrar</button></div></div></div>`}}
+
+/* ---------- 7. Cerrar turno (CU-07) ---------- */
+function closeM(){return {html:()=>`<div class="scrim"><div class="card modal"><div class="cu">CU-07 · POST /cash-shifts/{id}/close</div><h2>Cerrar turno</h2>
+  <div class="card" style="padding:12px"><div class="pay-row"><span>Efectivo inicial</span><span>${cop(S.shift.initial)}</span></div><div class="pay-row"><span>+ Ventas en efectivo</span><span>${cop(cashSales())}</span></div>
+  <div class="pay-row"><span>+ Ingresos</span><span>${cop(movSum('ingreso'))}</span></div><div class="pay-row"><span>− Retiros</span><span>${cop(movSum('retiro'))}</span></div><div class="pay-row"><b>Efectivo esperado</b><b>${cop(expected())}</b></div></div>
+  <div class="field"><label>Efectivo contado</label><input id="counted" inputmode="numeric" placeholder="Cuenta el efectivo del cajón"></div>
+  <div class="pay-row"><b>Diferencia</b><b id="diff" class="muted">—</b></div>
+  <p class="small muted">Se puede cerrar sin internet; los totales se recalculan al sincronizar.</p>
+  <div class="actions"><button data-act="cancel">Cancelar</button><button class="primary" id="closeOk">Cerrar turno</button></div></div></div>`}}
+
+/* ---------- 8. Sincronización (CU-11) ---------- */
+function syncV(){
+  const by=k=>S.sales.filter(s=>s.sync===k).length;
+  return `<div class="page"><div class="cu">CU-11 · POST /sync/sales</div><h2>Sincronización</h2>
+  <div class="kpis"><div class="card kpi"><span class="muted small">Pendientes</span><b class="warn">${by('pendiente')}</b></div><div class="card kpi"><span class="muted small">Aceptadas</span><b class="ok">${by('aceptada')}</b></div>
+  <div class="card kpi"><span class="muted small">Duplicadas</span><b>${by('duplicada')}</b></div><div class="card kpi"><span class="muted small">Rechazadas</span><b class="err">${by('rechazada')}</b></div></div>
+  <div style="display:flex;gap:10px;margin-bottom:12px"><button class="primary" id="syncNow" ${S.online&&by('pendiente')?'':'disabled'}>Sincronizar ahora</button><button id="net2">${S.online?'Simular corte de internet':'Restablecer conexión'}</button></div>
+  <div class="card pad small"><b>Reglas:</b> el POS envía en orden cronológico; reenviar es seguro porque el <code>id</code> lo genera el dispositivo; el servidor responde aceptada, duplicada o rechazada con motivo, que el dueño ve en el backoffice.</div>
+  <h3 style="margin-top:14px">Cola</h3><div class="card" style="overflow:auto"><table><tr><th>N°</th><th>ID</th><th class="num">Total</th><th>Estado</th><th>Motivo</th></tr>
+  ${S.sales.map(s=>`<tr><td>${s.no}</td><td><code>${s.id}</code></td><td class="num">${cop(s.total)}</td><td><span class="badge ${s.sync==='pendiente'?'warn':s.sync==='rechazada'?'err':'ok'}">${s.sync}</span></td><td>${s.reason||''}</td></tr>`).join('')}</table></div></div>`;
+}
+function doSync(){
+  const pend=S.sales.filter(s=>s.sync==='pendiente'); if(!pend.length) return;
+  pend.forEach((s,i)=>{ if(i===0&&pend.length>2){s.sync='duplicada';s.reason='Ya existía (reenvío tras corte de red)'} else if(i===pend.length-1&&pend.length>3){s.sync='rechazada';s.reason='Turno ya cerrado en servidor'} else s.sync='aceptada' });
+  toast('Sincronización completada'); render();
+}
+
+/* ---------- 9. Backoffice (CU-08/09/10) ---------- */
+function boV(){
+  const valid=S.sales.filter(s=>s.status==='completada'), voided=S.sales.filter(s=>s.status==='anulada');
+  const sum=a=>a.reduce((x,s)=>x+s.total,0);
+  const by=k=>valid.reduce((a,s)=>a+s.pays.filter(p=>p[0]===k).reduce((x,p)=>x+p[1],0)-(k==='EFECTIVO'?s.change:0),0);
+  const tabs=[['reporte','Reportes'],['catalogo','Catálogo y precios'],['org','Sucursales y usuarios']];
+  let body='';
+  if(S.bo==='reporte') body=`<div class="cu">CU-08 · GET /reports/daily-sales</div><div class="kpis"><div class="card kpi"><span class="muted small">Vendido (hoy)</span><b>${cop(sum(valid))}</b></div><div class="card kpi"><span class="muted small">Tickets</span><b>${valid.length}</b></div>
+   <div class="card kpi"><span class="muted small">Ticket promedio</span><b>${valid.length?cop(sum(valid)/valid.length):'$0'}</b></div><div class="card kpi"><span class="muted small">Anuladas (aparte)</span><b class="err">${voided.length} · ${cop(sum(voided))}</b></div></div>
+   <div class="two"><div class="card pad"><h3>Por medio de pago</h3>${METHODS.map(m=>`<div class="pay-row"><span>${m.i} ${m.n}</span><b>${cop(by(m.k))}</b></div>`).join('')}</div>
+   <div class="card pad"><h3>Por sucursal</h3><table><tr><th>Sede</th><th class="num">Ventas</th></tr><tr><td>Sede Centro</td><td class="num">${cop(sum(valid))}</td></tr><tr><td>Sede Norte</td><td class="num">${cop(1284500)}</td></tr><tr><td><b>Consolidado</b></td><td class="num"><b>${cop(sum(valid)+1284500)}</b></td></tr></table></div></div>
+   <h3 style="margin-top:14px">Ventas rechazadas en sincronización</h3><div class="card pad small">${S.sales.filter(s=>s.sync==='rechazada').map(s=>`${s.no} · ${cop(s.total)} · ${s.reason}`).join('<br>')||'Ninguna'}</div>`;
+  else if(S.bo==='catalogo') body=`<div class="cu">CU-09 · /products · POST /products/{id}/precios</div><div class="card" style="overflow:auto"><table><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>IVA</th><th class="num">Precio vigente</th><th></th></tr>
+   ${P.map(p=>`<tr><td>${p.code}</td><td>${p.emoji} ${p.name}</td><td>${CATS.find(c=>c[0]===p.cat)[1]}</td><td>${p.tax}%</td><td class="num">${cop(p.price)}</td><td><button style="min-height:34px" data-price="${p.id}">Cambiar precio</button></td></tr>`).join('')}</table></div>
+   <p class="small muted">Un cambio de precio abre una nueva vigencia; no sobrescribe. Un producto con ventas se desactiva, no se elimina.</p>`;
+  else body=`<div class="cu">CU-10 · /organization/*</div><div class="two"><div class="card pad"><h3>Sucursales y cajas</h3>${Object.entries(BRANCHES).map(([b,c])=>`<div class="pay-row"><b>${b}</b><span>${c.join(', ')} <span class="badge ok">activa</span></span></div>`).join('')}<button style="margin-top:10px">＋ Nueva sucursal</button></div>
+   <div class="card pad"><h3>Usuarios</h3>${Object.values(USERS).map(u=>`<div class="pay-row"><b>${u.name}</b><span>${u.role} · Todas las sedes <span class="badge ok">activo</span></span></div>`).join('')}<button style="margin-top:10px">＋ Nuevo usuario</button></div></div>
+   <p class="small muted">Desactivar en lugar de borrar; todo cambio queda en el registro de auditoría.</p>`;
+  return `<div id="pos"><div class="top"><span class="brand">🥐 BakeryPOS · Backoffice</span><div class="nav">${tabs.map(([k,n])=>`<button data-bo="${k}" class="${S.bo===k?'active':''}">${n}</button>`).join('')}</div><button id="backPos">← Volver al POS</button></div><div class="page">${body}</div></div>`;
+}
+
+/* ---------- Events ---------- */
+function bind(){
+  document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>pinKey(b.dataset.key));
+  const on=(s,f)=>{const e=$(s);if(e)e.onclick=f};
+  const br=$('#branch'); if(br) br.onchange=()=>{S.branch=br.value};
+  document.querySelectorAll('[data-init]').forEach(b=>b.onclick=()=>{$('#init').value=b.dataset.init});
+  on('#logout',()=>go({screen:'login',user:null})); on('#exit',()=>go({screen:'login',user:null}));
+  on('#openShift',()=>{const v=Number($('#init').value);if(isNaN(v)||v<0){$('#shiftErr').textContent='VALIDACION: el efectivo inicial debe ser ≥ 0';return}
+    S.register=$('#reg').value; S.shift={initial:v,movs:[],opened:nowT()}; go({screen:'pos',view:'sell'})});
+  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>go({view:b.dataset.view}));
+  document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>go({cat:b.dataset.cat}));
+  const se=$('#search'); if(se){se.oninput=()=>{S.q=se.value;const pos=se.selectionStart;render();const n=$('#search');n.focus();n.setSelectionRange(pos,pos)}}
+  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>addProd(b.dataset.p));
+  document.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{const l=S.cart[b.dataset.inc];l.qty+=l.p.weight?.25:1;render()});
+  document.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{const i=b.dataset.dec,l=S.cart[i];l.qty-=l.p.weight?.25:1;if(l.qty<=0)S.cart.splice(i,1);render()});
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{S.cart.splice(b.dataset.del,1);render()});
+  document.querySelectorAll('[data-disc]').forEach(b=>b.onclick=()=>{
+    if(!S.user.perms.includes('descuento')) return go({modal:ownerM('descuento',b.dataset.disc)});
+    go({modal:discM(b.dataset.disc)})});
+  document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>act(b.dataset.act));
+  on('#net',toggleNet); on('#net2',toggleNet); on('#syncNow',doSync);
+  document.querySelectorAll('[data-void]').forEach(b=>b.onclick=()=>{
+    const needOwner=!S.user.perms.includes('anular'); go({modal:voidM(b.dataset.void,needOwner)})});
+  document.querySelectorAll('[data-mov]').forEach(b=>b.onclick=()=>go({modal:movM(b.dataset.mov)}));
+  document.querySelectorAll('[data-bo]').forEach(b=>b.onclick=()=>go({bo:b.dataset.bo}));
+  document.querySelectorAll('[data-price]').forEach(b=>b.onclick=()=>go({modal:priceM(b.dataset.price)}));
+  on('#backPos',()=>go({screen:'pos'}));
+  modalBind();
+}
+function toggleNet(){S.online=!S.online;toast(S.online?'Conexión restablecida':'Sin conexión: las ventas se guardan en el dispositivo');render()}
+function act(a){
+  if(a==='cancel') return go({modal:null});
+  if(a==='clear') return go({cart:[]});
+  if(a==='bo') return go({screen:'bo'});
+  if(a==='close') return go({modal:closeM()});
+  if(a==='pay'){S.modal={saleId:uid(),pays:[],method:'EFECTIVO',amt:null};S.modal=payM();render()}
+}
+function discM(i){return {html:()=>`<div class="scrim"><div class="card modal"><h2>Descuento</h2><div class="field"><label>Valor del descuento ($)</label><input id="dVal" inputmode="numeric"></div>
+  <div class="field"><label>Motivo (obligatorio)</label><select id="dReason"><option value="">— elegir —</option><option>Producto del día anterior</option><option>Cliente frecuente</option><option>Cortesía</option></select></div>
+  <div id="dErr" class="err small" style="min-height:18px"></div><div class="actions"><button data-act="cancel">Cancelar</button><button class="primary" id="dOk">Aplicar</button></div></div></div>`,i}}
+function priceM(pid){const p=P.find(x=>x.id===pid);return {pid,html:()=>`<div class="scrim"><div class="card modal"><div class="cu">POST /products/{id}/precios</div><h2>Cambiar precio</h2><p class="muted small">${p.name}. Abre una nueva vigencia desde hoy; el precio anterior se conserva.</p>
+  <div class="field"><label>Nuevo precio ($)</label><input id="pVal" inputmode="numeric" value="${p.price}"></div><div id="pErr" class="err small" style="min-height:18px"></div>
+  <div class="actions"><button data-act="cancel">Cancelar</button><button class="primary" id="pOk">Guardar</button></div></div></div>`}}
+function ownerM(what,i){return {what,i,html:()=>`<div class="scrim"><div class="card modal"><h2>Requiere autorización</h2><p class="muted small">Tu rol no tiene permiso para ${what}. SIN_PERMISO → pide el PIN del propietario.</p>
+  <div class="field"><label>PIN del propietario</label><input id="oPin" type="password" inputmode="numeric" maxlength="6"></div><div id="oErr" class="err small" style="min-height:18px"></div>
+  <div class="actions"><button data-act="cancel">Cancelar</button><button class="primary" id="oOk">Autorizar</button></div></div></div>`}}
+
+function modalBind(){
+  const m=S.modal; if(!m) return; const on=(s,f)=>{const e=$(s);if(e)e.onclick=f};
+  // peso
+  if(m.p){const kg=$('#kg');const upd=()=>{$('#kgSub').textContent=cop((parseFloat(kg.value)||0)*m.p.price)};kg.oninput=upd;
+    document.querySelectorAll('[data-kg]').forEach(b=>b.onclick=()=>{kg.value=b.dataset.kg;upd()});
+    on('#kgOk',()=>{const q=parseFloat(String(kg.value).replace(',','.'));if(!(q>0))return toast('VALIDACION: cantidad > 0');S.cart.push({p:m.p,qty:q,disc:0});go({modal:null})})}
+  // cobro
+  if(m.pays){
+    document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{m.method=b.dataset.m;m.amt=null;m.err='';S.modal=payM();render()});
+    document.querySelectorAll('[data-amt]').forEach(b=>b.onclick=()=>{$('#amt').value=b.dataset.amt});
+    document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{m.pays.splice(b.dataset.rm,1);S.modal=payM();render()});
+    on('#addPay',()=>{const meth=METHODS.find(x=>x.k===m.method),total=cartTotal(),paid=m.pays.reduce((a,p)=>a+p.amount,0),left=total-paid;
+      let v=Number($('#amt').value),ref=$('#ref')?.value.trim();
+      if(!(v>0)){m.err='VALIDACION: el monto debe ser > 0'}
+      else if(meth.ref&&!ref){m.err='VALIDACION: este medio exige referencia'}
+      else if(!meth.cash&&v>left){m.err='Los medios no efectivo no admiten exceso (máx '+cop(left)+')'}
+      else{m.err='';m.pays.push({k:meth.k,name:meth.n,amount:v,ref});m.amt=null}
+      S.modal=payM();render()});
+    on('#confirmPay',()=>confirmSale(m));
+  }
+  // anular
+  if(m.id&&m.needOwner!==undefined) on('#vOk',()=>{const r=$('#vr').value;if(!r)return $('#vErr').textContent='VALIDACION: el motivo es obligatorio';
+    if(m.needOwner&&$('#ownerPin').value!==OWNER_PIN)return $('#vErr').textContent='SIN_PERMISO: PIN de propietario incorrecto';
+    const s=S.sales.find(x=>x.id===m.id);s.status='anulada';if(s.sync==='aceptada')s.sync='aceptada';toast('Venta '+s.no+' anulada · '+r);go({modal:null})});
+  // movimiento
+  if(m.type) on('#mOk',()=>{const a=Number($('#mAmt').value),e=$('#mErr');if(!(a>0))return e.textContent='VALIDACION: monto > 0';
+    let auth=null;if(m.type==='retiro'){if($('#mPin').value!==OWNER_PIN)return e.textContent='SIN_PERMISO: los retiros requieren autorización del propietario (caja.retiro)';
+      if(a>expected())return e.textContent='El retiro supera el efectivo esperado ('+cop(expected())+')';auth='Carlos Pérez'}
+    S.shift.movs.push({time:nowT(),type:m.type,amount:a,reason:$('#mReason').value,auth});toast('Movimiento registrado');go({modal:null})});
+  // cerrar turno
+  if($('#counted')){const c=$('#counted');c.oninput=()=>{const d=Number(c.value)-expected(),e=$('#diff');e.textContent=c.value?(d>0?'+':'')+cop(d):'—';e.className=!c.value?'muted':d===0?'ok':d>0?'warn':'err'};
+    on('#closeOk',()=>{if(c.value==='')return toast('Ingresa el efectivo contado');const d=Number(c.value)-expected();
+      S.shift=null;S.cart=[];
+      go({modal:{html:()=>`<div class="scrim"><div class="card modal"><h2>Turno cerrado</h2><p>Diferencia de caja: <b class="${d===0?'ok':'err'}">${cop(d)}</b></p><p class="muted small">Un turno cerrado no admite ventas (TURNO_CERRADO).</p><div class="actions"><button class="primary" id="byeOk">Salir</button></div></div></div>`}})
+      $('#byeOk').onclick=()=>go({modal:null,screen:'login',user:null,sales:[],consec:0})})}
+  // descuento
+  if(m.i!==undefined&&$('#dOk')) on('#dOk',()=>{const v=Number($('#dVal').value),r=$('#dReason').value,l=S.cart[m.i];if(!(v>0)||!r)return $('#dErr').textContent='VALIDACION: valor > 0 y motivo obligatorio';
+    if(v>l.qty*l.p.price)return $('#dErr').textContent='El descuento supera la línea';l.disc=v;l.reason=r;go({modal:null})});
+  if(m.pid) on('#pOk',()=>{const v=Number($('#pVal').value);if(!(v>=0)||$('#pVal').value==='')return $('#pErr').textContent='VALIDACION: precio ≥ 0';P.find(x=>x.id===m.pid).price=v;toast('Nueva vigencia de precio creada');go({modal:null})});
+  // owner
+  if($('#oOk')) on('#oOk',()=>{if($('#oPin').value!==OWNER_PIN)return $('#oErr').textContent='PIN incorrecto';go({modal:discM(m.i)})});
+}
+$('#themeBtn').onclick=()=>{const d=document.documentElement,cur=d.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');d.dataset.theme=cur==='dark'?'light':'dark'};
+render();
+</script>
+</body>
+</html>

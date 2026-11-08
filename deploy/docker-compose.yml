@@ -1,0 +1,86 @@
+# Staging y producción en un VPS (D-10): PostgreSQL, API, migraciones y Caddy (HTTPS + frontend) en contenedores.
+# Un VPS por ambiente; cada uno con su propio .env (no versionado, ver .env.example). Uso (docs/runbooks.md):
+#   ./scripts/deploy.sh .env.production
+# Nada sensible en este archivo: todo sale del .env.
+name: bakerypos-${ENVIRONMENT:?Define ENVIRONMENT (staging o production) en el .env}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bakerypos
+      POSTGRES_USER: bakerypos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    # Sin puerto publicado: solo la API, las migraciones y los backups la alcanzan dentro de la red de Docker.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bakerypos -d bakerypos"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Se ejecuta una vez por despliegue, antes de la API: docker compose --profile migrate run --rm migrate
+  migrate:
+    profiles: ["migrate"]
+    image: bakerypos-migrations:${VERSION:?}
+    build:
+      context: ..
+      dockerfile: Dockerfile.migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=bakerypos;Username=bakerypos;Password=${POSTGRES_PASSWORD}
+
+  api:
+    image: bakerypos-api:${VERSION:?}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:?}
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=bakerypos;Username=bakerypos;Password=${POSTGRES_PASSWORD}
+      Jwt__Secret: ${JWT_SECRET:?}
+      DataProtection__KeysPath: /keys
+      ReverseProxy__Enabled: "true"
+      Cors__AllowedOrigins__0: https://${DOMAIN:?}
+      Siigo__PartnerId: ${SIIGO_PARTNER_ID:-BakeryPOS}
+    volumes:
+      - dpkeys:/keys
+
+  web:
+    image: bakerypos-web:${VERSION:?}
+    build:
+      context: ${FRONTEND_DIR:-../../frontend}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  # Nombres fijos por ambiente: sobreviven a `docker compose down` (solo se borran con `down -v`, nunca en el runbook).
+  pgdata:
+    name: bakerypos_${ENVIRONMENT}_pgdata
+  # Llaves que cifran las credenciales de Bold y Siigo: van en cada backup (scripts/backup.sh).
+  dpkeys:
+    name: bakerypos_${ENVIRONMENT}_dpkeys
+  caddy_data:
+    name: bakerypos_${ENVIRONMENT}_caddy_data
+  caddy_config:
+    name: bakerypos_${ENVIRONMENT}_caddy_config

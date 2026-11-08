@@ -1,0 +1,55 @@
+name: backend-ci
+
+# CI del backend (independiente del frontend). Las pruebas de integración levantan PostgreSQL real
+# con Testcontainers (Docker viene instalado en ubuntu-latest).
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release -warnaserror
+      - name: Pruebas unitarias y de arquitectura
+        run: |
+          dotnet test tests/Tahona.BakeryPOS.UnitTests --no-build -c Release
+          dotnet test tests/Tahona.BakeryPOS.ArchitectureTests --no-build -c Release
+      - name: Pruebas de integración (PostgreSQL en contenedor)
+        run: dotnet test tests/Tahona.BakeryPOS.IntegrationTests --no-build -c Release
+      - name: La migración no tiene cambios pendientes en el modelo
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes --project src/Tahona.BakeryPOS.Infrastructure --startup-project src/Tahona.BakeryPOS.Infrastructure
+      - name: Bundle de migraciones (artefacto para el despliegue)
+        run: dotnet ef migrations bundle --project src/Tahona.BakeryPOS.Infrastructure --startup-project src/Tahona.BakeryPOS.Infrastructure -o efbundle --self-contained -r linux-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: efbundle
+          path: efbundle
+
+  docker:
+    needs: build-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v2'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t bakerypos-api:${{ github.sha }} .
+      - run: docker build -f Dockerfile.migrations -t bakerypos-migrations:${{ github.sha }} .
+      - name: El compose de despliegue es válido (valores ficticios, sin secretos)
+        working-directory: deploy
+        env:
+          ENVIRONMENT: ci
+          ASPNETCORE_ENVIRONMENT: Production
+          VERSION: ${{ github.sha }}
+          DOMAIN: ci.invalid
+          ACME_EMAIL: ci@ci.invalid
+          POSTGRES_PASSWORD: ci
+          JWT_SECRET: ci
+        run: docker compose -f docker-compose.yml config --quiet

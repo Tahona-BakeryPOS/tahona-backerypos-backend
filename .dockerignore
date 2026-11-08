@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/.vs/
+.git/
+.env
+tests/
+*.md
+.env.*
+deploy/
+postman/

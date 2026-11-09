@@ -147,12 +147,15 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
             creditedInvoice = credited;
         }
 
+        // La facturación es opcional por empresa (D-17): apagarla solo impide crear documentos nuevos. Los que ya existen
+        // (facturas en trámite y notas crédito de ventas ya facturadas) se terminan de enviar con la configuración guardada,
+        // aunque el interruptor esté apagado; solo hace falta que la configuración siga completa.
         var settings = await _db.FiscalSettings.IgnoreQueryFilters([QueryFilters.Tenant]).AsNoTracking()
-            .FirstOrDefaultAsync(s => s.CompanyId == doc.CompanyId && s.IsActive, ct);
+            .FirstOrDefaultAsync(s => s.CompanyId == doc.CompanyId, ct);
         doc.StartSubmission();
         if (settings is null || !settings.IsComplete)
         {
-            await FailTemporarilyAsync(doc, "La facturación electrónica no está configurada y activa.", ct);
+            await FailTemporarilyAsync(doc, "La configuración de facturación electrónica está incompleta.", ct);
             throw new InvalidOperationException("Facturación no configurada; se reintenta.");
         }
         var credentials = new SiigoCredentials(doc.CompanyId, _secrets.Unprotect(settings.EncryptedUsername), _secrets.Unprotect(settings.EncryptedAccessKey));

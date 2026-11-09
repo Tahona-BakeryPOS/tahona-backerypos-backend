@@ -49,7 +49,7 @@ cierre; el esperado es `CashMovement.Expected`, la suma con signo de los movimie
 pago, pagos e intentos, cuentas de Bold cifradas, datáfono por caja; `GatewayPaymentService` cobra fuera de la
 transacción y el webhook `POST /api/v1/webhooks/pagos/bold` aprueba con firma válida; ver
 `docs/payment-integration.md` §11) e `Invoicing` (Siigo: configuración, emparejamientos, documentos fiscales;
-`IFiscalDocumentIssuer` crea la factura de la venta y el outbox la envía con `FiscalSubmitHandler`; ver
+`IFiscalDocumentIssuer` crea la factura de la venta y el outbox la envía con `FiscalSubmitHandler`; la facturación es **opcional por empresa** (D-17: `FiscalSettings.IsActive`; apagada, la venta queda `not_required`, y lo ya creado se sigue enviando); ver
 `docs/electronic-invoicing.md` §9). Todo movimiento de
 existencias pasa por `InventoryLedger` (idempotencia por origen y política D-06). La auditoría se consulta por
 `IAuditLogReader` (`Application/Auditing`, implementado en Infrastructure). El resto llega por fases (`docs/implementation-plan.md`).

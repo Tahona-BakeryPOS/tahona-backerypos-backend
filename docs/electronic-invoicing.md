@@ -1,6 +1,6 @@
 # Integración con facturación electrónica
 
-Estado: **D-04 = Siigo, D-05 = factura electrónica en cada venta, D-15 = 5 años** (28/10/2026). Lo verificado
+Estado: **D-04 = Siigo, D-17 = facturación electrónica opcional por empresa (sustituye a D-05), D-15 = 5 años**. Lo verificado
 de la API de Siigo y sus consecuencias están en la sección 9. Pendiente: prueba con un documento aceptado en
 ambiente de habilitación (criterio de aceptación de la fase 7) y confirmación del contador (D-05, D-15).
 
@@ -16,10 +16,17 @@ ambiente de habilitación (criterio de aceptación de la fase 7) y confirmación
 | Identificación del adquirente | El documento puede identificar al comprador (nombre, NIT); con ello da derecho a IVA descontable y deducción | DIAN | Alta |
 | Transmisión, validación previa, CUDE, anexo técnico | No especificado en la página consultada | — | **Por verificar** |
 
-**Implicación:** la panadería debe emitir, por cada venta, un documento equivalente electrónico POS o
+**Implicación (si la empresa está obligada a facturar):** la panadería debe emitir, por cada venta, un documento equivalente electrónico POS o
 una factura electrónica, a través de un proveedor tecnológico o del servicio de la DIAN. Qué
 documento corresponde en cada caso (consumidor final vs. cliente con NIT, monto) lo define D-05 con el
 contador.
+
+> **Opcional por empresa (D-17).** La facturación se enciende o apaga en Configuración → Facturación electrónica. Encendida,
+> cada venta genera su factura (§4). Apagada, la venta queda con `fiscal_status = not_required` y no se crea ningún
+> documento; lo demás (cobros con Bold, inventario, caja, devoluciones) no cambia. Al apagarla, los documentos que ya
+> existen (facturas en trámite y notas crédito de ventas ya facturadas) se siguen enviando con la configuración guardada;
+> una venta no facturada no genera nota crédito. Si una empresa está obligada por la DIAN, mantener la facturación apagada
+> es responsabilidad de la empresa; el sistema no lo valida.
 
 ## 2. Selección del proveedor tecnológico
 
@@ -108,7 +115,7 @@ Fuentes oficiales: [Introducción](https://developers.siigo.com/docs/siigoapi/),
 [Facturación electrónica](https://developers.siigo.com/docs/siigoapi/facturacion-electronica/), API Blueprint oficial
 ([siigoapi.docs.apiary.io](https://siigoapi.docs.apiary.io/)) y el SDK oficial [SiigoSAS/siigo_sdk_javascript](https://github.com/SiigoSAS/siigo_sdk_javascript).
 
-**Por qué cambió D-05:** Siigo dice en su página del sistema POS que decidió **no desarrollar el documento
+**Por qué cambió D-05 (antes de D-17):** Siigo dice en su página del sistema POS que decidió **no desarrollar el documento
 equivalente electrónico POS** y enfocarse en la factura electrónica; ningún otro proveedor revisado (Factus, Alegra,
 Dataico, The Factory HKA) documenta públicamente una API para el POS electrónico. La DIAN permite sustituir el
 documento equivalente por factura electrónica, así que cada venta se factura electrónicamente: con los datos del

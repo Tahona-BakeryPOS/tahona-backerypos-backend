@@ -74,14 +74,15 @@ operación en `runbooks.md`.
 | HU-7.4 | Conciliar pagos contra ventas y cajas | ✅ consulta · ⏳ conciliación con extracto | Pagos, Informe de ventas |
 | — | Medios de pago y credenciales cifradas | ✅ | Métodos de pago, Integraciones |
 
-### M8. Facturación electrónica — fases 7 y 9 (D-04 Siigo, D-05 factura en cada venta)
+### M8. Facturación electrónica — fases 7 y 9 (D-04 Siigo, D-17 facturación opcional por empresa)
 | HU | Caso de uso | Estado | Dónde |
 |---|---|---|---|
 | HU-8.1 | Configuración fiscal, numeración y credenciales | ✅ | Configuración → Facturación electrónica, Numeraciones |
-| HU-8.2 | Emitir la factura de cada venta y seguir su estado | 🔎 (sin documento aceptado en habilitación) | Outbox → Siigo |
+| HU-8.2 | Emitir la factura de cada venta (si la facturación está encendida) y seguir su estado | 🔎 (sin documento aceptado en habilitación) | Outbox → Siigo |
 | HU-8.3 | Consultar antes de reintentar | ✅ | Misma Idempotency-Key |
 | HU-8.4 | Ver rechazados y reintentar | ✅ | Ventas y caja → Facturas electrónicas |
 | HU-8.5 | Nota crédito por anulación (motivo 2) o devolución (motivo 1) | 🔎 (`taxed_price` por verificar) | Fase 9 |
+| HU-8.6 | Encender o apagar la facturación electrónica por empresa | ✅ | Configuración → Facturación electrónica (D-17) |
 
 ### M9. Anulaciones y devoluciones — fase 9 (D-11)
 | HU | Caso de uso | Estado | Dónde |
@@ -114,7 +115,7 @@ Lo implementado que todavía no cuenta como terminado (criterios de salida de `t
 3. **Bold en sandbox**: cobro de prueba, venta con datáfono, webhook firmado real (fase 6).
 4. **Siigo en habilitación**: factura, nota crédito por anulación y por devolución aceptadas con CUFE/CUDE (fases 7 y 9).
 5. **Staging**: primer despliegue, E2E (`npm run e2e`), carga (k6) y una restauración de backup (fase 10).
-6. **Contador**: D-05 (factura en cada venta), D-11 (anulación/devolución), D-15 (5 años), tarifas de impuestos (I-20), permisos del Cajero.
+6. **Contador**: D-17 (facturación opcional; confirmar si la empresa está obligada), D-11 (anulación/devolución), D-15 (5 años), tarifas de impuestos (I-20), permisos del Cajero.
 7. **Commits**: nada tiene commit; revisar y commitear por fase en `backend` y `frontend`.
 
 ## 3. Próximos casos de uso

@@ -127,7 +127,8 @@ Formato: *Como … quiero … para …* · **CA** = criterios de aceptación ver
 
 ### M8. Facturación electrónica
 - **HU-8.1** Como propietario quiero configurar los datos fiscales de la empresa, la numeración autorizada y las credenciales del proveedor (pruebas y producción separadas).
-- **HU-8.2** Como sistema quiero emitir el documento fiscal de cada venta confirmada y seguir su estado hasta tener respuesta verificable.
+- **HU-8.2** Como sistema quiero emitir el documento fiscal de cada venta confirmada **cuando la empresa tiene la facturación encendida** y seguir su estado hasta tener respuesta verificable; con la facturación apagada la venta queda "sin factura" (D-17).
+- **HU-8.6** Como propietario quiero encender o apagar la facturación electrónica según mi necesidad, sin afectar los cobros ni lo ya facturado.
 - **HU-8.3** Como sistema quiero consultar el estado antes de reintentar un envío con resultado desconocido.
 - **HU-8.4** Como propietario quiero ver documentos rechazados, su motivo y corregir/reemitir según el procedimiento definido.
 - **HU-8.5** Como sistema quiero emitir la nota (crédito/ajuste) correspondiente a una devolución o anulación de venta ya documentada.

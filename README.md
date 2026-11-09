@@ -119,6 +119,7 @@ verifica que no haya cambios pendientes del modelo de EF Core.
 
 ## Documentación
 
+- [`docs/guia-general.md`](docs/guia-general.md) — guía general para personas no técnicas, con diagramas
 - [`docs/requirements.md`](docs/requirements.md) — requisitos
 - [`docs/architecture.md`](docs/architecture.md) — arquitectura
 - [`docs/data-model.md`](docs/data-model.md) — modelo de datos

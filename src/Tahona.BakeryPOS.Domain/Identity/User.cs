@@ -24,7 +24,7 @@ public sealed class User : AuditableEntity
     public static User Create(string fullName, string? email, string? passwordHash)
     {
         if (email is not null && passwordHash is null)
-            throw new DomainException("VALIDACION", "Un usuario con correo necesita una contraseña inicial.");
+            throw new DomainException("VALIDATION", "Un usuario con correo necesita una contraseña inicial.");
         var user = new User
         {
             Email = NormalizeEmail(email),
@@ -51,7 +51,7 @@ public sealed class User : AuditableEntity
     public void Rename(string fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName))
-            throw new DomainException("VALIDACION", "El nombre del usuario es obligatorio.");
+            throw new DomainException("VALIDATION", "El nombre del usuario es obligatorio.");
         FullName = fullName.Trim();
     }
 

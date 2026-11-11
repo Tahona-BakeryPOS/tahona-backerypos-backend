@@ -84,7 +84,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     public static Sale Start(Guid companyId, Guid branchId, Guid cashRegisterId, Guid cashSessionId, Guid cashierId, string? customerIdentification)
     {
         if (companyId == Guid.Empty || branchId == Guid.Empty || cashRegisterId == Guid.Empty || cashSessionId == Guid.Empty || cashierId == Guid.Empty)
-            throw new DomainException("VALIDACION", "La venta necesita empresa, sucursal, caja, sesión y cajero.");
+            throw new DomainException("VALIDATION", "La venta necesita empresa, sucursal, caja, sesión y cajero.");
         var sale = new Sale
         {
             CompanyId = companyId, BranchId = branchId, CashRegisterId = cashRegisterId, CashSessionId = cashSessionId, CashierId = cashierId,
@@ -107,9 +107,9 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     public void SetCustomer(string? identification)
     {
         if (Status is SaleStatus.Confirmed or SaleStatus.Cancelled or SaleStatus.Voided)
-            throw new DomainException("ESTADO_INVALIDO", "El cliente solo se cambia antes de confirmar la venta.");
+            throw new DomainException("INVALID_STATE", "El cliente solo se cambia antes de confirmar la venta.");
         if (identification is not null && !System.Text.RegularExpressions.Regex.IsMatch(identification.Trim(), "^[0-9]{4,15}$"))
-            throw new DomainException("VALIDACION", "La identificación del cliente tiene entre 4 y 15 dígitos (sin dígito de verificación).");
+            throw new DomainException("VALIDATION", "La identificación del cliente tiene entre 4 y 15 dígitos (sin dígito de verificación).");
         CustomerIdentification = string.IsNullOrWhiteSpace(identification) ? null : identification.Trim();
     }
 
@@ -133,9 +133,9 @@ public sealed class Sale : AuditableEntity, ITenantEntity
         if (Status == SaleStatus.Confirmed) return false;
         EnsureEditable();
         if (_lines.Count == 0)
-            throw new DomainException("VALIDACION", "La venta no tiene líneas.");
+            throw new DomainException("VALIDATION", "La venta no tiene líneas.");
         if (approvedTotal != Total)
-            throw new DomainException("PAGOS_NO_CUBREN_TOTAL", $"Los pagos aprobados ({approvedTotal:N2}) no cubren el total ({Total:N2}).");
+            throw new DomainException("PAYMENTS_DO_NOT_COVER_TOTAL", $"Los pagos aprobados ({approvedTotal:N2}) no cubren el total ({Total:N2}).");
         Status = SaleStatus.Confirmed;
         PaymentStatus = SalePaymentStatus.Paid;
         Number = number;
@@ -158,11 +158,11 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     public void Void(string reason, Guid by, DateTime at)
     {
         if (Status != SaleStatus.Confirmed)
-            throw new DomainException("ESTADO_INVALIDO", "Solo se anula una venta confirmada.");
+            throw new DomainException("INVALID_STATE", "Solo se anula una venta confirmada.");
         if (RefundedTotal > 0)
-            throw new DomainException("ANULACION_NO_PERMITIDA", "La venta ya tiene devoluciones: registra otra devolución en vez de anularla.");
+            throw new DomainException("VOID_NOT_ALLOWED", "La venta ya tiene devoluciones: registra otra devolución en vez de anularla.");
         if (string.IsNullOrWhiteSpace(reason))
-            throw new DomainException("VALIDACION", "La anulación exige motivo.");
+            throw new DomainException("VALIDATION", "La anulación exige motivo.");
         Status = SaleStatus.Voided;
         VoidReason = reason.Trim();
         VoidedBy = by;
@@ -177,9 +177,9 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     public void RegisterReturn(decimal amount)
     {
         if (Status != SaleStatus.Confirmed)
-            throw new DomainException("ESTADO_INVALIDO", "Solo se devuelve sobre una venta confirmada.");
+            throw new DomainException("INVALID_STATE", "Solo se devuelve sobre una venta confirmada.");
         if (amount <= 0 || RefundedTotal + amount > Total)
-            throw new DomainException("VALIDACION", "La devolución supera lo cobrado en la venta.");
+            throw new DomainException("VALIDATION", "La devolución supera lo cobrado en la venta.");
         RefundedTotal += amount;
         PaymentStatus = RefundedTotal == Total ? SalePaymentStatus.Refunded : SalePaymentStatus.PartiallyRefunded;
     }
@@ -195,7 +195,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     private void EnsureEditable()
     {
         if (!IsOpen)
-            throw new DomainException("ESTADO_INVALIDO", $"La venta está {Status}: no se puede modificar.");
+            throw new DomainException("INVALID_STATE", $"La venta está {Status}: no se puede modificar.");
     }
 
     private void Recalculate()
@@ -210,7 +210,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
 /// <summary>
 /// Line with a historical copy of name, price and tax. With a price that includes tax (D-07):
 /// gross = quantity × price − discount; base = gross / (1 + rate); tax = gross − base. If it does not
-/// incluye: base = cantidad × precio − descuento; impuesto = base × tarifa. Redondeo a 2 decimales.
+/// include it: base = quantity × price − discount; tax = base × rate. Rounded to 2 decimals.
 /// </summary>
 public sealed class SaleLine : AuditableEntity, ITenantEntity
 {
@@ -242,14 +242,14 @@ public sealed class SaleLine : AuditableEntity, ITenantEntity
     {
         // At most 2 decimals: it is what the electronic invoice accepts (Siigo, items.quantity).
         if (quantity <= 0 || decimal.Round(quantity, 2) != quantity)
-            throw new DomainException("VALIDACION", "La cantidad debe ser mayor que 0 con máximo 2 decimales.");
+            throw new DomainException("VALIDATION", "La cantidad debe ser mayor que 0 con máximo 2 decimales.");
         if (unitPrice < 0 || discountAmount < 0 || decimal.Round(discountAmount, 2) != discountAmount)
-            throw new DomainException("VALIDACION", "Precio y descuento no pueden ser negativos; el descuento admite 2 decimales.");
+            throw new DomainException("VALIDATION", "Precio y descuento no pueden ser negativos; el descuento admite 2 decimales.");
         if (discountAmount > 0 && string.IsNullOrWhiteSpace(discountReason))
-            throw new DomainException("VALIDACION", "El descuento exige motivo.");
+            throw new DomainException("VALIDATION", "El descuento exige motivo.");
         var gross = decimal.Round(quantity * unitPrice, 2) - discountAmount;
         if (gross < 0)
-            throw new DomainException("VALIDACION", "El descuento no puede superar el valor de la línea.");
+            throw new DomainException("VALIDATION", "El descuento no puede superar el valor de la línea.");
 
         var line = new SaleLine
         {

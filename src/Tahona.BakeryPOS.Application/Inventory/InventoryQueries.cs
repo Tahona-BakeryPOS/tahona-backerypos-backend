@@ -184,7 +184,7 @@ public sealed class InventoryQueriesHandler :
     {
         if (await _branches.FindAsync(branchId, ct) is null)
             return Result.Failure(Error.NotFound("Sucursal", branchId));
-        return _tenant.CanAccessBranch(branchId) ? Result.Success() : Result.Failure(Error.SinAsignacionVigente);
+        return _tenant.CanAccessBranch(branchId) ? Result.Success() : Result.Failure(Error.NoCurrentAssignment);
     }
 
     private async Task<IReadOnlyList<StockMovementDto>> ToDtosAsync(IReadOnlyList<StockMovement> movements, CancellationToken ct)

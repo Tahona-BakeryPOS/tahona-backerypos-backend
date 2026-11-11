@@ -46,7 +46,7 @@ public sealed class PaymentMethod : AuditableEntity, ITenantEntity
         bool requiresReference, int displayOrder)
     {
         if (companyId == Guid.Empty || string.IsNullOrWhiteSpace(code))
-            throw new DomainException("VALIDACION", "El medio de pago necesita empresa y código.");
+            throw new DomainException("VALIDATION", "El medio de pago necesita empresa y código.");
         var method = new PaymentMethod { CompanyId = companyId, Code = code.Trim().ToUpperInvariant(), Kind = kind };
         method.SetGatewayMethod(gatewayMethod);
         method.Update(name, requiresReference, displayOrder, isActive: true);
@@ -56,9 +56,9 @@ public sealed class PaymentMethod : AuditableEntity, ITenantEntity
     public void Update(string name, bool requiresReference, int displayOrder, bool isActive)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El nombre del medio de pago es obligatorio.");
+            throw new DomainException("VALIDATION", "El nombre del medio de pago es obligatorio.");
         if (Kind == PaymentMethodKind.Cash && !isActive)
-            throw new DomainException("VALIDACION", "El efectivo no se puede desactivar: la caja lo necesita.");
+            throw new DomainException("VALIDATION", "El efectivo no se puede desactivar: la caja lo necesita.");
         Name = name.Trim();
         // External card terminal and transfer always carry a reference; cash and gateway do not ask for one.
         RequiresReference = Kind is PaymentMethodKind.ExternalCard or PaymentMethodKind.TransferManual || requiresReference && Kind != PaymentMethodKind.Cash;
@@ -71,11 +71,11 @@ public sealed class PaymentMethod : AuditableEntity, ITenantEntity
         if (Kind == PaymentMethodKind.Gateway)
         {
             if (gatewayMethod is null || !BoldMethods.All.Contains(gatewayMethod))
-                throw new DomainException("VALIDACION", $"Método de la pasarela: {string.Join(", ", BoldMethods.All)}.");
+                throw new DomainException("VALIDATION", $"Método de la pasarela: {string.Join(", ", BoldMethods.All)}.");
             GatewayMethod = gatewayMethod;
         }
         else if (gatewayMethod is not null)
-            throw new DomainException("VALIDACION", "Solo los medios de la pasarela llevan método de pasarela.");
+            throw new DomainException("VALIDATION", "Solo los medios de la pasarela llevan método de pasarela.");
     }
 }
 

@@ -37,9 +37,9 @@ public sealed class Product : AuditableEntity, ITenantEntity
         string? barcode, bool trackStock, NegativeStockPolicy negativeStockPolicy = NegativeStockPolicy.Allow)
     {
         if (companyId == Guid.Empty)
-            throw new DomainException("VALIDACION", "El producto debe pertenecer a una empresa.");
+            throw new DomainException("VALIDATION", "El producto debe pertenecer a una empresa.");
         if (string.IsNullOrWhiteSpace(sku))
-            throw new DomainException("VALIDACION", "El código del producto es obligatorio.");
+            throw new DomainException("VALIDATION", "El código del producto es obligatorio.");
         var product = new Product { CompanyId = companyId, Sku = NormalizeSku(sku) };
         product.Update(name, categoryId, unitId, taxId, barcode, trackStock, negativeStockPolicy);
         return product;
@@ -49,9 +49,9 @@ public sealed class Product : AuditableEntity, ITenantEntity
         NegativeStockPolicy negativeStockPolicy = NegativeStockPolicy.Allow)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El nombre del producto es obligatorio.");
+            throw new DomainException("VALIDATION", "El nombre del producto es obligatorio.");
         if (categoryId == Guid.Empty || unitId == Guid.Empty || taxId == Guid.Empty)
-            throw new DomainException("VALIDACION", "Categoría, unidad e impuesto son obligatorios.");
+            throw new DomainException("VALIDATION", "Categoría, unidad e impuesto son obligatorios.");
         Name = name.Trim();
         CategoryId = categoryId;
         UnitId = unitId;
@@ -98,14 +98,14 @@ public sealed class ProductPrice : AuditableEntity, ITenantEntity
         DateTime validFrom, IReadOnlyCollection<ProductPrice> history)
     {
         if (amount < 0)
-            throw new DomainException("VALIDACION", "El precio no puede ser negativo.");
+            throw new DomainException("VALIDATION", "El precio no puede ser negativo.");
         if (decimal.Round(amount, 2) != amount)
-            throw new DomainException("VALIDACION", "El precio admite máximo 2 decimales.");
+            throw new DomainException("VALIDATION", "El precio admite máximo 2 decimales.");
         if (history.Any(p => p.ProductId != productId || p.BranchId != branchId))
-            throw new DomainException("VALIDACION", "El historial no corresponde al producto y sucursal.");
+            throw new DomainException("VALIDATION", "El historial no corresponde al producto y sucursal.");
         var latest = history.MaxBy(p => p.ValidFrom);
         if (latest is not null && validFrom <= latest.ValidFrom)
-            throw new DomainException("VALIDACION",
+            throw new DomainException("VALIDATION",
                 $"Ya hay un precio que rige desde {latest.ValidFrom:yyyy-MM-dd HH:mm} UTC; la nueva vigencia debe empezar después.");
 
         foreach (var open in history.Where(p => p.ValidTo is null || p.ValidTo > validFrom))

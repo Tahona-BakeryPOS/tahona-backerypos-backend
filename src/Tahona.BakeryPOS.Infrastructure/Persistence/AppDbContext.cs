@@ -97,7 +97,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
     public void ExpectVersion<T>(T entity, byte[] version) where T : class =>
         Entry(entity).Property(nameof(AuditableEntity.RowVersion)).OriginalValue = version;
 
-    // Transversales
+    // Cross-cutting
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<InboundEvent> InboundEvents => Set<InboundEvent>();

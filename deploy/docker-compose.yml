@@ -1,9 +1,9 @@
-# Staging y producción en un VPS (D-10): PostgreSQL, API, migraciones y Caddy (proxy HTTPS del API) en contenedores.
-# Solo el backend: ningún cliente se construye ni se sirve desde aquí; cada cliente se despliega por su lado.
-# Un VPS por ambiente; cada uno con su propio .env (no versionado, ver .env.example). Uso (docs/runbooks.md):
+# Staging and production on a VPS (D-10): PostgreSQL, API, migrations and Caddy (the API's HTTPS proxy) in containers.
+# Backend only: no client is built or served from here; each client is deployed on its own.
+# One VPS per environment; each with its own .env (not versioned, see .env.example). Usage (docs/runbooks.md):
 #   ./scripts/deploy.sh .env.production
-# Nada sensible en este archivo: todo sale del .env.
-name: bakerypos-${ENVIRONMENT:?Define ENVIRONMENT (staging o production) en el .env}
+# Nothing sensitive in this file: everything comes from the .env.
+name: bakerypos-${ENVIRONMENT:?Define ENVIRONMENT (staging or production) in the .env}
 
 services:
   db:
@@ -13,7 +13,7 @@ services:
       POSTGRES_DB: bakerypos
       POSTGRES_USER: bakerypos
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-    # Sin puerto publicado: solo la API, las migraciones y los backups la alcanzan dentro de la red de Docker.
+    # No published port: only the API, the migrations and the backups reach it inside the Docker network.
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # Se ejecuta una vez por despliegue, antes de la API: docker compose --profile migrate run --rm migrate
+  # It runs once per deployment, before the API: docker compose --profile migrate run --rm migrate
   migrate:
     profiles: ["migrate"]
     image: bakerypos-migrations:${VERSION:?}
@@ -50,13 +50,13 @@ services:
       Jwt__Secret: ${JWT_SECRET:?}
       DataProtection__KeysPath: /keys
       ReverseProxy__Enabled: "true"
-      # Origen del cliente web que llama al API desde el navegador (p. ej. https://pos.tupanaderia.co). Más de uno: Cors__AllowedOrigins__1, ...
-      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN:?Define CORS_ALLOWED_ORIGIN (origen del cliente web) en el .env}
+      # Origin of the web client that calls the API from the browser (e.g. https://pos.yourbakery.co). More than one: Cors__AllowedOrigins__1, ...
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN:?Define CORS_ALLOWED_ORIGIN (the web client's origin) in the .env}
       Siigo__PartnerId: ${SIIGO_PARTNER_ID:-BakeryPOS}
     volumes:
       - dpkeys:/keys
 
-  # Caddy: HTTPS automático (Let's Encrypt) y proxy hacia la API. No sirve ningún cliente.
+  # Caddy: automatic HTTPS (Let's Encrypt) and a proxy to the API. It serves no client.
   proxy:
     image: caddy:2.10-alpine
     restart: unless-stopped
@@ -67,7 +67,7 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      API_DOMAIN: ${API_DOMAIN:?Define API_DOMAIN (dominio público del API) en el .env}
+      API_DOMAIN: ${API_DOMAIN:?Define API_DOMAIN (the API's public domain) in the .env}
       ACME_EMAIL: ${ACME_EMAIL:?}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -75,10 +75,10 @@ services:
       - caddy_config:/config
 
 volumes:
-  # Nombres fijos por ambiente: sobreviven a `docker compose down` (solo se borran con `down -v`, nunca en el runbook).
+  # Fixed names per environment: they survive `docker compose down` (only deleted with `down -v`, never in the runbook).
   pgdata:
     name: bakerypos_${ENVIRONMENT}_pgdata
-  # Llaves que cifran las credenciales de Bold y Siigo: van en cada backup (scripts/backup.sh).
+  # Keys that encrypt the Bold and Siigo credentials: they go in every backup (scripts/backup.sh).
   dpkeys:
     name: bakerypos_${ENVIRONMENT}_dpkeys
   caddy_data:

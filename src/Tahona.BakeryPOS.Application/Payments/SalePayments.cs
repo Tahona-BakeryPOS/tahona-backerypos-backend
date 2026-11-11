@@ -29,7 +29,7 @@ public sealed class SalePayments : ISalePayments
         decimal amount, decimal? amountTendered, string? reference, CancellationToken ct)
     {
         if (!session.IsOpen)
-            return Result.Failure<SalePaymentInfo>(Error.CajaCerrada);
+            return Result.Failure<SalePaymentInfo>(Error.CashSessionClosed);
         var method = await _db.PaymentMethods.AsNoTracking().FirstOrDefaultAsync(m => m.Id == paymentMethodId, ct);
         if (method is null)
             return Result.Failure<SalePaymentInfo>(Error.NotFound("Medio de pago", paymentMethodId));

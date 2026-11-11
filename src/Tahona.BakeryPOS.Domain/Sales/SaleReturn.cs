@@ -30,7 +30,7 @@ public sealed class SaleReturn : AuditableEntity, ITenantEntity
     public static SaleReturn Create(Sale sale, Guid cashSessionId, string reason, Guid approvedBy, DateTime at)
     {
         if (string.IsNullOrWhiteSpace(reason))
-            throw new DomainException("VALIDACION", "La devolución exige motivo.");
+            throw new DomainException("VALIDATION", "La devolución exige motivo.");
         return new SaleReturn
         {
             CompanyId = sale.CompanyId, SaleId = sale.Id, BranchId = sale.BranchId, CashSessionId = cashSessionId,
@@ -43,12 +43,12 @@ public sealed class SaleReturn : AuditableEntity, ITenantEntity
     public SaleReturnLine AddLine(SaleLine line, decimal quantity, (decimal Quantity, decimal Amount) alreadyReturned, bool restock)
     {
         if (quantity <= 0 || decimal.Round(quantity, 2) != quantity)
-            throw new DomainException("VALIDACION", "La cantidad devuelta debe ser mayor que 0 con máximo 2 decimales.");
+            throw new DomainException("VALIDATION", "La cantidad devuelta debe ser mayor que 0 con máximo 2 decimales.");
         if (_lines.Any(l => l.SaleLineId == line.Id))
-            throw new DomainException("VALIDACION", "Hay líneas repetidas en la devolución.");
+            throw new DomainException("VALIDATION", "Hay líneas repetidas en la devolución.");
         var available = line.Quantity - alreadyReturned.Quantity;
         if (quantity > available)
-            throw new DomainException("VALIDACION", $"{line.Description}: se devuelven máximo {available:0.##}.");
+            throw new DomainException("VALIDATION", $"{line.Description}: se devuelven máximo {available:0.##}.");
         // Value proportional to the line total; the last one returns the exact remainder (no rounding mismatches).
         var amount = quantity == available
             ? line.LineTotal - alreadyReturned.Amount

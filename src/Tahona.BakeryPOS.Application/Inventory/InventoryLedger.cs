@@ -45,7 +45,7 @@ public sealed class InventoryLedger
         if (location is null)
             return Result.Failure<StockLocation>(Error.NotFound("Ubicación", locationId));
         if (!_tenant.CanAccessBranch(location.BranchId))
-            return Result.Failure<StockLocation>(Error.SinAsignacionVigente);
+            return Result.Failure<StockLocation>(Error.NoCurrentAssignment);
         if (!location.IsActive)
             return Result.Failure<StockLocation>(Error.Validation("La ubicación está desactivada."));
         return Result.Success(location);
@@ -108,10 +108,10 @@ public sealed class InventoryLedger
                 created.Add(movement);
             }
         }
-        catch (DomainException e) when (e.ErrorCode == Error.ExistenciasInsuficientes.Code)
+        catch (DomainException e) when (e.ErrorCode == Error.InsufficientStock.Code)
         {
             var name = products[pending[created.Count].ProductId].Name;
-            return Result.Failure<IReadOnlyList<StockMovement>>(Error.ExistenciasInsuficientes with { Message = $"{name}: {e.Message}" });
+            return Result.Failure<IReadOnlyList<StockMovement>>(Error.InsufficientStock with { Message = $"{name}: {e.Message}" });
         }
 
         return Result.Success<IReadOnlyList<StockMovement>>([.. existing, .. created]);

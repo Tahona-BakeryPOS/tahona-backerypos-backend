@@ -44,7 +44,7 @@ public sealed class IntegrationInfrastructureTests
     public async Task OpenApi_document_is_published()
     {
         var doc = await _api.CreateClient().GetStringAsync("/openapi/v1.json");
-        Assert.Contains("/api/v1/sucursales", doc);
+        Assert.Contains("/api/v1/branches", doc);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class IntegrationInfrastructureTests
         var correlation = Guid.NewGuid().ToString("N");
         client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
         client.DefaultRequestHeaders.Add("X-Correlation-Id", correlation);
-        var response = await client.PostAsJsonAsync("/api/v1/sucursales", new { code = "AUD-1", name = "Auditada" });
+        var response = await client.PostAsJsonAsync("/api/v1/branches", new { code = "AUD-1", name = "Auditada" });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(correlation, response.Headers.GetValues("X-Correlation-Id").Single());
 

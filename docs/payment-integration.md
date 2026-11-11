@@ -45,13 +45,13 @@ third-party plugins and **will not be used** as a basis.
 
 ```
 POS                 API (Payments)                       Wompi
- │ POST /ventas/{id}/pagos ─► TX: payment + attempt 'created'
+ │ POST /sales/{id}/payments ─► TX: payment + attempt 'created'
  │                          (reference = attempt.id)
  │                          outside TX: POST transaction ──────────►
  │                          ◄── external id, PENDING (or timeout)
  │                          TX: attempt 'pending' (+ external_id) | 'unknown' on timeout
  │ ◄── { estado, accion: QR / push }
- │ GET /ventas/{id}/estado (polling 2–3 s)
+ │ GET /sales/{id} (polling 2–3 s)    
  │                                       ◄── webhook transaction.updated (signed)
  │                          TX: inbound_event (dedupe) → attempt 'approved' → confirm sale
  │ ◄── confirmed
@@ -65,7 +65,7 @@ POS                 API (Payments)                       Wompi
 
 | Risk | Control |
 |---|---|
-| The POS retries "charge" | `Idempotency-Key` on `POST /ventas/{id}/pagos` → same attempt |
+| The POS retries "charge" | `Idempotency-Key` on `POST /sales/{id}/payments` → same attempt |
 | Two active attempts for the same sale | A single `pending/unknown` attempt per payment; a new one only if the previous one is final and not approved |
 | Repeated webhook | `inbound_events` UQ(provider, external_event_id) or (provider, transaction id, status) — *exact key to verify* |
 | Forged webhook | Checksum validated with the events secret; invalid event → 401 and audit |

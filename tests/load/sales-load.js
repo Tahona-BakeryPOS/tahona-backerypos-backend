@@ -1,8 +1,8 @@
-// Prueba de carga básica con k6 (fase 10): varias cajas venden en efectivo al mismo tiempo.
-// Mide la latencia de crear venta + pagar y que no haya errores. Solo contra staging o local, nunca producción.
+// Basic load test with k6 (phase 10): several registers sell in cash at the same time.
+// It measures the latency of creating a sale + paying and that there are no errors. Only against staging or local, never production.
 //
-// Prepara antes (runbook "Prueba de carga"): una caja con sesión abierta por cada VU, o una sola caja compartida, y un
-// token de cajero con ventas.crear. Corre:
+// Prepare beforehand (runbook "Load test"): a register with an open session for each VU, or a single shared register, and a
+// cashier token with sales.create. Run:
 //   k6 run -e API_URL=https://staging.example.com/api/v1 -e TOKEN=... -e CASH_REGISTER_ID=... \
 //          -e PRODUCT_ID=... -e CASH_METHOD_ID=... -e PRICE=2500 tests/load/sales-load.js
 import http from 'k6/http';
@@ -11,11 +11,11 @@ import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 
 const API = __ENV.API_URL;
 if (!API || !(/localhost|127\.0\.0\.1|staging/.test(API) || __ENV.ALLOW_ANY_HOST === '1'))
-  throw new Error('API_URL debe ser local o de staging.');
+  throw new Error('API_URL must be local or staging.');
 
 export const options = {
   scenarios: {
-    // Hora pico de una panadería con varias sedes: hasta 20 cajas cobrando sin pausa durante 3 minutos.
+    // A bakery's peak hour with several branches: up to 20 registers charging non-stop for 3 minutes.
     rush: {
       executor: 'ramping-vus',
       startVUs: 1,
@@ -44,7 +44,7 @@ export default function () {
   const price = Number(__ENV.PRICE ?? 2500);
   const quantity = 1 + Math.floor(Math.random() * 3);
 
-  const created = http.post(`${API}/ventas`, JSON.stringify({
+  const created = http.post(`${API}/sales`, JSON.stringify({
     cashRegisterId: __ENV.CASH_REGISTER_ID,
     customerIdentification: null,
     lines: [{ productId: __ENV.PRODUCT_ID, quantity, discountAmount: 0, discountReason: null }],
@@ -52,7 +52,7 @@ export default function () {
   if (!check(created, { 'venta creada': (r) => r.status === 201 })) return;
   const sale = created.json();
 
-  const paid = http.post(`${API}/ventas/${sale.id}/pagos`, JSON.stringify({
+  const paid = http.post(`${API}/sales/${sale.id}/payments`, JSON.stringify({
     paymentMethodId: __ENV.CASH_METHOD_ID, amount: sale.total, amountTendered: sale.total, reference: null,
   }), { headers: headers(uuidv4()), tags: { step: 'pay' } });
   check(paid, {

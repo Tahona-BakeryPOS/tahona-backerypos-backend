@@ -39,7 +39,7 @@ public sealed class FiscalSettings : AuditableEntity, ITenantEntity
     public void SetCredentials(string encryptedUsername, string encryptedAccessKey)
     {
         if (string.IsNullOrWhiteSpace(encryptedUsername) || string.IsNullOrWhiteSpace(encryptedAccessKey))
-            throw new DomainException("VALIDACION", "El usuario y la llave de acceso de Siigo son obligatorios.");
+            throw new DomainException("VALIDATION", "El usuario y la llave de acceso de Siigo son obligatorios.");
         EncryptedUsername = encryptedUsername;
         EncryptedAccessKey = encryptedAccessKey;
     }
@@ -48,9 +48,9 @@ public sealed class FiscalSettings : AuditableEntity, ITenantEntity
         string consumerFinalIdentification, int retentionYears)
     {
         if (string.IsNullOrWhiteSpace(consumerFinalIdentification))
-            throw new DomainException("VALIDACION", "La identificación del consumidor final es obligatoria.");
+            throw new DomainException("VALIDATION", "La identificación del consumidor final es obligatoria.");
         if (retentionYears < 1)
-            throw new DomainException("VALIDACION", "La conservación debe ser de al menos 1 año.");
+            throw new DomainException("VALIDATION", "La conservación debe ser de al menos 1 año.");
         InvoiceDocumentTypeId = invoiceDocumentTypeId;
         CreditNoteDocumentTypeId = creditNoteDocumentTypeId;
         SellerId = sellerId;
@@ -62,7 +62,7 @@ public sealed class FiscalSettings : AuditableEntity, ITenantEntity
     public void SetActive(bool active)
     {
         if (active && !IsComplete)
-            throw new DomainException("VALIDACION", "Completa credenciales, tipo de comprobante, vendedor y grupo de inventario antes de activar.");
+            throw new DomainException("VALIDATION", "Completa credenciales, tipo de comprobante, vendedor y grupo de inventario antes de activar.");
         IsActive = active;
     }
 }
@@ -95,7 +95,7 @@ public sealed class FiscalMapping : AuditableEntity, ITenantEntity
     public void Set(string externalId)
     {
         if (string.IsNullOrWhiteSpace(externalId))
-            throw new DomainException("VALIDACION", "El id en Siigo es obligatorio.");
+            throw new DomainException("VALIDATION", "El id en Siigo es obligatorio.");
         ExternalId = externalId.Trim();
     }
 }

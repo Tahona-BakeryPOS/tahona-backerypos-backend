@@ -75,7 +75,7 @@ public interface IAppDbContext
 
     /// <summary>
     /// Sets the version (rowversion) the client read: if the row changed since then, saving fails
-    /// with CONFLICTO_VERSION (412). This is how If-Match is implemented.
+    /// with VERSION_CONFLICT (412). This is how If-Match is implemented.
     /// </summary>
     void ExpectVersion<T>(T entity, byte[] version) where T : class;
 

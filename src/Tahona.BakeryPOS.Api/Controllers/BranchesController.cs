@@ -11,7 +11,7 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>Branches of the token's company (US-1.3). An id of another company answers 404.</summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/sucursales")]
+[Route("api/v{version:apiVersion}/branches")]
 [ApiVersion("1.0")]
 [Authorize]
 [RequirePermission(Permissions.OrganizationManage)]
@@ -42,7 +42,7 @@ public sealed class BranchesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateBranchCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
-        return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/sucursales/{result.Value.Id}" : null);
+        return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/branches/{result.Value.Id}" : null);
     }
 
     /// <summary>Edits the branch. Requires If-Match with the ETag read.</summary>
@@ -55,7 +55,7 @@ public sealed class BranchesController : ControllerBase
         (await _mediator.Send(new UpdateBranchCommand(id, Request.IfMatch(), body.Name, body.Address, body.CityCode, body.Phone), ct))
             .ToVersionedResult(HttpContext, b => b.Version);
 
-    [HttpPost("{id:guid}/desactivar")]
+    [HttpPost("{id:guid}/deactivate")]
     [ProducesResponseType<BranchDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct) =>

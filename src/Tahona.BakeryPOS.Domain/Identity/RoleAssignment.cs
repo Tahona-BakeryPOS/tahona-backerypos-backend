@@ -21,7 +21,7 @@ public sealed class RoleAssignment : AuditableEntity, ITenantEntity
     public static RoleAssignment Create(Guid companyId, Guid membershipId, Guid roleId, Guid? branchId, DateTime validFrom, DateTime? validTo)
     {
         if (validTo is not null && validTo <= validFrom)
-            throw new DomainException("VALIDACION", "La vigencia debe terminar después de empezar.");
+            throw new DomainException("VALIDATION", "La vigencia debe terminar después de empezar.");
         return new RoleAssignment
         {
             CompanyId = companyId,

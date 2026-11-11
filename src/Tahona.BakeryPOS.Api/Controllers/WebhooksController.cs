@@ -12,7 +12,7 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 /// the raw body. Bold expects 200 in under 2 s; an invalid signature answers 401 and is recorded.
 /// </summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/webhooks/pagos")]
+[Route("api/v{version:apiVersion}/webhooks/payments")]
 [ApiVersion("1.0")]
 [AllowAnonymous]
 public sealed class WebhooksController : ControllerBase

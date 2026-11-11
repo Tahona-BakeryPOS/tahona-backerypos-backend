@@ -77,7 +77,7 @@ public sealed class CompanyProfileHandler :
     {
         var companyId = _tenant.RequiredCompanyId;
         var company = await _db.Companies.AsNoTracking().FirstOrDefaultAsync(c => c.Id == companyId, ct);
-        return company is null ? Result.Failure<CompanyDto>(Error.NoEncontrado) : Result.Success(CompanyDto.From(company));
+        return company is null ? Result.Failure<CompanyDto>(Error.ResourceNotFound) : Result.Success(CompanyDto.From(company));
     }
 
     public async Task<Result<CompanyDto>> Handle(UpdateMyCompanyCommand request, CancellationToken ct)
@@ -90,7 +90,7 @@ public sealed class CompanyProfileHandler :
         var companyId = _tenant.RequiredCompanyId;
         var company = await _db.Companies.FirstOrDefaultAsync(c => c.Id == companyId, ct);
         if (company is null)
-            return Result.Failure<CompanyDto>(Error.NoEncontrado);
+            return Result.Failure<CompanyDto>(Error.ResourceNotFound);
 
         _db.ExpectVersion(company, version.Value);
         company.UpdateContact(request.TradeName, request.Email, request.Phone, request.Address, request.CityCode, request.TimeZone);

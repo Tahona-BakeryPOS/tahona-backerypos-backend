@@ -67,7 +67,7 @@ internal sealed class BoldGateway : IBoldGateway
                 return new BoldCheckoutResult(BoldCheckoutOutcome.Sent, envelope?.Payload?.GetPropertyOrNull("integration_id"), null, null);
 
             var (code, text) = envelope?.FirstError() ?? ($"HTTP{(int)response.StatusCode}", response.ReasonPhrase ?? "Error");
-            _logger.LogWarning("Bold rechazó el cobro {Reference}: {Status} {Code} {Message}", request.Reference, (int)response.StatusCode, code, text);
+            _logger.LogWarning("Bold rejected the charge {Reference}: {Status} {Code} {Message}", request.Reference, (int)response.StatusCode, code, text);
             // A 5xx (AP001 included) does not guarantee the charge was not created: it is treated as unknown.
             return (int)response.StatusCode >= 500
                 ? new BoldCheckoutResult(BoldCheckoutOutcome.Unknown, null, code, text)
@@ -75,7 +75,7 @@ internal sealed class BoldGateway : IBoldGateway
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
-            _logger.LogWarning(e, "Sin respuesta de Bold al crear el cobro {Reference}", request.Reference);
+            _logger.LogWarning(e, "No response from Bold when creating the charge {Reference}", request.Reference);
             return new BoldCheckoutResult(BoldCheckoutOutcome.Unknown, null, null, "Sin respuesta de Bold.");
         }
     }

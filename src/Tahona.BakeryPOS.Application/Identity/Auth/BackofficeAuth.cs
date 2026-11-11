@@ -80,7 +80,7 @@ public sealed class BackofficeAuthHandler :
         if (user is null || !user.IsActive || !user.CanUseBackoffice)
         {
             _hasher.VerifyDummy(request.Password);
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated);
         }
 
         var check = await VerifyPasswordAsync(user, request.Password, ct);
@@ -94,7 +94,7 @@ public sealed class BackofficeAuthHandler :
         if (companies.Count == 0 && !user.IsPlatformAdmin)
         {
             await _db.SaveChangesAsync(ct);
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado with { Message = "El usuario no tiene acceso a ninguna empresa activa." });
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated with { Message = "El usuario no tiene acceso a ninguna empresa activa." });
         }
 
         var session = await _sessions.IssueBackofficeAsync(user, membership, ct);
@@ -106,9 +106,9 @@ public sealed class BackofficeAuthHandler :
     {
         var user = await CurrentUserAsync(ct);
         if (user is null)
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated);
         if (user.MustChangePassword)
-            return Result.Failure<AuthSessionDto>(Error.CambioContrasenaRequerido);
+            return Result.Failure<AuthSessionDto>(Error.PasswordChangeRequired);
 
         var membership = await _sessions.ActiveMembershipAsync(user.Id, request.CompanyId, ct);
         if (membership is null)
@@ -126,7 +126,7 @@ public sealed class BackofficeAuthHandler :
         var now = Now;
         var token = await FindRefreshTokenAsync(request.RefreshToken, ct);
         if (token is null)
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated);
 
         if (!token.IsActive(now))
         {
@@ -136,7 +136,7 @@ public sealed class BackofficeAuthHandler :
                 await _sessions.RevokeAllAsync(token.UserId, null, ct);
                 await _db.SaveChangesAsync(ct);
             }
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated);
         }
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == token.UserId, ct);
@@ -150,7 +150,7 @@ public sealed class BackofficeAuthHandler :
         {
             token.Revoke(now);
             await _db.SaveChangesAsync(ct);
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated);
         }
 
         var session = await _sessions.IssueBackofficeAsync(user!, membership, ct, token);
@@ -173,11 +173,11 @@ public sealed class BackofficeAuthHandler :
     {
         var user = await CurrentUserAsync(ct);
         if (user is null || !user.CanUseBackoffice)
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated);
 
         var check = await VerifyPasswordAsync(user, request.CurrentPassword, ct);
         if (check.IsFailure)
-            return Result.Failure<AuthSessionDto>(check.Error.Code == Error.NoAutenticado.Code ? Error.ContrasenaIncorrecta : check.Error);
+            return Result.Failure<AuthSessionDto>(check.Error.Code == Error.Unauthenticated.Code ? Error.IncorrectPassword : check.Error);
 
         user.ChangePassword(_hasher.Hash(request.NewPassword));
         await _sessions.RevokeAllAsync(user.Id, null, ct);
@@ -196,13 +196,13 @@ public sealed class BackofficeAuthHandler :
     {
         var now = Now;
         if (user.IsLockedOut(now))
-            return Result.Failure(Error.UsuarioBloqueado(user.LockedUntil!.Value));
+            return Result.Failure(Error.UserLocked(user.LockedUntil!.Value));
 
         if (!_hasher.Verify(password, user.PasswordHash!))
         {
             var locked = user.RegisterFailedLogin(now);
             await _db.SaveChangesAsync(ct);
-            return Result.Failure(locked ? Error.UsuarioBloqueado(user.LockedUntil!.Value) : Error.NoAutenticado);
+            return Result.Failure(locked ? Error.UserLocked(user.LockedUntil!.Value) : Error.Unauthenticated);
         }
 
         user.RegisterSuccessfulLogin();

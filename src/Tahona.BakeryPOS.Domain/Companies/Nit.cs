@@ -26,9 +26,9 @@ public sealed record Nit
     {
         var digits = new string((number ?? string.Empty).Where(char.IsDigit).ToArray());
         if (digits.Length is < 6 or > MaxDigits)
-            throw new DomainException("NIT_INVALIDO", "El NIT debe tener entre 6 y 15 dígitos.");
+            throw new DomainException("INVALID_NIT", "El NIT debe tener entre 6 y 15 dígitos.");
         if (ComputeCheckDigit(digits) != checkDigit)
-            throw new DomainException("NIT_INVALIDO", "El dígito de verificación no corresponde al NIT.");
+            throw new DomainException("INVALID_NIT", "El dígito de verificación no corresponde al NIT.");
         return new Nit(digits, checkDigit);
     }
 

@@ -25,7 +25,7 @@ public sealed class TenantIsolationTests
     [Fact]
     public async Task List_returns_only_the_branches_of_the_token_company()
     {
-        var branches = await _api.ClientFor(_api.Data.CompanyA).GetFromJsonAsync<List<BranchDto>>("/api/v1/sucursales");
+        var branches = await _api.ClientFor(_api.Data.CompanyA).GetFromJsonAsync<List<BranchDto>>("/api/v1/branches");
 
         Assert.NotNull(branches);
         Assert.Contains(branches, b => b.Id == _api.Data.BranchA);
@@ -35,11 +35,11 @@ public sealed class TenantIsolationTests
     [Fact]
     public async Task Reading_another_company_branch_by_id_answers_not_found()
     {
-        var response = await _api.ClientFor(_api.Data.CompanyA).GetAsync($"/api/v1/sucursales/{_api.Data.BranchB}");
+        var response = await _api.ClientFor(_api.Data.CompanyA).GetAsync($"/api/v1/branches/{_api.Data.BranchB}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        Assert.Equal("NO_ENCONTRADO", body!.Codigo);
+        Assert.Equal("NOT_FOUND", body!.Code);
         Assert.False(string.IsNullOrEmpty(body.CorrelationId));
     }
 
@@ -49,7 +49,7 @@ public sealed class TenantIsolationTests
         var client = _api.ClientFor(_api.Data.CompanyB);
         client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
         // The body has no company; an extra "companyId" field is ignored.
-        var response = await client.PostAsJsonAsync("/api/v1/sucursales",
+        var response = await client.PostAsJsonAsync("/api/v1/branches",
             new { code = "B-NORTE", name = "Sede Norte", companyId = _api.Data.CompanyA });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -65,7 +65,7 @@ public sealed class TenantIsolationTests
     {
         var client = _api.ClientFor(_api.Data.CompanyB);
         client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
-        var response = await client.PostAsJsonAsync("/api/v1/sucursales", new { code = "A1", name = "Otra A1" });
+        var response = await client.PostAsJsonAsync("/api/v1/branches", new { code = "A1", name = "Otra A1" });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
@@ -73,8 +73,8 @@ public sealed class TenantIsolationTests
     [Fact]
     public async Task Requests_without_token_or_permission_are_rejected()
     {
-        var anonymous = await _api.CreateClient().GetAsync("/api/v1/sucursales");
-        var noPermission = await _api.ClientFor(_api.Data.CompanyA, "otro.permiso").GetAsync("/api/v1/sucursales");
+        var anonymous = await _api.CreateClient().GetAsync("/api/v1/branches");
+        var noPermission = await _api.ClientFor(_api.Data.CompanyA, "otro.permiso").GetAsync("/api/v1/branches");
 
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, noPermission.StatusCode);
@@ -84,9 +84,9 @@ public sealed class TenantIsolationTests
     public async Task Token_without_company_sees_nothing_and_cannot_create()
     {
         var client = _api.ClientFor(companyId: null);
-        var list = await client.GetFromJsonAsync<List<BranchDto>>("/api/v1/sucursales");
+        var list = await client.GetFromJsonAsync<List<BranchDto>>("/api/v1/branches");
         client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
-        var create = await client.PostAsJsonAsync("/api/v1/sucursales", new { code = "X1", name = "X" });
+        var create = await client.PostAsJsonAsync("/api/v1/branches", new { code = "X1", name = "X" });
 
         Assert.Empty(list!);
         Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
@@ -113,7 +113,7 @@ public sealed class TenantIsolationTests
     private AppDbContext NewContext(ITenantContext? tenant) =>
         _api.NewContext(tenant);
 
-    private sealed record ErrorResponse(string Codigo, string Mensaje, string CorrelationId);
+    private sealed record ErrorResponse(string Code, string Message, string CorrelationId);
 }
 
 /// <summary>Fixed company context to test the DbContext without HTTP.</summary>

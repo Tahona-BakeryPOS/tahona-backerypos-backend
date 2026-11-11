@@ -24,14 +24,14 @@ public sealed class RequirePermissionAttribute : Attribute, IAuthorizationFilter
         var http = context.HttpContext;
         if (http.User.Identity?.IsAuthenticated != true)
         {
-            context.Result = new ObjectResult(ErrorBody.From("NO_AUTENTICADO", "Debe iniciar sesión.", http))
+            context.Result = new ObjectResult(ErrorBody.From("UNAUTHENTICATED", "Debe iniciar sesión.", http))
             { StatusCode = StatusCodes.Status401Unauthorized };
             return;
         }
 
         if (!http.User.FindAll(HttpTenantContext.PermissionClaim).Any(c => c.Value == _permission))
         {
-            context.Result = new ObjectResult(ErrorBody.From("SIN_PERMISO", $"No tiene el permiso requerido: {_permission}", http))
+            context.Result = new ObjectResult(ErrorBody.From("PERMISSION_DENIED", $"No tiene el permiso requerido: {_permission}", http))
             { StatusCode = StatusCodes.Status403Forbidden };
         }
     }

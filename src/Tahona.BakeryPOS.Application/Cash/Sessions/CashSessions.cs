@@ -123,14 +123,14 @@ public sealed class CashSessionsHandler :
         if (register is null)
             return Result.Failure<CashSessionDto>(Error.NotFound("Caja", request.CashRegisterId));
         if (!_tenant.CanAccessBranch(register.BranchId))
-            return Result.Failure<CashSessionDto>(Error.SinAsignacionVigente);
+            return Result.Failure<CashSessionDto>(Error.NoCurrentAssignment);
         if (!register.IsActive)
             return Result.Failure<CashSessionDto>(Error.Validation("La caja está desactivada."));
         // The filtered unique index resolves the race between two devices opening at the same time.
         if (await _db.CashSessions.AnyAsync(s => s.CashRegisterId == register.Id && s.Status != CashSessionStatus.Closed, ct))
-            return Result.Failure<CashSessionDto>(Error.CajaYaAbierta);
+            return Result.Failure<CashSessionDto>(Error.CashSessionAlreadyOpen);
 
-        var userId = _tenant.UserId ?? throw new InvalidOperationException("Abrir caja requiere un usuario en sesión.");
+        var userId = _tenant.UserId ?? throw new InvalidOperationException("Opening a cash session requires a user in session.");
         var session = CashSession.Open(register.CompanyId, register.BranchId, register.Id, userId, request.OpeningAmount, Now);
         _db.CashSessions.Add(session);
         if (request.OpeningAmount > 0)
@@ -144,7 +144,7 @@ public sealed class CashSessionsHandler :
         var session = await _db.CashSessions.AsNoTracking()
             .FirstOrDefaultAsync(s => s.CashRegisterId == request.CashRegisterId && s.Status != CashSessionStatus.Closed, ct);
         if (session is null || !_tenant.CanAccessBranch(session.BranchId))
-            return Result.Failure<CashSessionDto>(Error.NoEncontrado with { Message = "La caja no tiene una sesión abierta." });
+            return Result.Failure<CashSessionDto>(Error.ResourceNotFound with { Message = "La caja no tiene una sesión abierta." });
         return Result.Success((await ToDtosAsync([session], ct))[0]);
     }
 
@@ -154,11 +154,11 @@ public sealed class CashSessionsHandler :
         if (session.IsFailure)
             return Result.Failure<CashMovementDto>(session.Error);
         if (!session.Value.IsOpen)
-            return Result.Failure<CashMovementDto>(Error.CajaCerrada);
+            return Result.Failure<CashMovementDto>(Error.CashSessionClosed);
 
         var kind = request.Kind == "expense" ? CashMovementKind.Expense : CashMovementKind.Income;
         if (kind == CashMovementKind.Expense && !_tenant.HasPermission(Permissions.CashWithdrawal))
-            return Result.Failure<CashMovementDto>(Error.SinPermiso with { Message = "Los retiros los autoriza un superior (permiso caja.retiro)." });
+            return Result.Failure<CashMovementDto>(Error.PermissionDenied with { Message = "Los retiros los autoriza un superior (permiso caja.retiro)." });
 
         var reason = await _db.CashReasons.AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.ReasonId, ct);
         if (reason is null)
@@ -170,7 +170,7 @@ public sealed class CashSessionsHandler :
         {
             var expected = CashMovement.Expected(await MovementsOfAsync(session.Value.Id, ct));
             if (request.Amount > expected)
-                return Result.Failure<CashMovementDto>(Error.RetiroExcedeSaldo with { Message = $"El retiro supera el efectivo esperado ({expected:N0})." });
+                return Result.Failure<CashMovementDto>(Error.WithdrawalExceedsBalance with { Message = $"El retiro supera el efectivo esperado ({expected:N0})." });
         }
 
         var movement = CashMovement.Create(session.Value, kind, request.Amount, Now, _tenant.UserId, reason.Id,
@@ -207,14 +207,14 @@ public sealed class CashSessionsHandler :
         if (session.IsFailure)
             return Result.Failure<CashSessionDto>(session.Error);
         if (!session.Value.IsOpen)
-            return Result.Failure<CashSessionDto>(Error.CajaCerrada);
+            return Result.Failure<CashSessionDto>(Error.CashSessionClosed);
 
         var pending = await _pending.CountForCashSessionAsync(request.SessionId, ct);
         if (pending > 0)
-            return Result.Failure<CashSessionDto>(Error.PagoPendiente(pending));
+            return Result.Failure<CashSessionDto>(Error.PaymentPending(pending));
 
         var expected = CashMovement.Expected(await MovementsOfAsync(request.SessionId, ct));
-        var userId = _tenant.UserId ?? throw new InvalidOperationException("Cerrar caja requiere un usuario en sesión.");
+        var userId = _tenant.UserId ?? throw new InvalidOperationException("Closing a cash session requires a user in session.");
         session.Value.Close(expected, request.CountedAmount, userId, Now, request.Notes);
         await _db.SaveChangesAsync(ct);
         return Result.Success((await ToDtosAsync([session.Value], ct))[0]);
@@ -249,7 +249,7 @@ public sealed class CashSessionsHandler :
         var session = await source.FirstOrDefaultAsync(s => s.Id == id, ct);
         if (session is null)
             return Result.Failure<CashSession>(Error.NotFound("Sesión de caja", id));
-        return _tenant.CanAccessBranch(session.BranchId) ? Result.Success(session) : Result.Failure<CashSession>(Error.SinAsignacionVigente);
+        return _tenant.CanAccessBranch(session.BranchId) ? Result.Success(session) : Result.Failure<CashSession>(Error.NoCurrentAssignment);
     }
 
     private async Task<List<CashMovement>> MovementsOfAsync(Guid sessionId, CancellationToken ct) =>
@@ -339,11 +339,11 @@ public sealed class CashDrawer : ICashDrawer
             return Result.Success();
         var session = await _db.CashSessions.FirstOrDefaultAsync(s => s.Id == cashSessionId, ct);
         if (session is null || !session.IsOpen)
-            return Result.Failure(Error.CajaCerrada);
+            return Result.Failure(Error.CashSessionClosed);
         var movements = await _db.CashMovements.AsNoTracking().Where(m => m.CashSessionId == cashSessionId).ToListAsync(ct);
         var expected = CashMovement.Expected(movements);
         if (amount > expected)
-            return Result.Failure(Error.RetiroExcedeSaldo with { Message = $"No hay efectivo suficiente en la caja para devolver {amount:N0} (esperado {expected:N0})." });
+            return Result.Failure(Error.WithdrawalExceedsBalance with { Message = $"No hay efectivo suficiente en la caja para devolver {amount:N0} (esperado {expected:N0})." });
         _db.CashMovements.Add(CashMovement.Create(session, CashMovementKind.RefundCash, amount, _clock.GetUtcNow().UtcDateTime, _tenant.UserId,
             authorizedBy: authorizedBy, note: sourceType == RefundSources.Void ? "Anulación de venta" : "Devolución de venta",
             sourceType: sourceType, sourceId: sourceId));

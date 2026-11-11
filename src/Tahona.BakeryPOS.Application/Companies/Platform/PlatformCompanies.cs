@@ -91,7 +91,7 @@ public sealed class PlatformCompaniesHandler :
     {
         var nit = Domain.Companies.Nit.Create(request.Nit, request.NitCheckDigit);
         if (await _db.Companies.IgnoreQueryFilters([QueryFilters.SoftDelete]).AnyAsync(c => c.NitNumber == nit.Number, ct))
-            return Result.Failure<CreatedCompanyDto>(Error.NitDuplicado);
+            return Result.Failure<CreatedCompanyDto>(Error.DuplicateNit);
 
         var company = Company.Create(request.LegalName, nit, request.TaxRegime, request.TaxResponsibilities, request.Email,
             request.TradeName, request.Phone, request.Address, request.CityCode, request.TimeZone);

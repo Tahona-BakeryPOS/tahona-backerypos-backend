@@ -21,7 +21,7 @@ public sealed class Membership : AuditableEntity, ITenantEntity
     public static Membership Create(Guid companyId, Guid userId, string? pinHash)
     {
         if (companyId == Guid.Empty || userId == Guid.Empty)
-            throw new DomainException("VALIDACION", "La pertenencia necesita empresa y usuario.");
+            throw new DomainException("VALIDATION", "La pertenencia necesita empresa y usuario.");
         return new Membership { CompanyId = companyId, UserId = userId, PinHash = pinHash };
     }
 

@@ -60,9 +60,9 @@ public sealed class AuthTests
         var client = _api.ClientWithToken(session.AccessToken);
         var select = await client.PostAsJsonAsync("/api/v1/auth/select-company", new { companyId = A.CompanyId });
         Assert.Equal(HttpStatusCode.Forbidden, select.StatusCode);
-        Assert.Contains("CAMBIO_CONTRASENA_REQUERIDO", await select.Content.ReadAsStringAsync());
+        Assert.Contains("PASSWORD_CHANGE_REQUIRED", await select.Content.ReadAsStringAsync());
 
-        var weak = await client.PostAsJsonAsync("/api/v1/auth/cambiar-contrasena", new { currentPassword = temporary, newPassword = "corta" });
+        var weak = await client.PostAsJsonAsync("/api/v1/auth/change-password", new { currentPassword = temporary, newPassword = "corta" });
         Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
     }
 
@@ -71,13 +71,13 @@ public sealed class AuthTests
     {
         var (email, temporary) = await CreateBackofficeUserAsync(A, "contador");
         // B's owner adds the same person by their email: they do not receive a new password.
-        var addedInB = await ApiFactory.ReadAsync<CreatedUserDto>(await _api.ClientWithToken(B.OwnerToken).PostAsJsonAsync("/api/v1/usuarios",
+        var addedInB = await ApiFactory.ReadAsync<CreatedUserDto>(await _api.ClientWithToken(B.OwnerToken).PostAsJsonAsync("/api/v1/users",
             new { fullName = "Otro nombre", email, assignments = new[] { new { roleId = B.CashierRoleId } } }));
         Assert.Null(addedInB.TemporaryPassword);
 
         var first = await LoginAsync(email, temporary);
         var changed = await ApiFactory.ReadAsync<AuthSessionDto>(await _api.ClientWithToken(first.AccessToken)
-            .PostAsJsonAsync("/api/v1/auth/cambiar-contrasena", new { currentPassword = temporary, newPassword = "OtraClave2026" }));
+            .PostAsJsonAsync("/api/v1/auth/change-password", new { currentPassword = temporary, newPassword = "OtraClave2026" }));
 
         Assert.Null(changed.CompanyId);
         Assert.Equal(new[] { A.CompanyId, B.CompanyId }.Order(), changed.Companies.Select(c => c.Id).Order());
@@ -137,7 +137,7 @@ public sealed class AuthTests
     public async Task Cashier_enters_with_pin_on_a_paired_device_with_branch_scope()
     {
         var device = _api.DeviceClient(A.DeviceToken);
-        var users = await device.GetFromJsonAsync<List<DeviceUserDto>>("/api/v1/dispositivo/usuarios");
+        var users = await device.GetFromJsonAsync<List<DeviceUserDto>>("/api/v1/device/users");
         Assert.Contains(users!, u => u.UserId == A.CashierUserId);
         Assert.DoesNotContain(users!, u => u.UserId == A.OwnerUserId); // no PIN
 
@@ -167,7 +167,7 @@ public sealed class AuthTests
 
         Assert.Equal(HttpStatusCode.Locked, locked.StatusCode);
         Assert.Equal(HttpStatusCode.Locked, evenRight.StatusCode);
-        Assert.Contains("USUARIO_BLOQUEADO", await evenRight.Content.ReadAsStringAsync());
+        Assert.Contains("USER_LOCKED", await evenRight.Content.ReadAsStringAsync());
 
         await using var db = _api.NewContext();
         var membership = await db.Memberships.IgnoreQueryFilters([QueryFilters.Tenant]).SingleAsync(m => m.UserId == userId);
@@ -182,7 +182,7 @@ public sealed class AuthTests
     {
         var owner = _api.ClientWithToken(A.OwnerToken);
         var otherBranch = await ApiFactory.ReadAsync<Tahona.BakeryPOS.Application.Companies.Branches.BranchDto>(
-            await ApiFactory.PostIdempotent(owner, "/api/v1/sucursales", new { code = "A-OTRA", name = "Otra sede" }));
+            await ApiFactory.PostIdempotent(owner, "/api/v1/branches", new { code = "A-OTRA", name = "Otra sede" }));
         var userId = await CreateCashierAsync(A, "Cajero de otra sede", "1357", otherBranch.Id);
 
         var response = await PinLogin(_api.DeviceClient(A.DeviceToken), userId, "1357");
@@ -194,18 +194,18 @@ public sealed class AuthTests
     public async Task Deactivated_device_and_unknown_token_are_rejected()
     {
         var owner = _api.ClientWithToken(A.OwnerToken);
-        var code = await ApiFactory.ReadAsync<PairingCodeDto>(await owner.PostAsync($"/api/v1/cajas/{A.CashRegisterId}/codigos-vinculacion", null));
-        var paired = await ApiFactory.ReadAsync<PairedDeviceDto>(await _api.CreateClient().PostAsJsonAsync("/api/v1/dispositivo/vincular",
+        var code = await ApiFactory.ReadAsync<PairingCodeDto>(await owner.PostAsync($"/api/v1/cash-registers/{A.CashRegisterId}/pairing-codes", null));
+        var paired = await ApiFactory.ReadAsync<PairedDeviceDto>(await _api.CreateClient().PostAsJsonAsync("/api/v1/device/pair",
             new { code = code.Code.ToLowerInvariant(), deviceName = "Equipo temporal" }));
-        var reused = await _api.CreateClient().PostAsJsonAsync("/api/v1/dispositivo/vincular", new { code = code.Code, deviceName = "Otro" });
+        var reused = await _api.CreateClient().PostAsJsonAsync("/api/v1/device/pair", new { code = code.Code, deviceName = "Otro" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, reused.StatusCode);
 
-        await owner.PostAsync($"/api/v1/dispositivos/{paired.DeviceId}/desactivar", null);
+        await owner.PostAsync($"/api/v1/devices/{paired.DeviceId}/deactivate", null);
         var afterDeactivation = await PinLogin(_api.DeviceClient(paired.DeviceToken), A.CashierUserId, ApiFactory.CashierPin);
         var unknown = await PinLogin(_api.DeviceClient("token-inventado"), A.CashierUserId, ApiFactory.CashierPin);
 
         Assert.Equal(HttpStatusCode.Forbidden, afterDeactivation.StatusCode);
-        Assert.Contains("DISPOSITIVO_NO_VINCULADO", await afterDeactivation.Content.ReadAsStringAsync());
+        Assert.Contains("DEVICE_NOT_PAIRED", await afterDeactivation.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.Forbidden, unknown.StatusCode);
     }
 
@@ -224,14 +224,14 @@ public sealed class AuthTests
     private async Task<(string Email, string TemporaryPassword)> CreateBackofficeUserAsync(ApiFactory.TenantSeed tenant, string name)
     {
         var email = $"{name}-{Guid.NewGuid():N}@prueba.test";
-        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await _api.ClientWithToken(tenant.OwnerToken).PostAsJsonAsync("/api/v1/usuarios",
+        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await _api.ClientWithToken(tenant.OwnerToken).PostAsJsonAsync("/api/v1/users",
             new { fullName = name, email, assignments = new[] { new { roleId = tenant.CashierRoleId } } }));
         return (email, created.TemporaryPassword!);
     }
 
     private async Task<Guid> CreateCashierAsync(ApiFactory.TenantSeed tenant, string name, string pin, Guid? branchId = null)
     {
-        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await _api.ClientWithToken(tenant.OwnerToken).PostAsJsonAsync("/api/v1/usuarios",
+        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await _api.ClientWithToken(tenant.OwnerToken).PostAsJsonAsync("/api/v1/users",
             new { fullName = name, pin, assignments = new[] { new { roleId = tenant.CashierRoleId, branchId = branchId ?? tenant.BranchId } } }));
         return created.User.Id;
     }

@@ -24,17 +24,17 @@ public sealed class SaleReturnsController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet("devoluciones")]
+    [HttpGet("returns")]
     [RequirePermission(Permissions.ReportsView)]
     [ProducesResponseType<PagedResult<SaleReturnListItemDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] Guid? sucursalId,
+    public async Task<IActionResult> GetAll([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] Guid? branchId,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
-        (await _mediator.Send(new GetSaleReturnsQuery(desde, hasta, sucursalId, page, pageSize), ct)).ToActionResult(HttpContext);
+        (await _mediator.Send(new GetSaleReturnsQuery(from, to, branchId, page, pageSize), ct)).ToActionResult(HttpContext);
 
     /// <summary>Colombian days (yyyy-MM-dd) inclusive; sold excludes voided, returns are separate, and net.</summary>
-    [HttpGet("informes/ventas")]
+    [HttpGet("reports/sales")]
     [RequirePermission(Permissions.ReportsView)]
     [ProducesResponseType<SalesReportDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Report([FromQuery] DateOnly desde, [FromQuery] DateOnly hasta, [FromQuery] Guid? sucursalId, CancellationToken ct) =>
-        (await _mediator.Send(new GetSalesReportQuery(desde, hasta, sucursalId), ct)).ToActionResult(HttpContext);
+    public async Task<IActionResult> Report([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] Guid? branchId, CancellationToken ct) =>
+        (await _mediator.Send(new GetSalesReportQuery(from, to, branchId), ct)).ToActionResult(HttpContext);
 }

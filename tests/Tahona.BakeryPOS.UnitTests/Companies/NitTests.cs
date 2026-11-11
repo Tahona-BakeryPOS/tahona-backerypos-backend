@@ -26,7 +26,7 @@ public class NitTests
     public void Rejects_a_wrong_check_digit()
     {
         var ex = Assert.Throws<DomainException>(() => Nit.Create("800197268", 5));
-        Assert.Equal("NIT_INVALIDO", ex.ErrorCode);
+        Assert.Equal("INVALID_NIT", ex.ErrorCode);
     }
 
     [Theory]

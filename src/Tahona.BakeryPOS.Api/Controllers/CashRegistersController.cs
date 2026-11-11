@@ -12,7 +12,7 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>The company's cash registers and the codes to pair devices to them.</summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/cajas")]
+[Route("api/v{version:apiVersion}/cash-registers")]
 [ApiVersion("1.0")]
 [Authorize]
 [RequirePermission(Permissions.OrganizationManage)]
@@ -39,7 +39,7 @@ public sealed class CashRegistersController : ControllerBase
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
     /// <summary>One-time code (15 min) to pair a device to this cash register.</summary>
-    [HttpPost("{id:guid}/codigos-vinculacion")]
+    [HttpPost("{id:guid}/pairing-codes")]
     [ProducesResponseType<PairingCodeDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreatePairingCode(Guid id, CancellationToken ct) =>

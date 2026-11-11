@@ -37,7 +37,7 @@ public class SaleReversalTests
 
         sale.RegisterReturn(1_000m);
         var e = Assert.Throws<DomainException>(() => sale.Void("Cliente desistió", Guid.NewGuid(), Now));
-        Assert.Equal("ANULACION_NO_PERMITIDA", e.ErrorCode);
+        Assert.Equal("VOID_NOT_ALLOWED", e.ErrorCode);
     }
 
     [Fact]

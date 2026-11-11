@@ -24,7 +24,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connection = configuration.GetConnectionString(AppDatabase.ConnectionStringName)
-            ?? throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection (PostgreSQL).");
+            ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection (PostgreSQL) is missing.");
 
         // One factory per request (scoped) so that each context receives the request's ITenantContext;
         // the request's context is shared between IAppDbContext and IOutbox (same transaction).
@@ -78,7 +78,7 @@ public static class DependencyInjection
         var jwt = configuration.GetSection(JwtOptions.Section).Get<JwtOptions>() ?? new JwtOptions();
         if (string.IsNullOrWhiteSpace(jwt.Secret) || jwt.Secret.Length < JwtOptions.MinSecretLength)
             throw new InvalidOperationException(
-                $"Jwt:Secret es obligatorio y debe tener al menos {JwtOptions.MinSecretLength} caracteres (user-secrets o variable Jwt__Secret).");
+                $"Jwt:Secret is required and must be at least {JwtOptions.MinSecretLength} characters long (user-secrets or the Jwt__Secret variable).");
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.Section));
         services.TryAddSingleton(TimeProvider.System);

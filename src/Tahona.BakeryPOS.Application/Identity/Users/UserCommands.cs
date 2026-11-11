@@ -114,7 +114,7 @@ public sealed class UserCommandsHandler :
         if (user is not null)
         {
             if (await _db.Memberships.AnyAsync(m => m.UserId == user.Id, ct))
-                return Result.Failure<CreatedUserDto>(Error.CorreoEnUso);
+                return Result.Failure<CreatedUserDto>(Error.EmailInUse);
         }
         else
         {
@@ -148,9 +148,9 @@ public sealed class UserCommandsHandler :
         if (!request.IsActive && membership.IsActive)
         {
             if (request.UserId == _tenant.UserId)
-                return Result.Failure<UserDto>(Error.AutoDesactivacion);
+                return Result.Failure<UserDto>(Error.SelfDeactivation);
             if (!await HasOtherActiveOwnerAsync(excludeMembershipId: membership.Id, excludeAssignmentId: null, ct))
-                return Result.Failure<UserDto>(Error.UltimoPropietario);
+                return Result.Failure<UserDto>(Error.LastOwner);
             membership.Deactivate();
             await _sessions.RevokeAllAsync(user.Id, membership.CompanyId, ct);
         }
@@ -164,7 +164,7 @@ public sealed class UserCommandsHandler :
             var shared = await _db.Memberships.IgnoreQueryFilters([QueryFilters.Tenant])
                 .AnyAsync(m => m.UserId == user.Id && m.Id != membership.Id, ct);
             if (shared || user.IsPlatformAdmin)
-                return Result.Failure<UserDto>(Error.UsuarioCompartido);
+                return Result.Failure<UserDto>(Error.SharedUser);
             user.Rename(request.FullName);
         }
 
@@ -189,7 +189,7 @@ public sealed class UserCommandsHandler :
         var duplicate = await _db.RoleAssignments.AnyAsync(a => a.MembershipId == membership.Id && a.RoleId == request.RoleId
             && a.BranchId == request.BranchId && (a.ValidTo == null || a.ValidTo > now), ct);
         if (duplicate)
-            return Result.Failure<AssignmentDto>(Error.AsignacionDuplicada);
+            return Result.Failure<AssignmentDto>(Error.DuplicateAssignment);
 
         var assignment = RoleAssignment.Create(membership.CompanyId, membership.Id, request.RoleId, request.BranchId,
             request.ValidFrom ?? now, request.ValidTo);
@@ -211,7 +211,7 @@ public sealed class UserCommandsHandler :
             return Result.Failure(Error.NotFound("Asignación", request.AssignmentId));
 
         if (!await HasOtherActiveOwnerAsync(excludeMembershipId: null, excludeAssignmentId: assignment.Id, ct))
-            return Result.Failure(Error.UltimoPropietario);
+            return Result.Failure(Error.LastOwner);
 
         assignment.End(Now);
         await _db.SaveChangesAsync(ct);

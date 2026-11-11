@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Restaurar primero (capa cacheable): solo los .csproj
+# Restore first (cacheable layer): only the .csproj files
 COPY Tahona.BakeryPOS.sln ./
 COPY src/Tahona.BakeryPOS.Api/Tahona.BakeryPOS.Api.csproj src/Tahona.BakeryPOS.Api/
 COPY src/Tahona.BakeryPOS.Application/Tahona.BakeryPOS.Application.csproj src/Tahona.BakeryPOS.Application/
@@ -16,7 +16,7 @@ RUN dotnet publish src/Tahona.BakeryPOS.Api/Tahona.BakeryPOS.Api.csproj -c Relea
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
-# Llaves de Data Protection (DataProtection__KeysPath=/keys): el volumen nombrado hereda este dueño.
+# Data Protection keys (DataProtection__KeysPath=/keys): the named volume inherits this owner.
 RUN mkdir -p /keys && chown $APP_UID /keys
 USER $APP_UID
 EXPOSE 8080

@@ -74,11 +74,11 @@ public sealed class DeviceAuthHandler :
         var pairing = await _db.DevicePairingCodes.IgnoreQueryFilters([QueryFilters.Tenant])
             .FirstOrDefaultAsync(p => p.CodeHash == hash && p.ConsumedAt == null, ct);
         if (pairing is null || !pairing.IsUsable(now))
-            return Result.Failure<PairedDeviceDto>(Error.CodigoVinculacionInvalido);
+            return Result.Failure<PairedDeviceDto>(Error.InvalidPairingCode);
 
         var register = await _registers.FindForDeviceAsync(pairing.CashRegisterId, ct);
         if (register is null || !register.IsActive)
-            return Result.Failure<PairedDeviceDto>(Error.CodigoVinculacionInvalido);
+            return Result.Failure<PairedDeviceDto>(Error.InvalidPairingCode);
 
         var token = SecretTokens.NewToken();
         var device = Device.Create(pairing.CompanyId, register.Id, request.DeviceName, SecretTokens.Hash(token));
@@ -132,23 +132,23 @@ public sealed class DeviceAuthHandler :
         if (membership?.PinHash is null || user is null)
         {
             _hasher.VerifyDummy(request.Pin);
-            return Result.Failure<AuthSessionDto>(Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(Error.Unauthenticated);
         }
 
         if (membership.IsPinLocked(now))
-            return Result.Failure<AuthSessionDto>(Error.UsuarioBloqueado(membership.PinLockedUntil!.Value));
+            return Result.Failure<AuthSessionDto>(Error.UserLocked(membership.PinLockedUntil!.Value));
 
         if (!_hasher.Verify(request.Pin, membership.PinHash))
         {
             // The membership change is left in the audit trail: this is how the lockout gets recorded (US-2.4).
             var locked = membership.RegisterFailedPin(now);
             await _db.SaveChangesAsync(ct);
-            return Result.Failure<AuthSessionDto>(locked ? Error.UsuarioBloqueado(membership.PinLockedUntil!.Value) : Error.NoAutenticado);
+            return Result.Failure<AuthSessionDto>(locked ? Error.UserLocked(membership.PinLockedUntil!.Value) : Error.Unauthenticated);
         }
 
         var grant = await _sessions.GrantOfAsync(membership.Id, register.BranchId, ct);
         if (!grant.HasAnyAssignment)
-            return Result.Failure<AuthSessionDto>(Error.SinAsignacionVigente);
+            return Result.Failure<AuthSessionDto>(Error.NoCurrentAssignment);
 
         membership.RegisterSuccessfulPin();
         device.Touch(now);
@@ -159,14 +159,14 @@ public sealed class DeviceAuthHandler :
     private async Task<Result<(Device Device, CashRegisterSummary Register)>> ResolveDeviceAsync(string? token, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(token))
-            return Result.Failure<(Device, CashRegisterSummary)>(Error.DispositivoNoVinculado);
+            return Result.Failure<(Device, CashRegisterSummary)>(Error.DeviceNotPaired);
 
         var hash = SecretTokens.Hash(token);
         var device = await _db.Devices.IgnoreQueryFilters([QueryFilters.Tenant])
             .FirstOrDefaultAsync(d => d.TokenHash == hash && d.IsActive, ct);
         var register = device is null ? null : await _registers.FindForDeviceAsync(device.CashRegisterId, ct);
         if (device is null || register is null || !register.IsActive)
-            return Result.Failure<(Device, CashRegisterSummary)>(Error.DispositivoNoVinculado);
+            return Result.Failure<(Device, CashRegisterSummary)>(Error.DeviceNotPaired);
         return Result.Success((device, register));
     }
 }

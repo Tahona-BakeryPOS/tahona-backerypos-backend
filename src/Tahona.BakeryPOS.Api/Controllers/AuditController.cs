@@ -12,7 +12,7 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>The company's change history (read-only): who changed what, with before and after.</summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/auditoria")]
+[Route("api/v{version:apiVersion}/audit")]
 [ApiVersion("1.0")]
 [Authorize]
 [RequirePermission(Permissions.OrganizationManage)]
@@ -27,12 +27,12 @@ public sealed class AuditController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType<PagedResult<AuditLogDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Get([FromQuery] string? entidad, [FromQuery] Guid? entidadId, [FromQuery] DateTime? desde,
-        [FromQuery] DateTime? hasta, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
-        (await _mediator.Send(new GetAuditLogQuery(entidad, entidadId, desde, hasta, page, pageSize), ct)).ToActionResult(HttpContext);
+    public async Task<IActionResult> Get([FromQuery] string? entity, [FromQuery] Guid? entityId, [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
+        (await _mediator.Send(new GetAuditLogQuery(entity, entityId, from, to, page, pageSize), ct)).ToActionResult(HttpContext);
 
     /// <summary>Tables with recorded changes, for filtering.</summary>
-    [HttpGet("entidades")]
+    [HttpGet("entities")]
     [ProducesResponseType<IReadOnlyList<string>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Entities(CancellationToken ct) =>
         (await _mediator.Send(new GetAuditEntitiesQuery(), ct)).ToActionResult(HttpContext);

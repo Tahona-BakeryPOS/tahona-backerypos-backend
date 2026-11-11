@@ -48,7 +48,7 @@ public sealed class IdentityProvisioning : IIdentityProvisioning
     {
         var permissionIds = await _db.Permissions.ToDictionaryAsync(p => p.Code, p => p.Id, ct);
         if (permissionIds.Count == 0)
-            throw new InvalidOperationException("No hay permisos en la base: aplica las migraciones antes de crear empresas.");
+            throw new InvalidOperationException("There are no permissions in the database: apply the migrations before creating companies.");
 
         Role? ownerRole = null;
         foreach (var (code, name, permissions) in DefaultRoles.All)

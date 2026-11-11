@@ -12,10 +12,10 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 /// <summary>
 /// Platform administration (D-09): company onboarding and listing, with no data about their operation.
 /// Onboarding does not use Idempotency-Key because the response carries the owner's one-time password
-/// and it must not be stored; a retry collides with NIT_DUPLICADO.
+/// and it must not be stored; a retry collides with DUPLICATE_NIT.
 /// </summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/plataforma/empresas")]
+[Route("api/v{version:apiVersion}/platform/companies")]
 [ApiVersion("1.0")]
 [Authorize]
 [RequirePermission(Permissions.PlatformAdmin)]

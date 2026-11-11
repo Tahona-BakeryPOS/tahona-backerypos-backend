@@ -28,44 +28,44 @@ public sealed class InventoryController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet("existencias")]
+    [HttpGet("stock")]
     [RequirePermission(Permissions.InventoryView)]
     [ProducesResponseType<PagedResult<StockRowDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetStock([FromQuery] Guid sucursalId, [FromQuery] Guid? ubicacionId, [FromQuery] string? buscar,
+    public async Task<IActionResult> GetStock([FromQuery] Guid branchId, [FromQuery] Guid? locationId, [FromQuery] string? search,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
-        (await _mediator.Send(new GetStockQuery(sucursalId, ubicacionId, buscar, page, pageSize), ct)).ToActionResult(HttpContext);
+        (await _mediator.Send(new GetStockQuery(branchId, locationId, search, page, pageSize), ct)).ToActionResult(HttpContext);
 
-    /// <summary><c>tipo</c>: initial, sale, return, void_reversal, adjustment_in o adjustment_out.</summary>
-    [HttpGet("movimientos-inventario")]
+    /// <summary><c>type</c>: initial, sale, return, void_reversal, adjustment_in o adjustment_out.</summary>
+    [HttpGet("inventory-movements")]
     [RequirePermission(Permissions.InventoryView)]
     [ProducesResponseType<PagedResult<StockMovementDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetMovements([FromQuery] Guid sucursalId, [FromQuery] Guid? ubicacionId, [FromQuery] Guid? productoId,
-        [FromQuery] string? tipo, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] int page = 1,
+    public async Task<IActionResult> GetMovements([FromQuery] Guid branchId, [FromQuery] Guid? locationId, [FromQuery] Guid? productId,
+        [FromQuery] string? type, [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
-        (await _mediator.Send(new GetStockMovementsQuery(sucursalId, ubicacionId, productoId, tipo, desde, hasta, page, pageSize), ct))
+        (await _mediator.Send(new GetStockMovementsQuery(branchId, locationId, productId, type, from, to, page, pageSize), ct))
             .ToActionResult(HttpContext);
 
-    [HttpGet("ubicaciones")]
+    [HttpGet("locations")]
     [RequirePermission(Permissions.InventoryView)]
     [ProducesResponseType<IReadOnlyList<StockLocationDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetLocations([FromQuery] Guid? sucursalId, CancellationToken ct) =>
-        (await _mediator.Send(new GetStockLocationsQuery(sucursalId), ct)).ToActionResult(HttpContext);
+    public async Task<IActionResult> GetLocations([FromQuery] Guid? branchId, CancellationToken ct) =>
+        (await _mediator.Send(new GetStockLocationsQuery(branchId), ct)).ToActionResult(HttpContext);
 
-    [HttpPost("ubicaciones")]
+    [HttpPost("locations")]
     [Idempotent]
     [RequirePermission(Permissions.InventoryAdjust)]
     [ProducesResponseType<StockLocationDto>(StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateLocation([FromBody] CreateStockLocationCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    [HttpGet("inventario/motivos")]
+    [HttpGet("inventory/reasons")]
     [RequirePermission(Permissions.InventoryView)]
     [ProducesResponseType<IReadOnlyList<AdjustmentReasonDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetReasons(CancellationToken ct) =>
         (await _mediator.Send(new GetAdjustmentReasonsQuery(), ct)).ToActionResult(HttpContext);
 
     /// <summary>Initial stock (once per product and location).</summary>
-    [HttpPost("inventario/inicial")]
+    [HttpPost("inventory/initial")]
     [Idempotent]
     [RequirePermission(Permissions.InventoryAdjust)]
     [ProducesResponseType<IReadOnlyList<StockMovementDto>>(StatusCodes.Status201Created)]
@@ -73,8 +73,8 @@ public sealed class InventoryController : ControllerBase
     public async Task<IActionResult> RegisterInitial([FromBody] RegisterInitialStockCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    /// <summary>Adjustment with a reason; signed quantity. 422 EXISTENCIAS_INSUFICIENTES only if there is no authorizer.</summary>
-    [HttpPost("inventario/ajustes")]
+    /// <summary>Adjustment with a reason; signed quantity. 422 INSUFFICIENT_STOCK only if there is no authorizer.</summary>
+    [HttpPost("inventory/adjustments")]
     [Idempotent]
     [RequirePermission(Permissions.InventoryAdjust)]
     [ProducesResponseType<StockMovementDto>(StatusCodes.Status201Created)]
@@ -82,16 +82,16 @@ public sealed class InventoryController : ControllerBase
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
     /// <summary>Physical count: adjusts each product to the counted amount and returns the differences.</summary>
-    [HttpPost("inventario/conteos")]
+    [HttpPost("inventory/counts")]
     [Idempotent]
     [RequirePermission(Permissions.InventoryAdjust)]
     [ProducesResponseType<IReadOnlyList<CountResultLine>>(StatusCodes.Status201Created)]
     public async Task<IActionResult> RegisterCount([FromBody] RegisterPhysicalCountCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    [HttpGet("inventario/reconciliacion")]
+    [HttpGet("inventory/reconciliation")]
     [RequirePermission(Permissions.InventoryView)]
     [ProducesResponseType<ReconciliationDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Reconcile([FromQuery] Guid? sucursalId, CancellationToken ct) =>
-        (await _mediator.Send(new GetReconciliationQuery(sucursalId), ct)).ToActionResult(HttpContext);
+    public async Task<IActionResult> Reconcile([FromQuery] Guid? branchId, CancellationToken ct) =>
+        (await _mediator.Send(new GetReconciliationQuery(branchId), ct)).ToActionResult(HttpContext);
 }

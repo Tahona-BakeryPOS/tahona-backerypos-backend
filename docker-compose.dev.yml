@@ -1,8 +1,8 @@
-# Lower environment (desarrollo local): Postgres en contenedor, igual que la v1.
-# La API normalmente se corre desde Visual Studio / dotnet run contra esta BD;
-# para correrla también en contenedor: añade `--profile api` y `--build`.
+# Lower environment (local development): Postgres in a container.
+# The API is normally run from Visual Studio / dotnet run against this DB;
+# to run it in a container too: add `--profile api` and `--build`.
 #   docker compose -p bakerypos-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
-# Puerto 15432: el 5432 lo usa el PostgreSQL local de Windows y el 5433 la base de la v1.
+# Port 15432: 5432 is used by the local Windows PostgreSQL and 5433 by the previous system's database.
 services:
   db:
     image: postgres:17-alpine
@@ -34,6 +34,6 @@ services:
 
 volumes:
   # Nombre fijo: sobrevive a `docker compose down`.
-  # Solo se borra con `down -v` o `docker volume rm bakerypos_dev_pgdata_dev`.
+  # It is only deleted with `down -v` or `docker volume rm bakerypos_dev_pgdata_dev`.
   pgdata:
     name: bakerypos_dev_pgdata_dev

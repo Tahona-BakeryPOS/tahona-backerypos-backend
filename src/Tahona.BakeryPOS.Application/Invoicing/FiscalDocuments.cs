@@ -100,13 +100,13 @@ public sealed class FiscalDocumentsHandler :
             return Result.Failure<byte[]>(Error.Validation("El documento aún no existe en Siigo."));
         var settings = await _db.FiscalSettings.AsNoTracking().FirstOrDefaultAsync(ct);
         if (settings is null || settings.EncryptedUsername.Length == 0)
-            return Result.Failure<byte[]>(Error.FacturacionNoConfigurada);
+            return Result.Failure<byte[]>(Error.InvoicingNotConfigured);
         var credentials = new SiigoCredentials(settings.CompanyId, _secrets.Unprotect(settings.EncryptedUsername),
             _secrets.Unprotect(settings.EncryptedAccessKey));
         var pdf = doc.Kind == FiscalDocumentKind.CreditNote
             ? await _siigo.CreditNotePdfAsync(credentials, doc.ExternalId, ct)
             : await _siigo.InvoicePdfAsync(credentials, doc.ExternalId, ct);
-        return pdf is null ? Result.Failure<byte[]>(Error.NoEncontrado with { Message = "Siigo no devolvió el PDF." }) : Result.Success(pdf);
+        return pdf is null ? Result.Failure<byte[]>(Error.ResourceNotFound with { Message = "Siigo no devolvió el PDF." }) : Result.Success(pdf);
     }
 
     public async Task<Result<FiscalDocumentDto>> Handle(RetryFiscalDocumentCommand request, CancellationToken ct)

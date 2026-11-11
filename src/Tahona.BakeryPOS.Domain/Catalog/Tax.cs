@@ -35,13 +35,13 @@ public sealed class Tax : AuditableEntity, ITenantEntity
     public static Tax Create(Guid companyId, string code, string name, TaxKind kind, decimal rate)
     {
         if (companyId == Guid.Empty)
-            throw new DomainException("VALIDACION", "El impuesto debe pertenecer a una empresa.");
+            throw new DomainException("VALIDATION", "El impuesto debe pertenecer a una empresa.");
         if (string.IsNullOrWhiteSpace(code))
-            throw new DomainException("VALIDACION", "El código del impuesto es obligatorio.");
+            throw new DomainException("VALIDATION", "El código del impuesto es obligatorio.");
         if (rate < 0 || rate > 100)
-            throw new DomainException("VALIDACION", "La tarifa debe estar entre 0 y 100.");
+            throw new DomainException("VALIDATION", "La tarifa debe estar entre 0 y 100.");
         if (kind == TaxKind.None && rate != 0)
-            throw new DomainException("VALIDACION", "Un impuesto 'sin impuesto' tiene tarifa 0.");
+            throw new DomainException("VALIDATION", "Un impuesto 'sin impuesto' tiene tarifa 0.");
         var tax = new Tax { CompanyId = companyId, Code = code.Trim().ToUpperInvariant(), Kind = kind, Rate = rate };
         tax.Update(name, isActive: true);
         return tax;
@@ -50,7 +50,7 @@ public sealed class Tax : AuditableEntity, ITenantEntity
     public void Update(string name, bool isActive)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El nombre del impuesto es obligatorio.");
+            throw new DomainException("VALIDATION", "El nombre del impuesto es obligatorio.");
         Name = name.Trim();
         IsActive = isActive;
     }

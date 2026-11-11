@@ -16,7 +16,7 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 /// in the use case together with the branch scope.
 /// </summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/productos")]
+[Route("api/v{version:apiVersion}/products")]
 [ApiVersion("1.0")]
 [Authorize]
 public sealed class ProductsController : ControllerBase
@@ -28,20 +28,20 @@ public sealed class ProductsController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>With <c>sucursalId</c>, current price and availability at that branch.</summary>
+    /// <summary>With <c>branchId</c>, current price and availability at that branch.</summary>
     [HttpGet]
     [RequirePermission(Permissions.ProductsView)]
     [ProducesResponseType<PagedResult<ProductDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll([FromQuery] Guid? sucursalId, [FromQuery] string? buscar, [FromQuery] Guid? categoriaId,
-        [FromQuery] bool incluirInactivos = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
-        (await _mediator.Send(new GetProductsQuery(sucursalId, buscar, categoriaId, incluirInactivos, page, pageSize), ct)).ToActionResult(HttpContext);
+    public async Task<IActionResult> GetAll([FromQuery] Guid? branchId, [FromQuery] string? search, [FromQuery] Guid? categoryId,
+        [FromQuery] bool includeInactive = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
+        (await _mediator.Send(new GetProductsQuery(branchId, search, categoryId, includeInactive, page, pageSize), ct)).ToActionResult(HttpContext);
 
     [HttpGet("{id:guid}")]
     [RequirePermission(Permissions.ProductsView)]
     [ProducesResponseType<ProductDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(Guid id, [FromQuery] Guid? sucursalId, CancellationToken ct) =>
-        (await _mediator.Send(new GetProductByIdQuery(id, sucursalId), ct)).ToVersionedResult(HttpContext, p => p.Version);
+    public async Task<IActionResult> GetById(Guid id, [FromQuery] Guid? branchId, CancellationToken ct) =>
+        (await _mediator.Send(new GetProductByIdQuery(id, branchId), ct)).ToVersionedResult(HttpContext, p => p.Version);
 
     [HttpPost]
     [Idempotent]
@@ -51,7 +51,7 @@ public sealed class ProductsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateProductCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
-        return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/productos/{result.Value.Id}" : null);
+        return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/products/{result.Value.Id}" : null);
     }
 
     /// <summary>Edits the product (the SKU does not change). Requires If-Match with the version read.</summary>
@@ -64,27 +64,27 @@ public sealed class ProductsController : ControllerBase
         (await _mediator.Send(new UpdateProductCommand(id, Request.IfMatch(), body.Name, body.CategoryId, body.UnitId, body.TaxId,
             body.Barcode, body.TrackStock, body.NegativeStockPolicy), ct)).ToVersionedResult(HttpContext, p => p.Version);
 
-    [HttpPost("{id:guid}/desactivar")]
+    [HttpPost("{id:guid}/deactivate")]
     [RequirePermission(Permissions.CatalogManage)]
     [ProducesResponseType<ProductDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new SetProductActiveCommand(id, false), ct)).ToVersionedResult(HttpContext, p => p.Version);
 
-    [HttpPost("{id:guid}/activar")]
+    [HttpPost("{id:guid}/activate")]
     [RequirePermission(Permissions.CatalogManage)]
     [ProducesResponseType<ProductDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new SetProductActiveCommand(id, true), ct)).ToVersionedResult(HttpContext, p => p.Version);
 
     /// <summary>Price history: base and per branch.</summary>
-    [HttpGet("{id:guid}/precios")]
+    [HttpGet("{id:guid}/prices")]
     [RequirePermission(Permissions.ProductsView)]
     [ProducesResponseType<IReadOnlyList<ProductPriceDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPrices(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new GetProductPricesQuery(id), ct)).ToActionResult(HttpContext);
 
     /// <summary>Opens a price validity period; the previous one is closed, not deleted.</summary>
-    [HttpPost("{id:guid}/precios")]
+    [HttpPost("{id:guid}/prices")]
     [Idempotent]
     [ProducesResponseType<ProductPriceDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -93,7 +93,7 @@ public sealed class ProductsController : ControllerBase
             .ToCreatedResult(HttpContext);
 
     /// <summary>Available or not at a branch (US-3.3).</summary>
-    [HttpPut("/api/v{version:apiVersion}/sucursales/{branchId:guid}/productos/{productId:guid}/disponibilidad")]
+    [HttpPut("/api/v{version:apiVersion}/branches/{branchId:guid}/products/{productId:guid}/availability")]
     [RequirePermission(Permissions.BranchPrices)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetAvailability(Guid branchId, Guid productId, [FromBody] SetAvailabilityRequest body, CancellationToken ct) =>
@@ -104,7 +104,7 @@ public sealed class ProductsController : ControllerBase
 public sealed record UpdateProductRequest(string Name, Guid CategoryId, Guid UnitId, Guid TaxId, string? Barcode, bool TrackStock,
     string? NegativeStockPolicy = null);
 
-/// <param name="BranchId">null = precio base.</param>
+/// <param name="BranchId">null = base price.</param>
 /// <param name="IncludesTax">null = true (D-07: list price with tax included).</param>
 public sealed record SetPriceRequest(Guid? BranchId, decimal Amount, bool? IncludesTax, DateTime? ValidFrom);
 

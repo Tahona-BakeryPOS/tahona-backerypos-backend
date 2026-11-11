@@ -45,7 +45,7 @@ public sealed class IdempotencyTests
         var second = await Post(key, new { code = "IDEM-3", name = "Otro" });
 
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
-        Assert.Contains("IDEMPOTENCIA_CONFLICTO", await second.Content.ReadAsStringAsync());
+        Assert.Contains("IDEMPOTENCY_CONFLICT", await second.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -65,10 +65,10 @@ public sealed class IdempotencyTests
     [Fact]
     public async Task Missing_key_is_rejected()
     {
-        var response = await _api.ClientFor(_api.Data.CompanyA).PostAsJsonAsync("/api/v1/sucursales", new { code = "SIN-CLAVE", name = "X" });
+        var response = await _api.ClientFor(_api.Data.CompanyA).PostAsJsonAsync("/api/v1/branches", new { code = "SIN-CLAVE", name = "X" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("IDEMPOTENCIA_REQUERIDA", await response.Content.ReadAsStringAsync());
+        Assert.Contains("IDEMPOTENCY_KEY_REQUIRED", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class IdempotencyTests
         var inA = await Post(key, new { code = "IDEM-5", name = "En A" });
         var clientB = _api.ClientFor(_api.Data.CompanyB);
         clientB.DefaultRequestHeaders.Add("Idempotency-Key", key);
-        var inB = await clientB.PostAsJsonAsync("/api/v1/sucursales", new { code = "IDEM-5", name = "En B" });
+        var inB = await clientB.PostAsJsonAsync("/api/v1/branches", new { code = "IDEM-5", name = "En B" });
 
         Assert.Equal(HttpStatusCode.Created, inA.StatusCode);
         Assert.Equal(HttpStatusCode.Created, inB.StatusCode);
@@ -89,6 +89,6 @@ public sealed class IdempotencyTests
     {
         var client = _api.ClientFor(_api.Data.CompanyA);
         client.DefaultRequestHeaders.Add("Idempotency-Key", key);
-        return client.PostAsJsonAsync("/api/v1/sucursales", body);
+        return client.PostAsJsonAsync("/api/v1/branches", body);
     }
 }

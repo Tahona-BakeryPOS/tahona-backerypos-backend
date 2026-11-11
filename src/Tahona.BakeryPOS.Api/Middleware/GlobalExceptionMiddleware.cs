@@ -44,24 +44,24 @@ public sealed class GlobalExceptionMiddleware
     {
         var (status, body) = exception switch
         {
-            ValidationException v => (StatusCodes.Status400BadRequest, ErrorBody.From("VALIDACION", "Los datos proporcionados no son válidos.", context,
+            ValidationException v => (StatusCodes.Status400BadRequest, ErrorBody.From("VALIDATION", "Los datos proporcionados no son válidos.", context,
                 v.Errors.GroupBy(e => e.PropertyName).ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray()))),
             DomainException d => (ResultExtensions.StatusCodeOf(d.ErrorCode), ErrorBody.From(d.ErrorCode, d.Message, context)),
             DbUpdateConcurrencyException => (StatusCodes.Status412PreconditionFailed,
-                ErrorBody.From("CONFLICTO_VERSION", "El registro fue modificado por otro usuario. Recárgalo e intenta de nuevo.", context)),
+                ErrorBody.From("VERSION_CONFLICT", "El registro fue modificado por otro usuario. Recárgalo e intenta de nuevo.", context)),
             // An attempt to write another company's data is a programming error or an attack: it is not detailed.
             GatewayUnavailableException g => (StatusCodes.Status503ServiceUnavailable,
-                ErrorBody.From("PROVEEDOR_NO_DISPONIBLE", g.Message, context)),
+                ErrorBody.From("PROVIDER_UNAVAILABLE", g.Message, context)),
             TenantIsolationException => (StatusCodes.Status403Forbidden,
-                ErrorBody.From("SIN_PERMISO", "No tiene permisos para realizar esta acción.", context)),
+                ErrorBody.From("PERMISSION_DENIED", "No tiene permisos para realizar esta acción.", context)),
             _ => (StatusCodes.Status500InternalServerError,
-                ErrorBody.From("ERROR_INTERNO", "Ocurrió un error interno. Intenta de nuevo.", context)),
+                ErrorBody.From("INTERNAL_ERROR", "Ocurrió un error interno. Intenta de nuevo.", context)),
         };
 
         if (status >= 500 || exception is TenantIsolationException)
-            _logger.LogError(exception, "Error {Code} en {Path}", body.Codigo, context.Request.Path);
+            _logger.LogError(exception, "Error {Code} on {Path}", body.Code, context.Request.Path);
         else
-            _logger.LogWarning("Error controlado {Code} en {Path}: {Message}", body.Codigo, context.Request.Path, exception.Message);
+            _logger.LogWarning("Handled error {Code} on {Path}: {Message}", body.Code, context.Request.Path, exception.Message);
 
         context.Response.StatusCode = status;
         context.Response.ContentType = "application/json";

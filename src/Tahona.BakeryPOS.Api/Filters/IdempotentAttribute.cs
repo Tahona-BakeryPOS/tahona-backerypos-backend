@@ -11,8 +11,8 @@ namespace Tahona.BakeryPOS.Api.Filters;
 
 /// <summary>
 /// Requires <c>Idempotency-Key</c> and guarantees that retrying the same request returns the same
-/// response without repeating the operation. Same key with another body → 409 IDEMPOTENCIA_CONFLICTO;
-/// same key still in progress → 409 IDEMPOTENCIA_EN_CURSO. 2xx and 4xx responses are stored; if the
+/// response without repeating the operation. Same key with another body → 409 IDEMPOTENCY_CONFLICT;
+/// same key still in progress → 409 IDEMPOTENCY_IN_PROGRESS. 2xx and 4xx responses are stored; if the
 /// operation fails with 5xx or an exception, the key is released so the client can retry.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
@@ -26,7 +26,7 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
         var key = http.Request.Headers[Header].ToString();
         if (string.IsNullOrWhiteSpace(key) || key.Length > 64)
         {
-            context.Result = Error(http, StatusCodes.Status400BadRequest, "IDEMPOTENCIA_REQUERIDA",
+            context.Result = Error(http, StatusCodes.Status400BadRequest, "IDEMPOTENCY_KEY_REQUIRED",
                 "Esta operación exige el encabezado Idempotency-Key (máx. 64 caracteres).");
             return;
         }
@@ -44,11 +44,11 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
                 context.Result = new ContentResult { StatusCode = replay.StatusCode, Content = replay.Body, ContentType = "application/json" };
                 return;
             case IdempotencyDecision.Mismatch:
-                context.Result = Error(http, StatusCodes.Status409Conflict, "IDEMPOTENCIA_CONFLICTO",
+                context.Result = Error(http, StatusCodes.Status409Conflict, "IDEMPOTENCY_CONFLICT",
                     "La clave de idempotencia ya se usó con un contenido distinto.");
                 return;
             case IdempotencyDecision.InProgress:
-                context.Result = Error(http, StatusCodes.Status409Conflict, "IDEMPOTENCIA_EN_CURSO",
+                context.Result = Error(http, StatusCodes.Status409Conflict, "IDEMPOTENCY_IN_PROGRESS",
                     "Una petición con la misma clave de idempotencia aún se está procesando.");
                 return;
         }

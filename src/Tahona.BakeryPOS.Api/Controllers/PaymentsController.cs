@@ -31,19 +31,19 @@ public sealed class PaymentsController : ControllerBase
     // ---- Payment methods ----
 
     /// <summary>Used by the backoffice and the POS (to charge).</summary>
-    [HttpGet("medios-pago")]
+    [HttpGet("payment-methods")]
     [ProducesResponseType<IReadOnlyList<PaymentMethodDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMethods(CancellationToken ct) =>
         (await _mediator.Send(new GetPaymentMethodsQuery(), ct)).ToActionResult(HttpContext);
 
-    [HttpPost("medios-pago")]
+    [HttpPost("payment-methods")]
     [Idempotent]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<PaymentMethodDto>(StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateMethod([FromBody] CreatePaymentMethodCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    [HttpPut("medios-pago/{id:guid}")]
+    [HttpPut("payment-methods/{id:guid}")]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<PaymentMethodDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
@@ -51,23 +51,23 @@ public sealed class PaymentsController : ControllerBase
         (await _mediator.Send(new UpdatePaymentMethodCommand(id, Request.IfMatch(), body.Name, body.RequiresReference, body.DisplayOrder, body.IsActive), ct))
             .ToVersionedResult(HttpContext, m => m.Version);
 
-    // ---- Pagos ----
+    // ---- Payments ----
 
-    [HttpGet("pagos/{id:guid}")]
+    [HttpGet("payments/{id:guid}")]
     [ProducesResponseType<PaymentDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPayment(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new GetPaymentQuery(id), ct)).ToActionResult(HttpContext);
 
-    /// <summary><c>estado</c>: pending, approved, declined, cancelled…</summary>
-    [HttpGet("pagos")]
+    /// <summary><c>status</c>: pending, approved, declined, cancelled…</summary>
+    [HttpGet("payments")]
     [RequirePermission(Permissions.ReportsView)]
     [ProducesResponseType<IReadOnlyList<PaymentDto>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPayments([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] string? estado,
-        [FromQuery] Guid? sesionCajaId, CancellationToken ct) =>
-        (await _mediator.Send(new GetPaymentsQuery(desde, hasta, estado, sesionCajaId), ct)).ToActionResult(HttpContext);
+    public async Task<IActionResult> GetPayments([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] string? status,
+        [FromQuery] Guid? cashSessionId, CancellationToken ct) =>
+        (await _mediator.Send(new GetPaymentsQuery(from, to, status, cashSessionId), ct)).ToActionResult(HttpContext);
 
     /// <summary>Manual resolution of a payment with no gateway response (I-23).</summary>
-    [HttpPost("pagos/{id:guid}/resolver")]
+    [HttpPost("payments/{id:guid}/resolve")]
     [RequirePermission(Permissions.PaymentsResolve)]
     [ProducesResponseType<PaymentDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -77,46 +77,46 @@ public sealed class PaymentsController : ControllerBase
     // ---- Bold integration ----
 
     /// <summary>Status per environment; never returns the keys.</summary>
-    [HttpGet("integraciones/pasarela")]
+    [HttpGet("integrations/gateway")]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<IReadOnlyList<GatewayAccountDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetGateway(CancellationToken ct) =>
         (await _mediator.Send(new GetGatewayAccountsQuery(), ct)).ToActionResult(HttpContext);
 
     /// <summary>Stores the (encrypted) keys of an environment; a null key keeps the stored one.</summary>
-    [HttpPut("integraciones/pasarela")]
+    [HttpPut("integrations/gateway")]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<GatewayAccountDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SaveGateway([FromBody] SaveGatewayAccountCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToActionResult(HttpContext);
 
-    [HttpGet("integraciones/pasarela/datafonos")]
+    [HttpGet("integrations/gateway/terminals")]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<IReadOnlyList<BoldTerminal>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTerminals(CancellationToken ct) =>
         (await _mediator.Send(new GetBoldTerminalsQuery(), ct)).ToActionResult(HttpContext);
 
-    [HttpGet("integraciones/pasarela/metodos")]
+    [HttpGet("integrations/gateway/methods")]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<IReadOnlyList<BoldMethodStatus>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetGatewayMethods(CancellationToken ct) =>
         (await _mediator.Send(new GetBoldMethodsQuery(), ct)).ToActionResult(HttpContext);
 
     /// <summary>Test charge on the card terminal of a register with an open session (without a sale).</summary>
-    [HttpPost("integraciones/pasarela/prueba")]
+    [HttpPost("integrations/gateway/test")]
     [Idempotent]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<PaymentDto>(StatusCodes.Status201Created)]
     public async Task<IActionResult> TestCharge([FromBody] StartTestChargeCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    [HttpGet("integraciones/pasarela/cajas")]
+    [HttpGet("integrations/gateway/cash-registers")]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<IReadOnlyList<RegisterTerminalDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRegisterTerminals(CancellationToken ct) =>
         (await _mediator.Send(new GetRegisterTerminalsQuery(), ct)).ToActionResult(HttpContext);
 
-    [HttpPut("cajas/{id:guid}/datafono")]
+    [HttpPut("cash-registers/{id:guid}/terminal")]
     [RequirePermission(Permissions.OrganizationManage)]
     [ProducesResponseType<RegisterTerminalDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SetRegisterTerminal(Guid id, [FromBody] SetTerminalRequest body, CancellationToken ct) =>

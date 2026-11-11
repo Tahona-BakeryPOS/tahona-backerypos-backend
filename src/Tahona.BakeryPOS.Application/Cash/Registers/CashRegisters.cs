@@ -63,7 +63,7 @@ public sealed class CashRegistersHandler :
 
         var code = request.Code.Trim().ToUpperInvariant();
         if (await _db.CashRegisters.IgnoreQueryFilters([QueryFilters.SoftDelete]).AnyAsync(r => r.BranchId == branch.Id && r.Code == code, ct))
-            return Result.Failure<CashRegisterDto>(Error.CodigoDuplicado);
+            return Result.Failure<CashRegisterDto>(Error.DuplicateCode);
 
         var register = CashRegister.Create(_tenant.RequiredCompanyId, branch.Id, code, request.Name);
         _db.CashRegisters.Add(register);

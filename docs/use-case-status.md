@@ -15,7 +15,7 @@ operations in `runbooks.md`. Screen names appear as they are in the clients' Spa
 ### M1. Companies and branches — phase 2
 | US | Use case | Status | Where |
 |---|---|---|---|
-| US-1.1 | Onboard a company with its owner (platform administrator) | ✅ | `Plataforma → Empresas`; `POST /plataforma/empresas` |
+| US-1.1 | Onboard a company with its owner (platform administrator) | ✅ | `Plataforma → Empresas`; `POST /platform/companies` |
 | US-1.2 | Edit the company's data | ✅ (logo pending: file storage is missing, I-17) | `Mi negocio → Empresa` |
 | US-1.3 | Create, edit and deactivate branches and registers | ✅ | `Mi negocio → Sucursales y cajas` |
 
@@ -49,7 +49,7 @@ operations in `runbooks.md`. Screen names appear as they are in the clients' Spa
 ### M5. Registers and shifts — phase 5
 | US | Use case | Status | Where |
 |---|---|---|---|
-| US-5.1 | Pair devices to registers with a one-time code | ✅ | `Mi negocio → Puntos de venta`; POS → `/vincular` |
+| US-5.1 | Pair devices to registers with a one-time code | ✅ | `Mi negocio → Puntos de venta`; POS → `/pair-device` |
 | US-5.2 | Open the cash session with opening cash | ✅ | POS → Open cash session |
 | US-5.3 | Income and withdrawals (authorized withdrawal) | ✅ | POS → Cash |
 | US-5.4 | Close by counting; block with pending payments (D-12) | ✅ | POS → Close cash session; backoffice → `Turnos, Cierres` |
@@ -63,13 +63,13 @@ operations in `runbooks.md`. Screen names appear as they are in the clients' Spa
 | US-6.4 | Charge in cash with change, through the gateway or mixed | ✅ cash/manual · 🔎 Bold | Payment |
 | US-6.5 | See the electronic payment's status live | 🔎 (no Bold sandbox) | Payment |
 | US-6.6 | Receipt with the invoice status | ✅ | Receipt |
-| — | Sale as a persistent process with 4 states (I-25) | ✅ | `POST /ventas` … |
+| — | Sale as a persistent process with 4 states (I-25) | ✅ | `POST /sales` … |
 
 ### M7. Payments — phase 6 (D-03: Bold)
 | US | Use case | Status | Where |
 |---|---|---|---|
 | US-7.1 | Charge at the gateway with an idempotent reference | 🔎 | `GatewayPaymentService` |
-| US-7.2 | Signed webhook, no duplicates | 🔎 | `POST /webhooks/pagos/bold` |
+| US-7.2 | Signed webhook, no duplicates | 🔎 | `POST /webhooks/payments/bold` |
 | US-7.3 | Resolve unknown payments | ✅ audited manual (Bold has no query, I-23) | `Ventas y caja → Pagos` |
 | US-7.4 | Reconcile payments against sales and registers | ✅ query · ⏳ reconciliation with a statement | `Pagos`, `Informe de ventas` |
 | — | Payment methods and encrypted credentials | ✅ | `Métodos de pago`, `Integraciones` |

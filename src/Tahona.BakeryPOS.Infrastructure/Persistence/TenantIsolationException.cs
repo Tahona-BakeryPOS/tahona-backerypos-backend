@@ -7,7 +7,7 @@ namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 public sealed class TenantIsolationException : Exception
 {
     public TenantIsolationException(string entity, Guid entityCompanyId, Guid? currentCompanyId)
-        : base($"Escritura de {entity} de la empresa {entityCompanyId} con sesión de la empresa {currentCompanyId?.ToString() ?? "(ninguna)"}.")
+        : base($"Write of {entity} of company {entityCompanyId} with a session of company {currentCompanyId?.ToString() ?? "(none)"}.")
     {
     }
 }

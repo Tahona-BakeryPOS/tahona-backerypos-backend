@@ -29,7 +29,7 @@ Caddy requests the certificate on first access. Then:
 1. `curl https://API_DOMAIN/health` → `Healthy`.
 2. Create the platform administrator (only if none exists; it asks for the data in the terminal):
    `VERSION=<version printed by deploy.sh> bash ./scripts/bootstrap-admin.sh .env.production`.
-3. With that administrator, `POST https://API_DOMAIN/api/v1/auth/login` and `POST /api/v1/plataforma/empresas` create the first company (the response carries the owner's one-time password).
+3. With that administrator, `POST https://API_DOMAIN/api/v1/auth/login` and `POST /api/v1/platform/companies` create the first company (the response carries the owner's one-time password).
 4. Schedule the daily backup (section 4) and monitoring (section 7).
 
 ## 3. Updating to a new version
@@ -73,7 +73,7 @@ made after the backup were lost (check against the receipts and the documents in
 | `/health` responds `Unhealthy` | `logs db`, disk space (`df -h`) | Free disk (old backups, `docker image prune`) and `up -d db` |
 | The API does not start after deploying | `logs api`: missing `Jwt__Secret` (≥ 32), `DataProtection__KeysPath` or the connection string | Fix the `.env` and `up -d api`, or roll back (section 3) |
 | HTTPS certificate expired or not issued | `logs proxy` (Let's Encrypt) | Correct DNS and ports 80/443 open; `docker compose ... restart proxy` |
-| Bold payments stay "pending" | Payments (the API's payment query); webhook `https://API_DOMAIN/api/v1/webhooks/pagos/bold` configured in Bold | Resolve by hand with the approval number (I-23) |
+| Bold payments stay "pending" | Payments (the API's payment query); webhook `https://API_DOMAIN/api/v1/webhooks/payments/bold` configured in Bold | Resolve by hand with the approval number (I-23) |
 | Invoices "unconfirmed" or "retrying" | Electronic invoices → attempts; Siigo status | Fix the cause (credentials, pairings) and retry; never mark as accepted by hand |
 | Bold/Siigo credentials unreadable | The keys volume was lost | Restore the keys from the backup or type the credentials again |
 | A register cannot close | Pending payments of that session (D-12) | Resolve the pending payments and close |

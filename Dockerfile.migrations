@@ -1,5 +1,5 @@
-# Bundle de migraciones (D-10, fase 10): las migraciones nunca se aplican al arrancar la API fuera de desarrollo;
-# se ejecutan como paso del despliegue con este contenedor (deploy/docker-compose.yml, perfil "migrate").
+# Migrations bundle (D-10, phase 10): migrations are never applied on API startup outside development;
+# they run as a deployment step with this container (deploy/docker-compose.yml, profile "migrate").
 # La cadena llega en ConnectionStrings__DefaultConnection (la lee DesignTimeDbContextFactory).
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src

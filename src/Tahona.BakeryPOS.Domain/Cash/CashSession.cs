@@ -40,7 +40,7 @@ public sealed class CashSession : AuditableEntity, ITenantEntity
     public static CashSession Open(Guid companyId, Guid branchId, Guid cashRegisterId, Guid openedBy, decimal openingAmount, DateTime at)
     {
         if (companyId == Guid.Empty || branchId == Guid.Empty || cashRegisterId == Guid.Empty || openedBy == Guid.Empty)
-            throw new DomainException("VALIDACION", "La sesión necesita empresa, sucursal, caja y usuario.");
+            throw new DomainException("VALIDATION", "La sesión necesita empresa, sucursal, caja y usuario.");
         CashMoney.Validate(openingAmount, allowZero: true, "El efectivo inicial");
         return new CashSession
         {
@@ -66,7 +66,7 @@ public sealed class CashSession : AuditableEntity, ITenantEntity
     public void EnsureOpen()
     {
         if (!IsOpen)
-            throw new DomainException("CAJA_CERRADA", "La sesión de caja ya está cerrada.");
+            throw new DomainException("CASH_SESSION_CLOSED", "La sesión de caja ya está cerrada.");
     }
 }
 
@@ -109,7 +109,7 @@ public sealed class CashMovement : AuditableEntity, ITenantEntity
         session.EnsureOpen();
         CashMoney.Validate(amount, allowZero: false, "El monto");
         if (kind is CashMovementKind.Income or CashMovementKind.Expense && reasonId is null)
-            throw new DomainException("VALIDACION", "Los ingresos y retiros requieren un motivo.");
+            throw new DomainException("VALIDATION", "Los ingresos y retiros requieren un motivo.");
         return new CashMovement
         {
             CompanyId = session.CompanyId, CashSessionId = session.Id, Kind = kind, Amount = amount, OccurredAt = at,
@@ -147,7 +147,7 @@ public sealed class CashReason : AuditableEntity, ITenantEntity
     public static CashReason Create(Guid companyId, CashReasonKind kind, string name)
     {
         if (companyId == Guid.Empty || string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El motivo necesita empresa y nombre.");
+            throw new DomainException("VALIDATION", "El motivo necesita empresa y nombre.");
         return new CashReason { CompanyId = companyId, Kind = kind, Name = name.Trim() };
     }
 }
@@ -170,8 +170,8 @@ internal static class CashMoney
     public static void Validate(decimal amount, bool allowZero, string what)
     {
         if (amount < 0 || (!allowZero && amount == 0))
-            throw new DomainException("VALIDACION", $"{what} debe ser {(allowZero ? "mayor o igual a" : "mayor que")} 0.");
+            throw new DomainException("VALIDATION", $"{what} debe ser {(allowZero ? "mayor o igual a" : "mayor que")} 0.");
         if (decimal.Round(amount, 2) != amount)
-            throw new DomainException("VALIDACION", $"{what} admite máximo 2 decimales.");
+            throw new DomainException("VALIDATION", $"{what} admite máximo 2 decimales.");
     }
 }

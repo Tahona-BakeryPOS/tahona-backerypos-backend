@@ -19,9 +19,9 @@ public sealed class Role : AuditableEntity, ITenantEntity
     public static Role Create(Guid companyId, string code, string name, bool isSystem, IEnumerable<Guid> permissionIds)
     {
         if (companyId == Guid.Empty)
-            throw new DomainException("VALIDACION", "El rol debe pertenecer a una empresa.");
+            throw new DomainException("VALIDATION", "El rol debe pertenecer a una empresa.");
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El código y el nombre del rol son obligatorios.");
+            throw new DomainException("VALIDATION", "El código y el nombre del rol son obligatorios.");
         var role = new Role { CompanyId = companyId, Code = code.Trim().ToUpperInvariant(), Name = name.Trim(), IsSystem = isSystem };
         role._permissions.AddRange(permissionIds.Distinct().Select(p => new RolePermission(role.Id, p)));
         return role;

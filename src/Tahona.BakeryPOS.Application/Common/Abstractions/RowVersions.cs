@@ -14,14 +14,14 @@ public static class RowVersions
     public static Result<byte[]> Decode(string? version)
     {
         if (string.IsNullOrWhiteSpace(version))
-            return Result.Failure<byte[]>(Error.VersionRequerida);
+            return Result.Failure<byte[]>(Error.VersionRequired);
         try
         {
             return Result.Success(Convert.FromBase64String(version));
         }
         catch (FormatException)
         {
-            return Result.Failure<byte[]>(Error.ConflictoVersion);
+            return Result.Failure<byte[]>(Error.VersionConflict);
         }
     }
 }

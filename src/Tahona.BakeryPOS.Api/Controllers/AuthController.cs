@@ -59,13 +59,13 @@ public sealed class AuthController : ControllerBase
         (await _mediator.Send(command, ct)).ToActionResult(HttpContext);
 
     /// <summary>Changes the password (mandatory after the one-time one) and returns a new session.</summary>
-    [HttpPost("cambiar-contrasena")]
+    [HttpPost("change-password")]
     [Authorize]
     [ProducesResponseType<AuthSessionDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToActionResult(HttpContext);
 
-    /// <summary>Entrada a caja: equipo vinculado + PIN. 5 intentos fallidos bloquean 5 minutos (HU-2.4).</summary>
+    /// <summary>Register sign-in: paired device + PIN. 5 failed attempts lock for 5 minutes (US-2.4).</summary>
     [HttpPost("login-pin")]
     [AllowAnonymous]
     [EnableRateLimiting(RateLimiting.Auth)]

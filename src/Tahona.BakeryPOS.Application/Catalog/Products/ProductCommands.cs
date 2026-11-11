@@ -89,7 +89,7 @@ public sealed class ProductCommandsHandler :
     IRequestHandler<SetProductPriceCommand, Result<ProductPriceDto>>,
     IRequestHandler<SetProductAvailabilityCommand, Result>
 {
-    private static readonly Error BarrasDuplicado = Error.CodigoDuplicado with { Message = "Otro producto ya tiene ese código de barras." };
+    private static readonly Error BarrasDuplicado = Error.DuplicateCode with { Message = "Otro producto ya tiene ese código de barras." };
 
     private readonly IAppDbContext _db;
     private readonly ITenantContext _tenant;
@@ -110,7 +110,7 @@ public sealed class ProductCommandsHandler :
     {
         var sku = Product.NormalizeSku(request.Sku);
         if (await _db.Products.IgnoreQueryFilters([QueryFilters.SoftDelete]).AnyAsync(p => p.Sku == sku, ct))
-            return Result.Failure<ProductDto>(Error.CodigoDuplicado);
+            return Result.Failure<ProductDto>(Error.DuplicateCode);
         var check = await CheckReferencesAsync(request.CategoryId, request.UnitId, request.TaxId, Product.NormalizeBarcode(request.Barcode), null, ct);
         if (check.IsFailure)
             return Result.Failure<ProductDto>(check.Error);
@@ -206,9 +206,9 @@ public sealed class ProductCommandsHandler :
     private async Task<Result> CheckPriceScopeAsync(Guid? branchId, CancellationToken ct)
     {
         if (branchId is null)
-            return _tenant.HasPermission(Permissions.CatalogManage) ? Result.Success() : Result.Failure(Error.SinPermiso);
+            return _tenant.HasPermission(Permissions.CatalogManage) ? Result.Success() : Result.Failure(Error.PermissionDenied);
         if (!_tenant.HasPermission(Permissions.CatalogManage) && !_tenant.HasPermission(Permissions.BranchPrices))
-            return Result.Failure(Error.SinPermiso);
+            return Result.Failure(Error.PermissionDenied);
         return await CheckBranchScopeAsync(branchId.Value, ct);
     }
 
@@ -216,7 +216,7 @@ public sealed class ProductCommandsHandler :
     {
         if (await _branches.FindAsync(branchId, ct) is null)
             return Result.Failure(Error.NotFound("Sucursal", branchId));
-        return _tenant.CanAccessBranch(branchId) ? Result.Success() : Result.Failure(Error.SinAsignacionVigente);
+        return _tenant.CanAccessBranch(branchId) ? Result.Success() : Result.Failure(Error.NoCurrentAssignment);
     }
 
     /// <summary>Category and tax must exist in the company and be active; the unit must exist.</summary>

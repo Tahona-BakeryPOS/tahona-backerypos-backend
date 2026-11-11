@@ -26,12 +26,12 @@ public sealed class CatalogController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet("categorias")]
+    [HttpGet("categories")]
     [ProducesResponseType<IReadOnlyList<CategoryDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCategories(CancellationToken ct) =>
         (await _mediator.Send(new GetCategoriesQuery(), ct)).ToActionResult(HttpContext);
 
-    [HttpPost("categorias")]
+    [HttpPost("categories")]
     [Idempotent]
     [ProducesResponseType<CategoryDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -39,7 +39,7 @@ public sealed class CatalogController : ControllerBase
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
     /// <summary>Name, order and status. Requires If-Match with the version read.</summary>
-    [HttpPut("categorias/{id:guid}")]
+    [HttpPut("categories/{id:guid}")]
     [ProducesResponseType<CategoryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
@@ -47,12 +47,12 @@ public sealed class CatalogController : ControllerBase
         (await _mediator.Send(new UpdateCategoryCommand(id, Request.IfMatch(), body.Name, body.DisplayOrder, body.IsActive), ct))
             .ToVersionedResult(HttpContext, c => c.Version);
 
-    [HttpGet("impuestos")]
+    [HttpGet("taxes")]
     [ProducesResponseType<IReadOnlyList<TaxDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTaxes(CancellationToken ct) =>
         (await _mediator.Send(new GetTaxesQuery(), ct)).ToActionResult(HttpContext);
 
-    [HttpPost("impuestos")]
+    [HttpPost("taxes")]
     [Idempotent]
     [ProducesResponseType<TaxDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -60,7 +60,7 @@ public sealed class CatalogController : ControllerBase
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
     /// <summary>Name and status (the rate does not change). Requires If-Match with the version read.</summary>
-    [HttpPut("impuestos/{id:guid}")]
+    [HttpPut("taxes/{id:guid}")]
     [ProducesResponseType<TaxDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
@@ -68,7 +68,7 @@ public sealed class CatalogController : ControllerBase
         (await _mediator.Send(new UpdateTaxCommand(id, Request.IfMatch(), body.Name, body.IsActive), ct))
             .ToVersionedResult(HttpContext, t => t.Version);
 
-    [HttpGet("unidades")]
+    [HttpGet("units")]
     [ProducesResponseType<IReadOnlyList<UnitDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUnits(CancellationToken ct) =>
         (await _mediator.Send(new GetUnitsQuery(), ct)).ToActionResult(HttpContext);

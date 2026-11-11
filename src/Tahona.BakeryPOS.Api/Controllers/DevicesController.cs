@@ -11,7 +11,7 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>The company's paired devices. Deactivating one revokes its access.</summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/dispositivos")]
+[Route("api/v{version:apiVersion}/devices")]
 [ApiVersion("1.0")]
 [Authorize]
 [RequirePermission(Permissions.OrganizationManage)]
@@ -29,7 +29,7 @@ public sealed class DevicesController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
         (await _mediator.Send(new GetDevicesQuery(), ct)).ToActionResult(HttpContext);
 
-    [HttpPost("{id:guid}/desactivar")]
+    [HttpPost("{id:guid}/deactivate")]
     [ProducesResponseType<DeviceDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct) =>

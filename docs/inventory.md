@@ -50,7 +50,7 @@ Option C approved (27/10/2026): `products.negative_stock_policy` (`allow` by def
 
 ## 5. Reconciliation
 
-- Query `GET /inventario/reconciliacion`: compares `stock_balances.on_hand` with `Σ stock_movements`
+- Query `GET /inventory/reconciliation`: compares `stock_balances.on_hand` with `Σ stock_movements`
   per (location, product) and lists differences (they should be zero).
 - Nightly job per company: runs the reconciliation and records the result; a difference raises an
   alert (it indicates a software error, not an operational one).

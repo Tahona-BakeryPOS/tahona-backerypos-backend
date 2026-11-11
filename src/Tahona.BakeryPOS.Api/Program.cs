@@ -39,7 +39,7 @@ builder.Services.AddOpenApi("v1", options => options.AddDocumentTransformer((doc
 {
     document.Info.Title = "BakeryPOS API";
     document.Info.Version = "v1";
-    document.Info.Description = "POS SaaS para panaderías — MVP v1.1. Errores: { codigo, mensaje, detalles?, correlationId }.";
+    document.Info.Description = "Bakery POS SaaS — MVP v1.1. Errors: { code, message, details?, correlationId }.";
     return Task.CompletedTask;
 }));
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("postgres");
@@ -65,7 +65,7 @@ if (behindProxy)
 // redeploy; without them the stored credentials cannot be read.
 if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing")
     && string.IsNullOrWhiteSpace(builder.Configuration["DataProtection:KeysPath"]))
-    throw new InvalidOperationException("DataProtection:KeysPath es obligatorio fuera de desarrollo (variable DataProtection__KeysPath, volumen persistente).");
+    throw new InvalidOperationException("DataProtection:KeysPath is required outside development (variable DataProtection__KeysPath, persistent volume).");
 
 var app = builder.Build();
 

@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# Restaura un backup de scripts/backup.sh. DESTRUCTIVO: reemplaza la base del ambiente (runbook "Restaurar un backup").
-# Uso, desde backend/deploy:
+# Restores a backup from scripts/backup.sh. DESTRUCTIVE: it replaces the environment's database (runbook "Restoring a backup").
+# Usage, from backend/deploy:
 #   bash ./scripts/restore.sh .env.production /var/backups/bakerypos/bakerypos-production-20261028T033000Z.dump
-# Si existe el archivo de llaves con el mismo sello (…-dpkeys.tar.gz) también se restauran las llaves.
+# If the keys file with the same timestamp (…-dpkeys.tar.gz) exists, the keys are restored too.
 set -euo pipefail
 
-ENV_FILE="${1:?Uso: ./scripts/restore.sh .env.X archivo.dump}"
-DUMP="${2:?Falta el archivo .dump}"
+ENV_FILE="${1:?Usage: ./scripts/restore.sh .env.X file.dump}"
+DUMP="${2:?The .dump file is missing}"
 cd "$(dirname "$0")/.."
 set -a; . "./$ENV_FILE"; set +a
 : "${ENVIRONMENT:?}"
 export VERSION="${VERSION:-restore}"
-[ -s "$DUMP" ] || { echo "No existe o está vacío: $DUMP"; exit 1; }
+[ -s "$DUMP" ] || { echo "It does not exist or is empty: $DUMP"; exit 1; }
 
-echo "Se va a REEMPLAZAR la base de '$ENVIRONMENT' con $DUMP."
-read -r -p "Escribe el nombre del ambiente para confirmar: " answer
-[ "$answer" = "$ENVIRONMENT" ] || { echo "Cancelado."; exit 1; }
+echo "The database of '$ENVIRONMENT' is going to be REPLACED with $DUMP."
+read -r -p "Type the environment name to confirm: " answer
+[ "$answer" = "$ENVIRONMENT" ] || { echo "Cancelled."; exit 1; }
 
 compose() { docker compose --env-file "$ENV_FILE" -f docker-compose.yml "$@"; }
 
-# Copia de seguridad del estado actual antes de reemplazarlo.
+# Backup of the current state before replacing it.
 bash ./scripts/backup.sh "$ENV_FILE"
 
 compose stop api proxy
@@ -32,8 +32,8 @@ if [ -s "$keys" ]; then
   docker run --rm -i -v "bakerypos_${ENVIRONMENT}_dpkeys:/keys" alpine:3.22 sh -c 'rm -rf /keys/* && tar -C /keys -xzf -' < "$keys"
   echo "Llaves de Data Protection restauradas."
 else
-  echo "AVISO: no hay archivo de llaves para este backup; las credenciales de Bold y Siigo podrían no leerse."
+  echo "WARNING: there is no keys file for this backup; the Bold and Siigo credentials may not be readable."
 fi
 
 compose up -d api proxy
-echo "Restauración terminada. Revisa /health y entra al backoffice."
+echo "Restore finished. Check /health and sign in to the backoffice."

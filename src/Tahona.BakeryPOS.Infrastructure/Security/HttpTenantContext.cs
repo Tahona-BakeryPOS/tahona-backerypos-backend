@@ -50,11 +50,11 @@ public sealed class HttpTenantContext : ITenantContext, IBackgroundTenant
     public void Enter(Guid companyId, Guid? userId = null)
     {
         if (User is not null)
-            throw new InvalidOperationException("IBackgroundTenant es solo para procesos sin petición HTTP.");
+            throw new InvalidOperationException("IBackgroundTenant is only for processes with no HTTP request.");
         _backgroundCompany = companyId;
         _backgroundUser = userId;
     }
 
     public Guid RequiredCompanyId =>
-        CompanyId ?? throw new DomainException("EMPRESA_REQUERIDA", "La operación requiere una sesión dentro de una empresa.");
+        CompanyId ?? throw new DomainException("COMPANY_REQUIRED", "La operación requiere una sesión dentro de una empresa.");
 }

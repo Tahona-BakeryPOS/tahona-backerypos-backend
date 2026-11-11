@@ -1,5 +1,5 @@
-# Caddy: HTTPS automático (Let's Encrypt) y proxy de todo el tráfico hacia la API.
-# API_DOMAIN y ACME_EMAIL llegan del .env (deploy/docker-compose.yml).
+# Caddy: automatic HTTPS (Let's Encrypt) and a proxy for all traffic to the API.
+# API_DOMAIN and ACME_EMAIL come from the .env (deploy/docker-compose.yml).
 {
 	email {$ACME_EMAIL}
 }
@@ -16,7 +16,7 @@
 		-Server
 	}
 
-	# API (incluye el webhook de Bold: https://API_DOMAIN/api/v1/webhooks/pagos/bold) y la salud para el
-	# monitoreo externo (/health: responde la API con su chequeo de PostgreSQL).
+	# API (includes the Bold webhook: https://API_DOMAIN/api/v1/webhooks/payments/bold) and the health check for
+	# external monitoring (/health: the API answers with its PostgreSQL check).
 	reverse_proxy api:8080
 }

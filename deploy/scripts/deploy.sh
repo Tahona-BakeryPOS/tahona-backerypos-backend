@@ -1,33 +1,33 @@
 #!/usr/bin/env bash
-# Despliega (o actualiza) un ambiente en el VPS: backup previo → imágenes → migraciones → API y proxy.
-# Uso, desde backend/deploy:   bash ./scripts/deploy.sh .env.production
-# Requisitos: Docker con Compose v2 y este repo actualizado (git pull) en la versión a desplegar.
+# Deploys (or updates) an environment on the VPS: prior backup → images → migrations → API and proxy.
+# Usage, from backend/deploy:   bash ./scripts/deploy.sh .env.production
+# Requirements: Docker with Compose v2 and this repo up to date (git pull) at the version to deploy.
 set -euo pipefail
 
-ENV_FILE="${1:?Uso: ./scripts/deploy.sh .env.staging|.env.production}"
+ENV_FILE="${1:?Usage: ./scripts/deploy.sh .env.staging|.env.production}"
 cd "$(dirname "$0")/.."
-[ -f "$ENV_FILE" ] || { echo "No existe $ENV_FILE (copia .env.deploy.example)"; exit 1; }
+[ -f "$ENV_FILE" ] || { echo "$ENV_FILE does not exist (copy .env.deploy.example)"; exit 1; }
 
-# Versión = commit de este repo, salvo que se fije VERSION para volver a una ya construida.
+# Version = this repo's commit, unless VERSION is set to go back to an already built one.
 if [ -z "${VERSION:-}" ]; then
   export VERSION="$(git -C .. rev-parse --short HEAD)"
 fi
-echo "Desplegando versión $VERSION con $ENV_FILE"
+echo "Deploying version $VERSION with $ENV_FILE"
 
 compose() { docker compose --env-file "$ENV_FILE" -f docker-compose.yml "$@"; }
 
-# 1. Base de datos arriba y backup antes de migrar (si ya había datos).
+# 1. Database up and a backup before migrating (if there was already data).
 compose up -d db
 compose exec -T db sh -c 'until pg_isready -U bakerypos -d bakerypos; do sleep 2; done'
 bash ./scripts/backup.sh "$ENV_FILE"
 
-# 2. Imágenes (se construyen en el VPS; las anteriores quedan para volver atrás).
+# 2. Images (built on the VPS; the previous ones stay to roll back).
 compose --profile migrate build migrate api
 
-# 3. Migraciones con el bundle (solo aditivas; si fallan, la API anterior sigue corriendo).
+# 3. Migrations with the bundle (additive only; if they fail, the previous API keeps running).
 compose --profile migrate run --rm migrate
 
-# 4. API y proxy en la versión nueva.
+# 4. API and proxy at the new version.
 compose up -d api proxy
 compose ps
-echo "Listo. Revisa https://$(grep -E '^API_DOMAIN=' "$ENV_FILE" | cut -d= -f2-)/health"
+echo "Done. Check https://$(grep -E '^API_DOMAIN=' "$ENV_FILE" | cut -d= -f2-)/health"

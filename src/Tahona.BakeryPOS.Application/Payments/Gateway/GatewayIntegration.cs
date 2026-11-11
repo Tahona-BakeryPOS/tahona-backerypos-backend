@@ -119,7 +119,7 @@ public sealed class GatewayIntegrationHandler :
     {
         var key = await ActiveIdentityKeyAsync(ct);
         return key is null
-            ? Result.Failure<IReadOnlyList<BoldTerminal>>(Error.PasarelaNoConfigurada)
+            ? Result.Failure<IReadOnlyList<BoldTerminal>>(Error.GatewayNotConfigured)
             : Result.Success(await _bold.ListTerminalsAsync(key, ct));
     }
 
@@ -127,7 +127,7 @@ public sealed class GatewayIntegrationHandler :
     {
         var key = await ActiveIdentityKeyAsync(ct);
         return key is null
-            ? Result.Failure<IReadOnlyList<BoldMethodStatus>>(Error.PasarelaNoConfigurada)
+            ? Result.Failure<IReadOnlyList<BoldMethodStatus>>(Error.GatewayNotConfigured)
             : Result.Success(await _bold.ListMethodsAsync(key, ct));
     }
 

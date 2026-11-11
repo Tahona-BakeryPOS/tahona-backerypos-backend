@@ -1,4 +1,4 @@
-# Los scripts y archivos de despliegue corren en Linux: siempre LF.
+# Deployment scripts and files run on Linux: always LF.
 *.sh text eol=lf
 deploy/Caddyfile text eol=lf
 deploy/.env* text eol=lf

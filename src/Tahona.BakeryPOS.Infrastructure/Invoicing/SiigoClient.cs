@@ -175,14 +175,14 @@ internal sealed class SiigoClient : ISiigoClient
                     stamp.ValueKind == JsonValueKind.Object ? NonEmpty(Str(stamp, "errors")) : null);
             }
             var errors = await ErrorsAsync(response, ct);
-            _logger.LogWarning("Siigo respondió {Status} en {Method} {Path}", status, method, path);
+            _logger.LogWarning("Siigo answered {Status} on {Method} {Path}", status, method, path);
             return status >= 500 || response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.Unauthorized
                 ? new SiigoInvoiceResult(SiigoOutcome.Unknown, status, null, null, null, null, null, errors)
                 : new SiigoInvoiceResult(SiigoOutcome.Invalid, status, null, null, null, null, null, errors);
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
         {
-            _logger.LogWarning("Sin respuesta de Siigo en {Method} {Path}", method, path);
+            _logger.LogWarning("No response from Siigo on {Method} {Path}", method, path);
             return new SiigoInvoiceResult(SiigoOutcome.Unknown, null, null, null, null, null, null, "Sin respuesta de Siigo.");
         }
     }

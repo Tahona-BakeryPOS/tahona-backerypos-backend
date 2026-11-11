@@ -138,10 +138,10 @@ public sealed class InventoryCommandsHandler :
         if (branch is null)
             return Result.Failure<StockLocationDto>(Error.NotFound("Sucursal", request.BranchId));
         if (!_tenant.CanAccessBranch(branch.Id))
-            return Result.Failure<StockLocationDto>(Error.SinAsignacionVigente);
+            return Result.Failure<StockLocationDto>(Error.NoCurrentAssignment);
         var code = request.Code.Trim().ToUpperInvariant();
         if (await _db.StockLocations.AnyAsync(l => l.BranchId == branch.Id && l.Code == code, ct))
-            return Result.Failure<StockLocationDto>(Error.CodigoDuplicado);
+            return Result.Failure<StockLocationDto>(Error.DuplicateCode);
 
         // The first location of a branch (created before phase 4) is left as the default one.
         var isDefault = !await _db.StockLocations.AnyAsync(l => l.BranchId == branch.Id && l.IsDefault, ct);
@@ -169,7 +169,7 @@ public sealed class InventoryCommandsHandler :
         var productIds = request.Lines.Select(l => l.ProductId).ToList();
         if (await _db.StockMovements.AnyAsync(m => m.Kind == StockMovementKind.Initial && m.SourceId == request.LocationId
                 && productIds.Contains(m.SourceLineId), ct))
-            return Result.Failure<IReadOnlyList<StockMovementDto>>(Error.InventarioInicialRegistrado);
+            return Result.Failure<IReadOnlyList<StockMovementDto>>(Error.InitialStockAlreadyRecorded);
 
         var posted = await _ledger.PostAsync(new StockPosting(request.LocationId, StockMovementKind.Initial, StockSources.Initial,
             request.LocationId, request.Lines.Select(l => new StockPostingLine(l.ProductId, l.Quantity, l.ProductId)).ToList(),

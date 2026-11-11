@@ -55,15 +55,15 @@ public sealed class StockMovement : AuditableEntity, ITenantEntity
         Guid? reasonId = null, Guid? authorizedBy = null, string? note = null)
     {
         if (companyId == Guid.Empty || locationId == Guid.Empty || productId == Guid.Empty)
-            throw new DomainException("VALIDACION", "El movimiento necesita empresa, ubicación y producto.");
+            throw new DomainException("VALIDATION", "El movimiento necesita empresa, ubicación y producto.");
         if (quantity == 0)
-            throw new DomainException("VALIDACION", "La cantidad del movimiento no puede ser cero.");
+            throw new DomainException("VALIDATION", "La cantidad del movimiento no puede ser cero.");
         if (decimal.Round(quantity, 4) != quantity)
-            throw new DomainException("VALIDACION", "La cantidad admite máximo 4 decimales.");
+            throw new DomainException("VALIDATION", "La cantidad admite máximo 4 decimales.");
         if (IsInbound(kind) != quantity > 0)
-            throw new DomainException("VALIDACION", $"Un movimiento {kind} {(IsInbound(kind) ? "suma" : "resta")} existencias.");
+            throw new DomainException("VALIDATION", $"Un movimiento {kind} {(IsInbound(kind) ? "suma" : "resta")} existencias.");
         if (string.IsNullOrWhiteSpace(sourceType) || sourceId == Guid.Empty)
-            throw new DomainException("VALIDACION", "El movimiento debe indicar su origen.");
+            throw new DomainException("VALIDATION", "El movimiento debe indicar su origen.");
 
         return new StockMovement
         {
@@ -97,15 +97,15 @@ public sealed class StockBalance : AuditableEntity, ITenantEntity
 
     /// <summary>
     /// Applies the movement. If the balance would go negative and the product does not allow it (D-06), it requires an
-    /// authorization; without it, it fails with EXISTENCIAS_INSUFICIENTES.
+    /// authorization; without it, it fails with INSUFFICIENT_STOCK.
     /// </summary>
     public void Apply(StockMovement movement, bool allowNegative)
     {
         if (movement.LocationId != LocationId || movement.ProductId != ProductId || movement.CompanyId != CompanyId)
-            throw new DomainException("VALIDACION", "El movimiento no corresponde a este saldo.");
+            throw new DomainException("VALIDATION", "El movimiento no corresponde a este saldo.");
         var next = OnHand + movement.Quantity;
         if (movement.Quantity < 0 && next < 0 && !allowNegative && movement.AuthorizedBy is null)
-            throw new DomainException("EXISTENCIAS_INSUFICIENTES",
+            throw new DomainException("INSUFFICIENT_STOCK",
                 $"Existencias insuficientes: hay {OnHand:0.####} y se necesitan {-movement.Quantity:0.####}. Pide autorización a un superior.");
         OnHand = next;
         LastMovementId = movement.Id;

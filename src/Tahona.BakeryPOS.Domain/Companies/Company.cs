@@ -41,13 +41,13 @@ public sealed class Company : AuditableEntity
         string? timeZone = null)
     {
         if (string.IsNullOrWhiteSpace(legalName))
-            throw new DomainException("VALIDACION", "La razón social es obligatoria.");
+            throw new DomainException("VALIDATION", "La razón social es obligatoria.");
 
         var responsibilities = taxResponsibilities.Select(r => r.Trim().ToUpperInvariant()).Distinct().ToList();
         if (!TaxCodes.Regimes.Contains(taxRegime))
-            throw new DomainException("VALIDACION", $"Régimen fiscal no reconocido: {taxRegime}.");
+            throw new DomainException("VALIDATION", $"Régimen fiscal no reconocido: {taxRegime}.");
         if (responsibilities.Count == 0 || responsibilities.Any(r => !TaxCodes.Responsibilities.Contains(r)))
-            throw new DomainException("VALIDACION", "Las responsabilidades fiscales son obligatorias y deben ser códigos DIAN válidos.");
+            throw new DomainException("VALIDATION", "Las responsabilidades fiscales son obligatorias y deben ser códigos DIAN válidos.");
 
         var company = new Company
         {
@@ -65,7 +65,7 @@ public sealed class Company : AuditableEntity
     public void UpdateContact(string? tradeName, string email, string? phone, string? address, string? cityCode, string? timeZone)
     {
         if (string.IsNullOrWhiteSpace(email))
-            throw new DomainException("VALIDACION", "El correo de la empresa es obligatorio.");
+            throw new DomainException("VALIDATION", "El correo de la empresa es obligatorio.");
         TradeName = Clean(tradeName);
         Email = email.Trim().ToLowerInvariant();
         Phone = Clean(phone);

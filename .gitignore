@@ -47,7 +47,7 @@ launchSettings.json
 .DS_Store
 Thumbs.db
 
-## Secrets — nunca subir a control de versiones
+## Secrets — never commit to version control
 appsettings.Production.json
 *.pfx
 *.key
@@ -72,5 +72,5 @@ coverage/
 .env.*
 !.env.*.example
 
-# Postman: environment local con IDs y PIN reales
+# Postman: local environment with real IDs and PINs
 postman/*.local.postman_environment.json

@@ -54,7 +54,7 @@ public sealed class OutboxProcessor : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fallo en el ciclo de la bandeja de salida");
+                _logger.LogError(ex, "Outbox processing cycle failed");
                 await Task.Delay(_options.PollInterval, stoppingToken);
             }
         }
@@ -74,7 +74,7 @@ public sealed class OutboxProcessor : BackgroundService
             try
             {
                 if (handler is null)
-                    throw new InvalidOperationException($"No hay handler registrado para el mensaje '{message.Type}'.");
+                    throw new InvalidOperationException($"No handler is registered for message '{message.Type}'.");
                 await handler.HandleAsync(new OutboxEnvelope(message.Id, message.CompanyId, message.Type, message.Payload, message.Attempts), ct);
                 await db.OutboxMessages.Where(m => m.Id == message.Id).ExecuteUpdateAsync(s => s
                     .SetProperty(m => m.Status, OutboxStatus.Done)
@@ -87,7 +87,7 @@ public sealed class OutboxProcessor : BackgroundService
                 var failed = message.Attempts >= _options.MaxAttempts;
                 var next = DateTime.UtcNow.Add(Backoff(message.Attempts));
                 var error = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
-                _logger.LogWarning(ex, "Mensaje {Id} ({Type}) falló en el intento {Attempt}", message.Id, message.Type, message.Attempts);
+                _logger.LogWarning(ex, "Message {Id} ({Type}) failed on attempt {Attempt}", message.Id, message.Type, message.Attempts);
                 await db.OutboxMessages.Where(m => m.Id == message.Id).ExecuteUpdateAsync(s => s
                     .SetProperty(m => m.Status, failed ? OutboxStatus.Failed : OutboxStatus.Pending)
                     .SetProperty(m => m.NextAttemptAt, next)

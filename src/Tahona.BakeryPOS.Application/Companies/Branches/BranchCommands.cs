@@ -46,7 +46,7 @@ public sealed class CreateBranchHandler : IRequestHandler<CreateBranchCommand, R
 
         // The company filter limits the search to the company's own branches.
         if (await _db.Branches.IgnoreQueryFilters([QueryFilters.SoftDelete]).AnyAsync(b => b.Code == code, ct))
-            return Result.Failure<BranchDto>(Error.CodigoDuplicado);
+            return Result.Failure<BranchDto>(Error.DuplicateCode);
 
         var branch = Branch.Create(_tenant.RequiredCompanyId, code, request.Name, request.Address, request.CityCode, request.Phone);
         _db.Branches.Add(branch);

@@ -24,9 +24,9 @@ public sealed class StockLocation : AuditableEntity, ITenantEntity
     public static StockLocation Create(Guid companyId, Guid branchId, string code, string name, bool isDefault)
     {
         if (companyId == Guid.Empty || branchId == Guid.Empty)
-            throw new DomainException("VALIDACION", "La ubicación debe pertenecer a una sucursal.");
+            throw new DomainException("VALIDATION", "La ubicación debe pertenecer a una sucursal.");
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "Código y nombre de la ubicación son obligatorios.");
+            throw new DomainException("VALIDATION", "Código y nombre de la ubicación son obligatorios.");
         return new StockLocation
         {
             CompanyId = companyId, BranchId = branchId, Code = code.Trim().ToUpperInvariant(), Name = name.Trim(), IsDefault = isDefault,
@@ -62,9 +62,9 @@ public sealed class AdjustmentReason : AuditableEntity, ITenantEntity
     public static AdjustmentReason Create(Guid companyId, string code, string name, AdjustmentDirection direction)
     {
         if (companyId == Guid.Empty)
-            throw new DomainException("VALIDACION", "El motivo debe pertenecer a una empresa.");
+            throw new DomainException("VALIDATION", "El motivo debe pertenecer a una empresa.");
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "Código y nombre del motivo son obligatorios.");
+            throw new DomainException("VALIDATION", "Código y nombre del motivo son obligatorios.");
         return new AdjustmentReason { CompanyId = companyId, Code = code.Trim().ToUpperInvariant(), Name = name.Trim(), Direction = direction };
     }
 

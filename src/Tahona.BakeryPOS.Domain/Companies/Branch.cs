@@ -22,9 +22,9 @@ public sealed class Branch : AuditableEntity, ITenantEntity
     public static Branch Create(Guid companyId, string code, string name, string? address, string? cityCode = null, string? phone = null)
     {
         if (companyId == Guid.Empty)
-            throw new DomainException("VALIDACION", "La sucursal debe pertenecer a una empresa.");
+            throw new DomainException("VALIDATION", "La sucursal debe pertenecer a una empresa.");
         if (string.IsNullOrWhiteSpace(code))
-            throw new DomainException("VALIDACION", "El código de la sucursal es obligatorio.");
+            throw new DomainException("VALIDATION", "El código de la sucursal es obligatorio.");
         var branch = new Branch { CompanyId = companyId, Code = code.Trim().ToUpperInvariant() };
         branch.Update(name, address, cityCode, phone);
         return branch;
@@ -33,7 +33,7 @@ public sealed class Branch : AuditableEntity, ITenantEntity
     public void Update(string name, string? address, string? cityCode, string? phone)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El nombre de la sucursal es obligatorio.");
+            throw new DomainException("VALIDATION", "El nombre de la sucursal es obligatorio.");
         Name = name.Trim();
         Address = Clean(address);
         CityCode = Clean(cityCode);

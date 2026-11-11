@@ -140,7 +140,7 @@ public interface IInventoryPosting
 
     /// <summary>
     /// Deducts the sale (without saving; idempotent per line). With <paramref name="authorizedBy"/> it allows a negative balance
-    /// on "block" products; it fails with EXISTENCIAS_INSUFICIENTES if there is none.
+    /// on "block" products; it fails with INSUFFICIENT_STOCK if there is none.
     /// </summary>
     Task<SharedKernel.Results.Result> PostSaleAsync(Guid branchId, Guid saleId, IReadOnlyList<(Guid LineId, Guid ProductId, decimal Quantity)> lines,
         Guid? authorizedBy, CancellationToken ct);
@@ -164,7 +164,7 @@ public interface ICashDrawer
 
     /// <summary>
     /// D-11: the money of a void or return leaves in cash from the open session (without saving; idempotent per
-    /// source). Fails with CAJA_CERRADA or if the expected cash is not enough.
+    /// source). Fails with CASH_SESSION_CLOSED or if the expected cash is not enough.
     /// </summary>
     Task<SharedKernel.Results.Result> RecordRefundAsync(Guid cashSessionId, string sourceType, Guid sourceId, decimal amount, Guid authorizedBy,
         CancellationToken ct);

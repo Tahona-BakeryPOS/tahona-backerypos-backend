@@ -69,7 +69,7 @@ public sealed class TaxesHandler :
     {
         var code = request.Code.Trim().ToUpperInvariant();
         if (await _db.Taxes.IgnoreQueryFilters([QueryFilters.SoftDelete]).AnyAsync(t => t.Code == code, ct))
-            return Result.Failure<TaxDto>(Error.CodigoDuplicado);
+            return Result.Failure<TaxDto>(Error.DuplicateCode);
 
         var tax = Tax.Create(_tenant.RequiredCompanyId, code, request.Name, Enum.Parse<TaxKind>(request.Kind, true), request.Rate);
         _db.Taxes.Add(tax);

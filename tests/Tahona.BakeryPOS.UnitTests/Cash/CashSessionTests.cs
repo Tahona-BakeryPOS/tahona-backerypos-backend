@@ -47,7 +47,7 @@ public class CashSessionTests
         s.Close(100_000m, 100_000m, User, Now, null);
 
         var e = Assert.Throws<DomainException>(() => CashMovement.Create(s, CashMovementKind.Income, 1m, Now, User, Guid.NewGuid()));
-        Assert.Equal("CAJA_CERRADA", e.ErrorCode);
+        Assert.Equal("CASH_SESSION_CLOSED", e.ErrorCode);
         Assert.Throws<DomainException>(() => s.Close(1m, 1m, User, Now, null));
     }
 

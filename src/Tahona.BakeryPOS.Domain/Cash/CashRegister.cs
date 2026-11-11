@@ -20,9 +20,9 @@ public sealed class CashRegister : AuditableEntity, ITenantEntity
     public static CashRegister Create(Guid companyId, Guid branchId, string code, string name)
     {
         if (companyId == Guid.Empty || branchId == Guid.Empty)
-            throw new DomainException("VALIDACION", "La caja debe pertenecer a una empresa y una sucursal.");
+            throw new DomainException("VALIDATION", "La caja debe pertenecer a una empresa y una sucursal.");
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El código y el nombre de la caja son obligatorios.");
+            throw new DomainException("VALIDATION", "El código y el nombre de la caja son obligatorios.");
         return new CashRegister { CompanyId = companyId, BranchId = branchId, Code = code.Trim().ToUpperInvariant(), Name = name.Trim() };
     }
 

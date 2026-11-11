@@ -6,7 +6,7 @@ namespace Tahona.BakeryPOS.Api.Extensions;
 
 /// <summary>
 /// Per-IP limit for the anonymous endpoints that receive secrets (login, refresh, pairing, PIN):
-/// it slows brute force before it reaches the per-user lockout. Answers 429 LIMITE_EXCEDIDO.
+/// it slows brute force before it reaches the per-user lockout. Answers 429 RATE_LIMIT_EXCEEDED.
 /// </summary>
 public static class RateLimiting
 {
@@ -22,7 +22,7 @@ public static class RateLimiting
             {
                 var http = context.HttpContext;
                 http.Response.ContentType = "application/json";
-                var body = ErrorBody.From("LIMITE_EXCEDIDO", "Demasiados intentos. Espera un minuto e intenta de nuevo.", http);
+                var body = ErrorBody.From("RATE_LIMIT_EXCEEDED", "Demasiados intentos. Espera un minuto e intenta de nuevo.", http);
                 await http.Response.WriteAsync(JsonSerializer.Serialize(body, JsonSerializerOptions.Web), ct);
             };
             options.AddPolicy(Auth, http => RateLimitPartition.GetFixedWindowLimiter(

@@ -10,7 +10,7 @@ namespace Tahona.BakeryPOS.Infrastructure.Persistence.Seeding;
 /// <summary>
 /// Development only: creates the platform administrator with the credentials from user-secrets
 /// (<c>Seed:PlatformAdminEmail</c>, <c>Seed:PlatformAdminPassword</c>). Companies are created afterwards
-/// through <c>POST /api/v1/plataforma/empresas</c>, the same as in production. It never logs the password.
+/// through <c>POST /api/v1/platform/companies</c>, the same as in production. It never logs the password.
 /// </summary>
 public static class DevelopmentSeeder
 {
@@ -24,7 +24,7 @@ public static class DevelopmentSeeder
         var password = config["Seed:PlatformAdminPassword"];
         if (email is null || string.IsNullOrWhiteSpace(password))
         {
-            logger.LogInformation("Sin administrador de plataforma de desarrollo: define Seed:PlatformAdminEmail y Seed:PlatformAdminPassword en user-secrets.");
+            logger.LogInformation("No development platform administrator: set Seed:PlatformAdminEmail and Seed:PlatformAdminPassword in user-secrets.");
             return;
         }
 
@@ -35,6 +35,6 @@ public static class DevelopmentSeeder
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
         db.Users.Add(User.CreatePlatformAdmin(config["Seed:PlatformAdminName"] ?? "Administrador de plataforma", email, hasher.Hash(password)));
         await db.SaveChangesAsync(ct);
-        logger.LogInformation("Administrador de plataforma de desarrollo creado: {Email}", email);
+        logger.LogInformation("Development platform administrator created: {Email}", email);
     }
 }

@@ -32,7 +32,7 @@ public class StockLedgerTests
         balance.Apply(Move(1m, StockMovementKind.Initial), allowNegative: false);
 
         var e = Assert.Throws<DomainException>(() => balance.Apply(Move(-2m, StockMovementKind.Sale), allowNegative: false));
-        Assert.Equal("EXISTENCIAS_INSUFICIENTES", e.ErrorCode);
+        Assert.Equal("INSUFFICIENT_STOCK", e.ErrorCode);
         Assert.Equal(1m, balance.OnHand);
     }
 

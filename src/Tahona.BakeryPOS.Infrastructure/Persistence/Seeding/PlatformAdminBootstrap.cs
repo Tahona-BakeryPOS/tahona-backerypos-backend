@@ -20,7 +20,7 @@ public static class PlatformAdminBootstrap
     {
         var normalized = User.NormalizeEmail(email);
         if (normalized is null || string.IsNullOrWhiteSpace(password) || password.Length < 12)
-            return (false, "Define BOOTSTRAP_ADMIN_EMAIL y BOOTSTRAP_ADMIN_PASSWORD (mínimo 12 caracteres).");
+            return (false, "Set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD (minimum 12 characters).");
 
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -32,6 +32,6 @@ public static class PlatformAdminBootstrap
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
         db.Users.Add(User.CreatePlatformAdmin(string.IsNullOrWhiteSpace(name) ? "Administrador de plataforma" : name.Trim(), normalized, hasher.Hash(password)));
         await db.SaveChangesAsync(ct);
-        return (true, $"Administrador de plataforma creado: {normalized}. Quita BOOTSTRAP_ADMIN_PASSWORD del ambiente.");
+        return (true, $"Platform administrator created: {normalized}. Remove BOOTSTRAP_ADMIN_PASSWORD from the environment.");
     }
 }

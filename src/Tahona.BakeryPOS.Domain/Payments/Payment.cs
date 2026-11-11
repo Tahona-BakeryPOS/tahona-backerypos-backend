@@ -56,13 +56,13 @@ public sealed class Payment : AuditableEntity, ITenantEntity
     public static Payment StartGateway(Guid companyId, PaymentPurpose purpose, Guid? saleId, Guid cashSessionId, PaymentMethod method, decimal amount)
     {
         if (method.Kind != PaymentMethodKind.Gateway)
-            throw new DomainException("VALIDACION", "El medio de pago no es de la pasarela.");
+            throw new DomainException("VALIDATION", "El medio de pago no es de la pasarela.");
         if (purpose == PaymentPurpose.Sale && saleId is null)
-            throw new DomainException("VALIDACION", "El pago de una venta debe indicar la venta.");
+            throw new DomainException("VALIDATION", "El pago de una venta debe indicar la venta.");
         if (amount <= 0 || decimal.Round(amount, 2) != amount)
-            throw new DomainException("VALIDACION", "El monto debe ser mayor que 0 y con máximo 2 decimales.");
+            throw new DomainException("VALIDATION", "El monto debe ser mayor que 0 y con máximo 2 decimales.");
         if (method.CompanyId != companyId || !method.IsActive)
-            throw new DomainException("VALIDACION", "El medio de pago no está activo en la empresa.");
+            throw new DomainException("VALIDATION", "El medio de pago no está activo en la empresa.");
         return new Payment
         {
             CompanyId = companyId, Purpose = purpose, SaleId = saleId, CashSessionId = cashSessionId,
@@ -78,24 +78,24 @@ public sealed class Payment : AuditableEntity, ITenantEntity
         decimal? amountTendered, string? reference, DateTime at)
     {
         if (method.Kind == PaymentMethodKind.Gateway)
-            throw new DomainException("VALIDACION", "Los medios de la pasarela se cobran en el datáfono.");
+            throw new DomainException("VALIDATION", "Los medios de la pasarela se cobran en el datáfono.");
         if (method.CompanyId != companyId || !method.IsActive)
-            throw new DomainException("VALIDACION", "El medio de pago no está activo en la empresa.");
+            throw new DomainException("VALIDATION", "El medio de pago no está activo en la empresa.");
         if (amount <= 0 || decimal.Round(amount, 2) != amount)
-            throw new DomainException("VALIDACION", "El monto debe ser mayor que 0 y con máximo 2 decimales.");
+            throw new DomainException("VALIDATION", "El monto debe ser mayor que 0 y con máximo 2 decimales.");
         if (method.RequiresReference && string.IsNullOrWhiteSpace(reference))
-            throw new DomainException("VALIDACION", $"{method.Name} exige referencia.");
+            throw new DomainException("VALIDATION", $"{method.Name} exige referencia.");
         decimal? change = null;
         if (method.Kind == PaymentMethodKind.Cash)
         {
             var tendered = amountTendered ?? amount;
             if (tendered < amount)
-                throw new DomainException("VALIDACION", "El efectivo recibido es menor que el monto.");
+                throw new DomainException("VALIDATION", "El efectivo recibido es menor que el monto.");
             amountTendered = tendered;
             change = tendered - amount;
         }
         else if (amountTendered is not null)
-            throw new DomainException("VALIDACION", "Solo el efectivo admite excedente (cambio).");
+            throw new DomainException("VALIDATION", "Solo el efectivo admite excedente (cambio).");
 
         return new Payment
         {
@@ -138,11 +138,11 @@ public sealed class Payment : AuditableEntity, ITenantEntity
     {
         EnsurePending();
         if (resolution is not (PaymentStatus.Approved or PaymentStatus.Declined or PaymentStatus.Cancelled))
-            throw new DomainException("VALIDACION", "Resolución: aprobado, rechazado o cancelado.");
+            throw new DomainException("VALIDATION", "Resolución: aprobado, rechazado o cancelado.");
         if (resolution == PaymentStatus.Approved && string.IsNullOrWhiteSpace(approvalNumber))
-            throw new DomainException("VALIDACION", "Para aprobar a mano escribe el número de aprobación del recibo del datáfono.");
+            throw new DomainException("VALIDATION", "Para aprobar a mano escribe el número de aprobación del recibo del datáfono.");
         if (string.IsNullOrWhiteSpace(note))
-            throw new DomainException("VALIDACION", "Explica por qué se resuelve a mano.");
+            throw new DomainException("VALIDATION", "Explica por qué se resuelve a mano.");
         Status = resolution;
         ResolvedAt = at;
         ResolvedBy = by;
@@ -155,9 +155,9 @@ public sealed class Payment : AuditableEntity, ITenantEntity
     public void ApplyRefund(decimal amount)
     {
         if (Status is not (PaymentStatus.Approved or PaymentStatus.PartiallyRefunded))
-            throw new DomainException("ESTADO_INVALIDO", $"Solo se reembolsa un pago aprobado (está {Status}).");
+            throw new DomainException("INVALID_STATE", $"Solo se reembolsa un pago aprobado (está {Status}).");
         if (amount <= 0 || RefundedAmount + amount > Amount)
-            throw new DomainException("VALIDACION", "El reembolso supera lo pagado.");
+            throw new DomainException("VALIDATION", "El reembolso supera lo pagado.");
         RefundedAmount += amount;
         Status = RefundedAmount == Amount ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
     }
@@ -165,7 +165,7 @@ public sealed class Payment : AuditableEntity, ITenantEntity
     private void EnsurePending()
     {
         if (!IsPending)
-            throw new DomainException("ESTADO_INVALIDO", $"El pago ya está resuelto ({Status}).");
+            throw new DomainException("INVALID_STATE", $"El pago ya está resuelto ({Status}).");
     }
 }
 
@@ -253,7 +253,7 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
     {
         EnsureOpen();
         if (status is not (AttemptStatus.Approved or AttemptStatus.Declined or AttemptStatus.Voided or AttemptStatus.Error))
-            throw new DomainException("VALIDACION", "Resultado de pasarela no válido.");
+            throw new DomainException("VALIDATION", "Resultado de pasarela no válido.");
         Status = status;
         RawStatus = rawStatus;
         ExternalId = externalId;
@@ -270,7 +270,7 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
     private void EnsureOpen()
     {
         if (!IsOpen)
-            throw new DomainException("ESTADO_INVALIDO", $"El intento ya terminó ({Status}).");
+            throw new DomainException("INVALID_STATE", $"El intento ya terminó ({Status}).");
     }
 }
 

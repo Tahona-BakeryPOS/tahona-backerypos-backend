@@ -8,8 +8,8 @@ This is an independent repository: it is built, tested, documented and deployed 
 backoffice, other applications) consumes the HTTP API described in [`docs/api-contracts.md`](docs/api-contracts.md) and at
 `/openapi/v1.json`.
 
-> Code, database and documentation are in English. User-facing messages and the display names seeded for each company are
-> in Spanish, and the API routes and error codes still are too (see the "Language" section of [`CLAUDE.md`](CLAUDE.md)).
+> Code, database, API (routes, error codes, fields) and documentation are in English. User-facing messages and the display names
+> seeded for each company are in Spanish (see the "Language" section of [`CLAUDE.md`](CLAUDE.md)).
 
 ## What it does
 
@@ -89,8 +89,8 @@ docs/      requirements, architecture, data model, API contracts, decisions and 
    The OpenAPI document is served at `/openapi/v1.json`.
 
 4. First sign-in: `POST /api/v1/auth/login` with the platform administrator and then
-   `POST /api/v1/plataforma/empresas` to create a company. The response includes the owner's one-time password, which the
-   owner must change at `/api/v1/auth/cambiar-contrasena`.
+   `POST /api/v1/platform/companies` to create a company. The response includes the owner's one-time password, which the
+   owner must change at `/api/v1/auth/change-password`.
 
 ## Tests
 

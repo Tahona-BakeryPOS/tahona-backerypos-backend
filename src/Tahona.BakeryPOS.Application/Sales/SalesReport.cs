@@ -56,7 +56,7 @@ public sealed class SalesReportHandler : IRequestHandler<GetSalesReportQuery, Re
     public async Task<Result<SalesReportDto>> Handle(GetSalesReportQuery request, CancellationToken ct)
     {
         if (request.BranchId is { } requested && !_tenant.CanAccessBranch(requested))
-            return Result.Failure<SalesReportDto>(Error.SinAsignacionVigente);
+            return Result.Failure<SalesReportDto>(Error.NoCurrentAssignment);
         var from = request.From.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) - ColombiaOffset;
         var to = request.To.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) - ColombiaOffset;
 

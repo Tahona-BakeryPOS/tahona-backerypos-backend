@@ -6,7 +6,7 @@ namespace Tahona.BakeryPOS.Api.Extensions;
 
 /// <summary>
 /// Converts Result/Result&lt;T&gt; into HTTP responses with the standard error body
-/// <c>{ codigo, mensaje, correlationId }</c>.
+/// <c>{ code, message, correlationId }</c>.
 /// </summary>
 public static class ResultExtensions
 {
@@ -27,18 +27,18 @@ public static class ResultExtensions
 
     public static int StatusCodeOf(string code) => code switch
     {
-        "NO_AUTENTICADO" => StatusCodes.Status401Unauthorized,
-        "SIN_PERMISO" or "EMPRESA_REQUERIDA" or "CAMBIO_CONTRASENA_REQUERIDO" or "DISPOSITIVO_NO_VINCULADO" => StatusCodes.Status403Forbidden,
-        "NO_ENCONTRADO" => StatusCodes.Status404NotFound,
-        "VALIDACION" or "IDEMPOTENCIA_REQUERIDA" => StatusCodes.Status400BadRequest,
-        "IDEMPOTENCIA_CONFLICTO" or "IDEMPOTENCIA_EN_CURSO" or "CODIGO_DUPLICADO" or "NIT_DUPLICADO"
-            or "CORREO_EN_USO" or "ASIGNACION_DUPLICADA" or "INVENTARIO_INICIAL_REGISTRADO"
-            or "CAJA_YA_ABIERTA" or "CAJA_CERRADA" or "ESTADO_INVALIDO" or "PAGO_EN_CURSO" => StatusCodes.Status409Conflict,
-        "PROVEEDOR_NO_DISPONIBLE" => StatusCodes.Status503ServiceUnavailable,
-        "CONFLICTO_VERSION" => StatusCodes.Status412PreconditionFailed,
-        "USUARIO_BLOQUEADO" => StatusCodes.Status423Locked,
-        "VERSION_REQUERIDA" => StatusCodes.Status428PreconditionRequired,
-        "LIMITE_EXCEDIDO" => StatusCodes.Status429TooManyRequests,
+        "UNAUTHENTICATED" => StatusCodes.Status401Unauthorized,
+        "PERMISSION_DENIED" or "COMPANY_REQUIRED" or "PASSWORD_CHANGE_REQUIRED" or "DEVICE_NOT_PAIRED" => StatusCodes.Status403Forbidden,
+        "NOT_FOUND" => StatusCodes.Status404NotFound,
+        "VALIDATION" or "IDEMPOTENCY_KEY_REQUIRED" => StatusCodes.Status400BadRequest,
+        "IDEMPOTENCY_CONFLICT" or "IDEMPOTENCY_IN_PROGRESS" or "DUPLICATE_CODE" or "DUPLICATE_NIT"
+            or "EMAIL_IN_USE" or "DUPLICATE_ASSIGNMENT" or "INITIAL_STOCK_ALREADY_RECORDED"
+            or "CASH_SESSION_ALREADY_OPEN" or "CASH_SESSION_CLOSED" or "INVALID_STATE" or "PAYMENT_IN_PROGRESS" => StatusCodes.Status409Conflict,
+        "PROVIDER_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
+        "VERSION_CONFLICT" => StatusCodes.Status412PreconditionFailed,
+        "USER_LOCKED" => StatusCodes.Status423Locked,
+        "VERSION_REQUIRED" => StatusCodes.Status428PreconditionRequired,
+        "RATE_LIMIT_EXCEEDED" => StatusCodes.Status429TooManyRequests,
         _ => StatusCodes.Status422UnprocessableEntity,
     };
 

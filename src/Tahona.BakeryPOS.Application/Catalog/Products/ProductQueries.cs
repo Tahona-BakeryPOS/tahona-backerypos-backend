@@ -145,7 +145,7 @@ public sealed class ProductQueriesHandler :
             return Result.Success();
         if (await _branches.FindAsync(id, ct) is null)
             return Result.Failure(Error.NotFound("Sucursal", id));
-        return _tenant.CanAccessBranch(id) ? Result.Success() : Result.Failure(Error.SinAsignacionVigente);
+        return _tenant.CanAccessBranch(id) ? Result.Success() : Result.Failure(Error.NoCurrentAssignment);
     }
 
     private async Task<IReadOnlyList<ProductDto>> ToDtosAsync(IReadOnlyList<Product> products, Guid? branchId, CancellationToken ct)

@@ -20,7 +20,7 @@ and never for declaring an integration finished.
 
 ## Critical failure scenarios (automated)
 
-1. Retry of `POST /ventas` with the same `Idempotency-Key` → a single sale.
+1. Retry of `POST /sales` with the same `Idempotency-Key` → a single sale.
 2. Timeout when creating the gateway transaction → attempt `unknown`; the worker resolves it by querying; no second charge is created.
 3. Duplicate webhook → a single state change; webhook with an invalid signature → rejected and audited.
 4. Webhook never arrives → the worker queries and confirms the sale.
@@ -28,7 +28,7 @@ and never for declaring an integration finished.
 6. Approved payment of a cancelled sale → left flagged for refund in reconciliation.
 7. Timeout when issuing the document → `unknown`; no resend without a prior query; same number.
 8. Tax rejection → `rejected` with reasons; no fake "accepted" state.
-9. Two registers sell the last unit with the `block` policy → one sale goes through, the other gets `EXISTENCIAS_INSUFICIENTES`.
+9. Two registers sell the last unit with the `block` policy → one sale goes through, the other gets `INSUFFICIENT_STOCK`.
 10. Return exceeding what was sold → 422; successive partial returns add up correctly.
 11. Cash close with a pending payment → blocked (D-12).
 12. Process crash between steps → workers resume from the persisted state.

@@ -22,7 +22,7 @@ namespace Tahona.BakeryPOS.IntegrationTests;
 /// <summary>
 /// Real API against real PostgreSQL (Testcontainers container). It is created once per collection:
 /// it applies the migrations and onboards two demo companies through the same endpoints the product uses
-/// (plataforma → propietario → sucursal → caja → equipo vinculado → cajero).
+/// (platform → owner → branch → register → paired device → cashier).
 /// </summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -101,7 +101,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         var platform = ClientFor(null, Permissions.PlatformAdmin);
         var ownerEmail = $"propietario@{suffix}.test";
-        var created = await ReadAsync<CreatedCompanyDto>(await platform.PostAsJsonAsync("/api/v1/plataforma/empresas", new
+        var created = await ReadAsync<CreatedCompanyDto>(await platform.PostAsJsonAsync("/api/v1/platform/companies", new
         {
             legalName, nit, nitCheckDigit = dv, taxRegime = "48", taxResponsibilities = new[] { "R-99-PN" },
             email = $"contacto@{suffix}.test", owner = new { fullName = $"Propietario {suffix.ToUpperInvariant()}", email = ownerEmail },
@@ -111,21 +111,21 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         var first = await ReadAsync<AuthSessionDto>(await CreateClient().PostAsJsonAsync("/api/v1/auth/login",
             new { email = ownerEmail, password = created.Owner.TemporaryPassword }));
         var session = await ReadAsync<AuthSessionDto>(await ClientWithToken(first.AccessToken).PostAsJsonAsync(
-            "/api/v1/auth/cambiar-contrasena", new { currentPassword = created.Owner.TemporaryPassword, newPassword = OwnerPassword }));
+            "/api/v1/auth/change-password", new { currentPassword = created.Owner.TemporaryPassword, newPassword = OwnerPassword }));
         var owner = ClientWithToken(session.AccessToken);
 
-        var branch = await ReadAsync<BranchDto>(await PostIdempotent(owner, "/api/v1/sucursales",
+        var branch = await ReadAsync<BranchDto>(await PostIdempotent(owner, "/api/v1/branches",
             new { code = $"{suffix.ToUpperInvariant()}1", name = $"Sede {suffix.ToUpperInvariant()}1" }));
-        var register = await ReadAsync<CashRegisterDto>(await PostIdempotent(owner, "/api/v1/cajas",
+        var register = await ReadAsync<CashRegisterDto>(await PostIdempotent(owner, "/api/v1/cash-registers",
             new { branchId = branch.Id, code = "CAJA1", name = "Caja 1" }));
-        var code = await ReadAsync<PairingCodeDto>(await owner.PostAsync($"/api/v1/cajas/{register.Id}/codigos-vinculacion", null));
-        var device = await ReadAsync<PairedDeviceDto>(await CreateClient().PostAsJsonAsync("/api/v1/dispositivo/vincular",
+        var code = await ReadAsync<PairingCodeDto>(await owner.PostAsync($"/api/v1/cash-registers/{register.Id}/pairing-codes", null));
+        var device = await ReadAsync<PairedDeviceDto>(await CreateClient().PostAsJsonAsync("/api/v1/device/pair",
             new { code = code.Code, deviceName = "Tablet mostrador" }));
 
         var roles = await owner.GetFromJsonAsync<List<RoleDto>>("/api/v1/roles");
         var cashierRole = roles!.Single(r => r.Code == SystemRoles.Cashier);
-        var ownerUser = (await owner.GetFromJsonAsync<List<UserDto>>("/api/v1/usuarios"))!.Single();
-        var cashier = await ReadAsync<CreatedUserDto>(await owner.PostAsJsonAsync("/api/v1/usuarios", new
+        var ownerUser = (await owner.GetFromJsonAsync<List<UserDto>>("/api/v1/users"))!.Single();
+        var cashier = await ReadAsync<CreatedUserDto>(await owner.PostAsJsonAsync("/api/v1/users", new
         {
             fullName = $"Cajero {suffix.ToUpperInvariant()}", pin = CashierPin,
             assignments = new[] { new { roleId = cashierRole.Id, branchId = branch.Id } },

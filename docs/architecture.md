@@ -83,8 +83,8 @@ A sale is not resolved in a single transaction. It is a process with persisted s
 steps; every external call happens **outside** SQL transactions.
 
 ```
-[1] POST /ventas (Idempotency-Key)            → TX: 'draft' sale + lines with frozen prices/taxes
-[2] POST /ventas/{id}/pagos (cash|gateway)    → TX: payment attempt 'created' (unique reference)
+[1] POST /sales (Idempotency-Key)            → TX: 'draft' sale + lines with frozen prices/taxes
+[2] POST /sales/{id}/payments (cash|gateway)    → TX: payment attempt 'created' (unique reference)
       └─ if gateway: outside TX → create the gateway transaction → TX: store external id, 'pending'
 [3] Webhook or status query                   → TX: attempt 'approved'/'declined' (+ deduplicated inbound event)
 [4] Confirmation (when approved payments = total) → single TX:

@@ -86,7 +86,7 @@ public sealed class GatewayPaymentService
         decimal amount, IReadOnlyList<BoldTax> taxes, string? description, CancellationToken ct)
     {
         if (!session.IsOpen)
-            return Result.Failure<Payment>(Error.CajaCerrada);
+            return Result.Failure<Payment>(Error.CashSessionClosed);
         var method = await _db.PaymentMethods.AsNoTracking().FirstOrDefaultAsync(m => m.Id == paymentMethodId, ct);
         if (method is null)
             return Result.Failure<Payment>(Error.NotFound("Medio de pago", paymentMethodId));
@@ -94,10 +94,10 @@ public sealed class GatewayPaymentService
             return Result.Failure<Payment>(Error.Validation("El medio de pago no es de la pasarela o está desactivado."));
         var account = await _db.GatewayAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.IsActive, ct);
         if (account is null)
-            return Result.Failure<Payment>(Error.PasarelaNoConfigurada);
+            return Result.Failure<Payment>(Error.GatewayNotConfigured);
         var terminal = await _db.RegisterTerminals.AsNoTracking().FirstOrDefaultAsync(t => t.CashRegisterId == session.CashRegisterId, ct);
         if (terminal is null)
-            return Result.Failure<Payment>(Error.DatafonoNoConfigurado);
+            return Result.Failure<Payment>(Error.TerminalNotConfigured);
 
         var payment = Payment.StartGateway(_tenant.RequiredCompanyId, purpose, saleId, session.Id, method, amount);
         var attempt = PaymentAttempt.Create(payment, account.Environment, method.GatewayMethod!, terminal.TerminalSerial);
@@ -161,7 +161,7 @@ public sealed class GatewayPaymentsHandler :
         if (session is null)
             return Result.Failure<PaymentDto>(Error.Validation("La caja no tiene una sesión abierta: ábrela en el POS para hacer el cobro de prueba."));
         if (!_tenant.CanAccessBranch(session.BranchId))
-            return Result.Failure<PaymentDto>(Error.SinAsignacionVigente);
+            return Result.Failure<PaymentDto>(Error.NoCurrentAssignment);
 
         var payment = await _gateway.StartAsync(PaymentPurpose.Test, null, session, request.PaymentMethodId, request.Amount, [],
             "Cobro de prueba BakeryPOS", ct);
@@ -192,7 +192,7 @@ public sealed class GatewayPaymentsHandler :
             return Result.Failure<PaymentDto>(Error.NotFound("Pago", request.Id));
         var session = await _sessions.FindAsync(payment.CashSessionId, ct);
         if (session is not null && !_tenant.CanAccessBranch(session.BranchId))
-            return Result.Failure<PaymentDto>(Error.SinAsignacionVigente);
+            return Result.Failure<PaymentDto>(Error.NoCurrentAssignment);
 
         var resolution = request.Resolution switch
         {
@@ -200,7 +200,7 @@ public sealed class GatewayPaymentsHandler :
             "declined" => PaymentStatus.Declined,
             _ => PaymentStatus.Cancelled,
         };
-        payment.ResolveManually(resolution, _tenant.UserId ?? throw new InvalidOperationException("Requiere un usuario en sesión."),
+        payment.ResolveManually(resolution, _tenant.UserId ?? throw new InvalidOperationException("A user in session is required."),
             _clock.GetUtcNow().UtcDateTime, request.ApprovalNumber, request.Note);
         var attempt = await _db.PaymentAttempts.FirstOrDefaultAsync(a => a.PaymentId == payment.Id && (a.Status == AttemptStatus.Created
             || a.Status == AttemptStatus.Pending || a.Status == AttemptStatus.Unknown), ct);
@@ -286,7 +286,7 @@ public sealed class BoldWebhookHandler : IRequestHandler<ProcessBoldWebhookComma
         var record = await _events.RecordAsync(PaymentAttempt.Bold, evt.Id, request.RawBody, valid, ct);
         if (!valid)
         {
-            _logger.LogWarning("Webhook de Bold {EventId} rechazado: firma inválida o referencia desconocida", evt.Id);
+            _logger.LogWarning("Bold webhook {EventId} rejected: invalid signature or unknown reference", evt.Id);
             await _events.MarkAsync(record.Id, InboundEventStatus.Failed, "Firma inválida o referencia desconocida", ct);
             return WebhookOutcome.InvalidSignature;
         }
@@ -328,7 +328,7 @@ public sealed class BoldWebhookHandler : IRequestHandler<ProcessBoldWebhookComma
                 // Already resolved (e.g. by hand), voids or unknown types: the event is stored without changing anything.
                 note = $"Sin cambios: {evt.Type} con intento {attempt.Status} y pago {payment.Status}";
                 if (evt.Type == "SALE_APPROVED" && payment.Status != PaymentStatus.Approved)
-                    _logger.LogError("Pago {PaymentId}: Bold aprobó después de resolverse como {Status}; revisar en la conciliación", payment.Id, payment.Status);
+                    _logger.LogError("Payment {PaymentId}: Bold approved after it was resolved as {Status}; check it in the reconciliation", payment.Id, payment.Status);
                 return WebhookOutcome.Ignored;
         }
     }

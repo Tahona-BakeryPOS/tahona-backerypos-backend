@@ -16,7 +16,7 @@ public sealed class Category : AuditableEntity, ITenantEntity
     public static Category Create(Guid companyId, string name, int displayOrder)
     {
         if (companyId == Guid.Empty)
-            throw new DomainException("VALIDACION", "La categoría debe pertenecer a una empresa.");
+            throw new DomainException("VALIDATION", "La categoría debe pertenecer a una empresa.");
         var category = new Category { CompanyId = companyId };
         category.Update(name, displayOrder, isActive: true);
         return category;
@@ -25,9 +25,9 @@ public sealed class Category : AuditableEntity, ITenantEntity
     public void Update(string name, int displayOrder, bool isActive)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El nombre de la categoría es obligatorio.");
+            throw new DomainException("VALIDATION", "El nombre de la categoría es obligatorio.");
         if (displayOrder < 0)
-            throw new DomainException("VALIDACION", "El orden no puede ser negativo.");
+            throw new DomainException("VALIDATION", "El orden no puede ser negativo.");
         Name = name.Trim();
         DisplayOrder = displayOrder;
         IsActive = isActive;

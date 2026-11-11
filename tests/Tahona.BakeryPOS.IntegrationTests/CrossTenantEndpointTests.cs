@@ -28,21 +28,21 @@ public sealed class CrossTenantEndpointTests
     public static TheoryData<string, string, string> ForeignIdRequests => new()
     {
         // method, route with B's placeholders, JSON body
-        { "GET", "/api/v1/sucursales/{branchB}", "" },
-        { "PUT", "/api/v1/sucursales/{branchB}", """{"name":"Intrusa"}""" },
-        { "POST", "/api/v1/sucursales/{branchB}/desactivar", "" },
-        { "POST", "/api/v1/cajas", """{"branchId":"{branchB}","code":"X","name":"X"}""" },
-        { "POST", "/api/v1/cajas/{registerB}/codigos-vinculacion", "" },
-        { "POST", "/api/v1/dispositivos/{deviceB}/desactivar", "" },
-        { "GET", "/api/v1/usuarios/{cashierB}", "" },
-        { "PUT", "/api/v1/usuarios/{cashierB}", """{"fullName":"X","isActive":false}""" },
-        { "POST", "/api/v1/usuarios/{cashierB}/asignaciones", """{"roleId":"{roleA}"}""" },
-        { "DELETE", "/api/v1/usuarios/{cashierB}/asignaciones/{assignmentB}", "" },
-        { "DELETE", "/api/v1/usuarios/{cashierA}/asignaciones/{assignmentB}", "" },
-        { "POST", "/api/v1/usuarios/{cashierA}/asignaciones", """{"roleId":"{roleB}"}""" },
-        { "POST", "/api/v1/usuarios/{cashierA}/asignaciones", """{"roleId":"{roleA}","branchId":"{branchB}"}""" },
-        { "POST", "/api/v1/usuarios", """{"fullName":"X","pin":"1111","assignments":[{"roleId":"{roleB}"}]}""" },
-        { "POST", "/api/v1/usuarios", """{"fullName":"X","pin":"1111","assignments":[{"roleId":"{roleA}","branchId":"{branchB}"}]}""" },
+        { "GET", "/api/v1/branches/{branchB}", "" },
+        { "PUT", "/api/v1/branches/{branchB}", """{"name":"Intrusa"}""" },
+        { "POST", "/api/v1/branches/{branchB}/deactivate", "" },
+        { "POST", "/api/v1/cash-registers", """{"branchId":"{branchB}","code":"X","name":"X"}""" },
+        { "POST", "/api/v1/cash-registers/{registerB}/pairing-codes", "" },
+        { "POST", "/api/v1/devices/{deviceB}/deactivate", "" },
+        { "GET", "/api/v1/users/{cashierB}", "" },
+        { "PUT", "/api/v1/users/{cashierB}", """{"fullName":"X","isActive":false}""" },
+        { "POST", "/api/v1/users/{cashierB}/assignments", """{"roleId":"{roleA}"}""" },
+        { "DELETE", "/api/v1/users/{cashierB}/assignments/{assignmentB}", "" },
+        { "DELETE", "/api/v1/users/{cashierA}/assignments/{assignmentB}", "" },
+        { "POST", "/api/v1/users/{cashierA}/assignments", """{"roleId":"{roleB}"}""" },
+        { "POST", "/api/v1/users/{cashierA}/assignments", """{"roleId":"{roleA}","branchId":"{branchB}"}""" },
+        { "POST", "/api/v1/users", """{"fullName":"X","pin":"1111","assignments":[{"roleId":"{roleB}"}]}""" },
+        { "POST", "/api/v1/users", """{"fullName":"X","pin":"1111","assignments":[{"roleId":"{roleA}","branchId":"{branchB}"}]}""" },
     };
 
     [Theory]
@@ -66,11 +66,11 @@ public sealed class CrossTenantEndpointTests
     {
         var owner = _api.ClientWithToken(A.OwnerToken);
 
-        var registers = await owner.GetFromJsonAsync<List<CashRegisterDto>>("/api/v1/cajas");
-        var devices = await owner.GetFromJsonAsync<List<DeviceDto>>("/api/v1/dispositivos");
-        var users = await owner.GetFromJsonAsync<List<UserDto>>("/api/v1/usuarios");
+        var registers = await owner.GetFromJsonAsync<List<CashRegisterDto>>("/api/v1/cash-registers");
+        var devices = await owner.GetFromJsonAsync<List<DeviceDto>>("/api/v1/devices");
+        var users = await owner.GetFromJsonAsync<List<UserDto>>("/api/v1/users");
         var roles = await owner.GetFromJsonAsync<List<RoleDto>>("/api/v1/roles");
-        var company = await owner.GetFromJsonAsync<CompanyDto>("/api/v1/empresa");
+        var company = await owner.GetFromJsonAsync<CompanyDto>("/api/v1/company");
 
         Assert.Contains(registers!, r => r.Id == A.CashRegisterId);
         Assert.DoesNotContain(registers!, r => r.Id == B.CashRegisterId);
@@ -86,7 +86,7 @@ public sealed class CrossTenantEndpointTests
     {
         var response = await _api.DeviceClient(B.DeviceToken).PostAsJsonAsync("/api/v1/auth/login-pin",
             new { userId = A.CashierUserId, pin = ApiFactory.CashierPin });
-        var users = await _api.DeviceClient(B.DeviceToken).GetFromJsonAsync<List<DeviceUserDto>>("/api/v1/dispositivo/usuarios");
+        var users = await _api.DeviceClient(B.DeviceToken).GetFromJsonAsync<List<DeviceUserDto>>("/api/v1/device/users");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.DoesNotContain(users!, u => u.UserId == A.CashierUserId);
@@ -97,9 +97,9 @@ public sealed class CrossTenantEndpointTests
     {
         var platform = _api.ClientFor(null, Tahona.BakeryPOS.Application.Common.Security.Permissions.PlatformAdmin);
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await platform.GetAsync("/api/v1/usuarios")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await platform.GetAsync("/api/v1/empresa")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await _api.ClientWithToken(A.OwnerToken).GetAsync("/api/v1/plataforma/empresas")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await platform.GetAsync("/api/v1/users")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await platform.GetAsync("/api/v1/company")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _api.ClientWithToken(A.OwnerToken).GetAsync("/api/v1/platform/companies")).StatusCode);
     }
 
     private string Fill(string text) => text

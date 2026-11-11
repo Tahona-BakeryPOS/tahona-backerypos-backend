@@ -42,7 +42,7 @@ public sealed class CategoriesHandler :
     IRequestHandler<CreateCategoryCommand, Result<CategoryDto>>,
     IRequestHandler<UpdateCategoryCommand, Result<CategoryDto>>
 {
-    private static readonly Error NombreDuplicado = Error.CodigoDuplicado with { Message = "Ya existe una categoría con ese nombre." };
+    private static readonly Error NombreDuplicado = Error.DuplicateCode with { Message = "Ya existe una categoría con ese nombre." };
 
     private readonly IAppDbContext _db;
     private readonly ITenantContext _tenant;

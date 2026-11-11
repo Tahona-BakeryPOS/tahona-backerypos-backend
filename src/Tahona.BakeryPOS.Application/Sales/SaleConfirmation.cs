@@ -60,7 +60,7 @@ public sealed class SaleConfirmation
         // without stock and the payment is already approved, it is deducted anyway in the cashier's name and recorded.
         var lines = sale.Lines.Select(l => (l.Id, l.ProductId, l.Quantity)).ToList();
         var posted = await _inventory.PostSaleAsync(sale.BranchId, sale.Id, lines, sale.StockAuthorizedBy, ct);
-        if (posted.IsFailure && posted.Error.Code == Error.ExistenciasInsuficientes.Code)
+        if (posted.IsFailure && posted.Error.Code == Error.InsufficientStock.Code)
         {
             _logger.LogWarning("Venta {SaleId} pagada sin existencias suficientes: se descuenta igual ({Detail})", sale.Id, posted.Error.Message);
             posted = await _inventory.PostSaleAsync(sale.BranchId, sale.Id, lines, sale.StockAuthorizedBy ?? sale.CashierId, ct);

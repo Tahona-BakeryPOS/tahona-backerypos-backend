@@ -11,7 +11,7 @@ namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>The token's company (US-1.2).</summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/empresa")]
+[Route("api/v{version:apiVersion}/company")]
 [ApiVersion("1.0")]
 [Authorize]
 [RequirePermission(Permissions.OrganizationManage)]

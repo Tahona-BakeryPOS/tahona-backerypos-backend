@@ -34,11 +34,11 @@ public sealed class GatewayAccount : AuditableEntity, ITenantEntity
     public void SetCredentials(string encryptedIdentityKey, string? encryptedSecretKey, string sellerEmail)
     {
         if (string.IsNullOrWhiteSpace(encryptedIdentityKey))
-            throw new DomainException("VALIDACION", "La llave de identidad es obligatoria.");
+            throw new DomainException("VALIDATION", "La llave de identidad es obligatoria.");
         if (Environment == GatewayEnvironment.Production && string.IsNullOrWhiteSpace(encryptedSecretKey))
-            throw new DomainException("VALIDACION", "En producción la llave secreta es obligatoria: sin ella no se puede validar el webhook.");
+            throw new DomainException("VALIDATION", "En producción la llave secreta es obligatoria: sin ella no se puede validar el webhook.");
         if (string.IsNullOrWhiteSpace(sellerEmail))
-            throw new DomainException("VALIDACION", "El correo del vendedor en Bold es obligatorio.");
+            throw new DomainException("VALIDATION", "El correo del vendedor en Bold es obligatorio.");
         EncryptedIdentityKey = encryptedIdentityKey;
         EncryptedSecretKey = encryptedSecretKey;
         SellerEmail = sellerEmail.Trim().ToLowerInvariant();
@@ -70,7 +70,7 @@ public sealed class RegisterTerminal : AuditableEntity, ITenantEntity
     public void Set(string model, string serial)
     {
         if (string.IsNullOrWhiteSpace(model) || string.IsNullOrWhiteSpace(serial))
-            throw new DomainException("VALIDACION", "Modelo y serial del datáfono son obligatorios.");
+            throw new DomainException("VALIDATION", "Modelo y serial del datáfono son obligatorios.");
         TerminalModel = model.Trim();
         TerminalSerial = serial.Trim();
     }

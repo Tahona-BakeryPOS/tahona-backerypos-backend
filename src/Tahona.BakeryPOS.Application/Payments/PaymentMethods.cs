@@ -88,7 +88,7 @@ public sealed class PaymentMethodsHandler :
     {
         var code = request.Code.Trim().ToUpperInvariant();
         if (await _db.PaymentMethods.IgnoreQueryFilters([QueryFilters.SoftDelete]).AnyAsync(m => m.Code == code, ct))
-            return Result.Failure<PaymentMethodDto>(Error.CodigoDuplicado);
+            return Result.Failure<PaymentMethodDto>(Error.DuplicateCode);
 
         PaymentKinds.TryParse(request.Kind, out var kind);
         var method = PaymentMethod.Create(_tenant.RequiredCompanyId, code, request.Name, kind,
@@ -108,7 +108,7 @@ public sealed class PaymentMethodsHandler :
             return Result.Failure<PaymentMethodDto>(Error.NotFound("Medio de pago", request.Id));
         if (request.IsActive && method.Kind == PaymentMethodKind.Gateway
             && !await _db.GatewayAccounts.AnyAsync(a => a.IsActive, ct))
-            return Result.Failure<PaymentMethodDto>(Error.PasarelaNoConfigurada with
+            return Result.Failure<PaymentMethodDto>(Error.GatewayNotConfigured with
             { Message = "Configura y activa la integración con Bold antes de activar este medio." });
 
         _db.ExpectVersion(method, version.Value);

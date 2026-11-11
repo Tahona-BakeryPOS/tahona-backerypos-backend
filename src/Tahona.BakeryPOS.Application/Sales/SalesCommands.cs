@@ -103,16 +103,16 @@ public sealed class SalesCommandsHandler :
     {
         var session = await _sessions.FindOpenForRegisterAsync(request.CashRegisterId, ct);
         if (session is null)
-            return Result.Failure<SaleDto>(Error.CajaCerrada with { Message = "La caja no tiene una sesión abierta." });
+            return Result.Failure<SaleDto>(Error.CashSessionClosed with { Message = "La caja no tiene una sesión abierta." });
         if (!_tenant.CanAccessBranch(session.BranchId))
-            return Result.Failure<SaleDto>(Error.SinAsignacionVigente);
+            return Result.Failure<SaleDto>(Error.NoCurrentAssignment);
         if (request.Lines.Any(l => l.DiscountAmount > 0) && !_tenant.HasPermission(Permissions.SalesDiscount))
-            return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Aplicar descuentos requiere el permiso ventas.descuento." });
+            return Result.Failure<SaleDto>(Error.PermissionDenied with { Message = "Aplicar descuentos requiere el permiso ventas.descuento." });
 
         var now = _clock.GetUtcNow().UtcDateTime;
         var products = await _products.PricedAsync(request.Lines.Select(l => l.ProductId).ToList(), session.BranchId, now, ct);
         var sale = Sale.Start(_tenant.RequiredCompanyId, session.BranchId, session.CashRegisterId, session.Id,
-            _tenant.UserId ?? throw new InvalidOperationException("Vender requiere un usuario en sesión."), request.CustomerIdentification);
+            _tenant.UserId ?? throw new InvalidOperationException("Selling requires a user in session."), request.CustomerIdentification);
         foreach (var line in request.Lines)
         {
             if (!products.TryGetValue(line.ProductId, out var p))
@@ -143,7 +143,7 @@ public sealed class SalesCommandsHandler :
     public async Task<Result<SaleDto>> Handle(AuthorizeSaleStockCommand request, CancellationToken ct)
     {
         if (!_tenant.HasPermission(Permissions.InventoryAdjust))
-            return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Autorizar vender sin existencias requiere el permiso inventario.ajustar." });
+            return Result.Failure<SaleDto>(Error.PermissionDenied with { Message = "Autorizar vender sin existencias requiere el permiso inventario.ajustar." });
         var sale = await FindAsync(request.SaleId, ct);
         if (sale.IsFailure) return Result.Failure<SaleDto>(sale.Error);
         sale.Value.AuthorizeStock(_tenant.UserId!.Value);
@@ -160,11 +160,11 @@ public sealed class SalesCommandsHandler :
             return Result.Failure<SaleDto>(Error.Validation("La venta ya no admite pagos."));
         var session = await _sessions.FindAsync(sale.CashSessionId, ct);
         if (session is null || !session.IsOpen)
-            return Result.Failure<SaleDto>(Error.CajaCerrada);
+            return Result.Failure<SaleDto>(Error.CashSessionClosed);
 
         var existing = await _payments.ForSaleAsync(sale.Id, ct);
         if (existing.Any(p => p.Status == "pending"))
-            return Result.Failure<SaleDto>(Error.PagoEnCurso with { Message = "Hay un cobro en curso en el datáfono: espera su resultado." });
+            return Result.Failure<SaleDto>(Error.PaymentInProgress with { Message = "Hay un cobro en curso en el datáfono: espera su resultado." });
         var remaining = sale.Total - existing.Where(p => p.Status == "approved").Sum(p => p.Amount);
         if (request.Amount > remaining)
             return Result.Failure<SaleDto>(Error.Validation($"El monto supera lo que falta por pagar ({remaining:N2}). El excedente en efectivo va en 'recibido'."));
@@ -174,7 +174,7 @@ public sealed class SalesCommandsHandler :
         {
             var shortages = await _inventory.ShortagesAsync(sale.BranchId, sale.Lines.Select(l => (l.ProductId, l.Quantity)).ToList(), ct);
             if (shortages.Count > 0)
-                return Result.Failure<SaleDto>(Error.ExistenciasInsuficientes with
+                return Result.Failure<SaleDto>(Error.InsufficientStock with
                 {
                     Message = "Sin existencias suficientes: " + string.Join("; ", shortages.Select(s => $"{s.Name} (hay {s.OnHand:0.##}, se piden {s.Requested:0.##})"))
                         + ". Pide autorización a un superior.",
@@ -218,7 +218,7 @@ public sealed class SalesCommandsHandler :
         var sale = await _db.Sales.Include(s => s.Lines).FirstOrDefaultAsync(s => s.Id == id, ct);
         if (sale is null)
             return Result.Failure<Sale>(Error.NotFound("Venta", id));
-        return _tenant.CanAccessBranch(sale.BranchId) ? Result.Success(sale) : Result.Failure<Sale>(Error.SinAsignacionVigente);
+        return _tenant.CanAccessBranch(sale.BranchId) ? Result.Success(sale) : Result.Failure<Sale>(Error.NoCurrentAssignment);
     }
 }
 
@@ -250,6 +250,6 @@ public sealed class SalePaymentResolvedHandler : IOutboxHandler
             return;
         var result = await _confirmation.TryConfirmAsync(sale, ct);
         if (result.IsFailure)
-            throw new InvalidOperationException($"No se pudo confirmar la venta {sale.Id}: {result.Error.Code} {result.Error.Message}");
+            throw new InvalidOperationException($"Sale {sale.Id} could not be confirmed: {result.Error.Code} {result.Error.Message}");
     }
 }

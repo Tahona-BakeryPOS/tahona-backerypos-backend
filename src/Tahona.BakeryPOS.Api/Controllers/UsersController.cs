@@ -27,29 +27,29 @@ public sealed class UsersController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet("usuarios")]
+    [HttpGet("users")]
     [ProducesResponseType<IReadOnlyList<UserDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
         (await _mediator.Send(new GetUsersQuery(), ct)).ToActionResult(HttpContext);
 
-    [HttpGet("usuarios/{id:guid}")]
+    [HttpGet("users/{id:guid}")]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new GetUserByIdQuery(id), ct)).ToVersionedResult(HttpContext, u => u.Version);
 
-    [HttpPost("usuarios")]
+    [HttpPost("users")]
     [ProducesResponseType<CreatedUserDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create([FromBody] CreateUserCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
-        return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/usuarios/{result.Value.User.Id}" : null);
+        return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/users/{result.Value.User.Id}" : null);
     }
 
     /// <summary>Name, status and PIN in this company. Requires If-Match with the ETag read.</summary>
-    [HttpPut("usuarios/{id:guid}")]
+    [HttpPut("users/{id:guid}")]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
@@ -58,7 +58,7 @@ public sealed class UsersController : ControllerBase
         (await _mediator.Send(new UpdateUserCommand(id, Request.IfMatch(), body.FullName, body.IsActive, body.Pin), ct))
             .ToVersionedResult(HttpContext, u => u.Version);
 
-    [HttpPost("usuarios/{id:guid}/asignaciones")]
+    [HttpPost("users/{id:guid}/assignments")]
     [Idempotent]
     [ProducesResponseType<AssignmentDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -68,11 +68,11 @@ public sealed class UsersController : ControllerBase
             .ToCreatedResult(HttpContext);
 
     /// <summary>Closes the assignment's validity; it does not delete it.</summary>
-    [HttpDelete("usuarios/{id:guid}/asignaciones/{asignacionId:guid}")]
+    [HttpDelete("users/{id:guid}/assignments/{assignmentId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> EndAssignment(Guid id, Guid asignacionId, CancellationToken ct) =>
-        (await _mediator.Send(new EndAssignmentCommand(id, asignacionId), ct)).ToActionResult(HttpContext);
+    public async Task<IActionResult> EndAssignment(Guid id, Guid assignmentId, CancellationToken ct) =>
+        (await _mediator.Send(new EndAssignmentCommand(id, assignmentId), ct)).ToActionResult(HttpContext);
 
     [HttpGet("roles")]
     [ProducesResponseType<IReadOnlyList<RoleDto>>(StatusCodes.Status200OK)]

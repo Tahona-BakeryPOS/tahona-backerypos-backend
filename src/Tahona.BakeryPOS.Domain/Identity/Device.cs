@@ -21,7 +21,7 @@ public sealed class Device : AuditableEntity, ITenantEntity
     public static Device Create(Guid companyId, Guid cashRegisterId, string name, string tokenHash)
     {
         if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException("VALIDACION", "El nombre del dispositivo es obligatorio.");
+            throw new DomainException("VALIDATION", "El nombre del dispositivo es obligatorio.");
         return new Device { CompanyId = companyId, CashRegisterId = cashRegisterId, Name = name.Trim(), TokenHash = tokenHash };
     }
 
@@ -52,7 +52,7 @@ public sealed class DevicePairingCode : AuditableEntity, ITenantEntity
     public void Consume(Guid deviceId, DateTime now)
     {
         if (!IsUsable(now))
-            throw new DomainException("CODIGO_VINCULACION_INVALIDO", "El código de vinculación ya se usó o venció.");
+            throw new DomainException("INVALID_PAIRING_CODE", "El código de vinculación ya se usó o venció.");
         ConsumedAt = now;
         DeviceId = deviceId;
     }

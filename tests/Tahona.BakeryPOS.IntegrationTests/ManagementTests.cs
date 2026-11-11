@@ -37,57 +37,57 @@ public sealed class ManagementTests
     public async Task Duplicate_nit_and_invalid_check_digit_are_rejected()
     {
         var platform = _api.ClientFor(null, Permissions.PlatformAdmin);
-        var duplicate = await platform.PostAsJsonAsync("/api/v1/plataforma/empresas", CompanyBody("800197268", 4));
-        var badDv = await platform.PostAsJsonAsync("/api/v1/plataforma/empresas", CompanyBody("800197268", 5));
+        var duplicate = await platform.PostAsJsonAsync("/api/v1/platform/companies", CompanyBody("800197268", 4));
+        var badDv = await platform.PostAsJsonAsync("/api/v1/platform/companies", CompanyBody("800197268", 5));
 
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
-        Assert.Contains("NIT_DUPLICADO", await duplicate.Content.ReadAsStringAsync());
+        Assert.Contains("DUPLICATE_NIT", await duplicate.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.UnprocessableEntity, badDv.StatusCode);
-        Assert.Contains("NIT_INVALIDO", await badDv.Content.ReadAsStringAsync());
+        Assert.Contains("INVALID_NIT", await badDv.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task Company_update_requires_the_current_version()
     {
-        var get = await Owner.GetAsync("/api/v1/empresa");
+        var get = await Owner.GetAsync("/api/v1/company");
         var etag = get.Headers.ETag!.Tag;
         var company = await get.Content.ReadFromJsonAsync<CompanyDto>();
         var body = new { tradeName = "La Espiga", email = company!.Email, timeZone = "America/Bogota" };
 
-        var missing = await Owner.PutAsJsonAsync("/api/v1/empresa", body);
-        var updated = await Put(Owner, "/api/v1/empresa", body, etag);
-        var stale = await Put(Owner, "/api/v1/empresa", body with { tradeName = "Otra" }, etag);
-        var badZone = await Put(Owner, "/api/v1/empresa", body with { timeZone = "Marte/Olympus" }, updated.Headers.ETag!.Tag);
+        var missing = await Owner.PutAsJsonAsync("/api/v1/company", body);
+        var updated = await Put(Owner, "/api/v1/company", body, etag);
+        var stale = await Put(Owner, "/api/v1/company", body with { tradeName = "Otra" }, etag);
+        var badZone = await Put(Owner, "/api/v1/company", body with { timeZone = "Marte/Olympus" }, updated.Headers.ETag!.Tag);
 
         Assert.Equal((HttpStatusCode)428, missing.StatusCode);
         Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
         Assert.Equal("La Espiga", (await updated.Content.ReadFromJsonAsync<CompanyDto>())!.TradeName);
         Assert.Equal(HttpStatusCode.PreconditionFailed, stale.StatusCode);
-        Assert.Contains("CONFLICTO_VERSION", await stale.Content.ReadAsStringAsync());
+        Assert.Contains("VERSION_CONFLICT", await stale.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.BadRequest, badZone.StatusCode);
     }
 
     [Fact]
     public async Task Branch_is_edited_with_if_match_and_deactivated_not_deleted()
     {
-        var branch = await ApiFactory.ReadAsync<BranchDto>(await ApiFactory.PostIdempotent(Owner, "/api/v1/sucursales",
+        var branch = await ApiFactory.ReadAsync<BranchDto>(await ApiFactory.PostIdempotent(Owner, "/api/v1/branches",
             new { code = "EDIT-1", name = "Para editar" }));
 
-        var edited = await Put(Owner, $"/api/v1/sucursales/{branch.Id}", new { name = "Editada", cityCode = "05001" }, branch.Version);
-        var deactivated = await ApiFactory.ReadAsync<BranchDto>(await Owner.PostAsync($"/api/v1/sucursales/{branch.Id}/desactivar", null));
-        var cashRegister = await ApiFactory.PostIdempotent(Owner, "/api/v1/cajas", new { branchId = branch.Id, code = "C1", name = "Caja" });
+        var edited = await Put(Owner, $"/api/v1/branches/{branch.Id}", new { name = "Editada", cityCode = "05001" }, branch.Version);
+        var deactivated = await ApiFactory.ReadAsync<BranchDto>(await Owner.PostAsync($"/api/v1/branches/{branch.Id}/deactivate", null));
+        var cashRegister = await ApiFactory.PostIdempotent(Owner, "/api/v1/cash-registers", new { branchId = branch.Id, code = "C1", name = "Caja" });
 
         Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
         Assert.Equal("EDIT-1", deactivated.Code);
         Assert.False(deactivated.IsActive);
         Assert.Equal(HttpStatusCode.BadRequest, cashRegister.StatusCode);
-        Assert.Contains(await Owner.GetFromJsonAsync<List<BranchDto>>("/api/v1/sucursales") ?? [], b => b.Id == branch.Id);
+        Assert.Contains(await Owner.GetFromJsonAsync<List<BranchDto>>("/api/v1/branches") ?? [], b => b.Id == branch.Id);
     }
 
     [Fact]
     public async Task Temporary_password_and_pin_never_reach_the_database_in_clear()
     {
-        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await Owner.PostAsJsonAsync("/api/v1/usuarios", new
+        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await Owner.PostAsJsonAsync("/api/v1/users", new
         {
             fullName = "Usuaria secreta", email = $"secreta-{Guid.NewGuid():N}@prueba.test", pin = "9753",
             assignments = new[] { new { roleId = A.CashierRoleId, branchId = A.BranchId } },
@@ -106,12 +106,12 @@ public sealed class ManagementTests
     [Fact]
     public async Task User_update_needs_if_match_and_shared_users_keep_their_name()
     {
-        var get = await Owner.GetAsync($"/api/v1/usuarios/{A.CashierUserId}");
+        var get = await Owner.GetAsync($"/api/v1/users/{A.CashierUserId}");
         var etag = get.Headers.ETag!.Tag;
 
-        var missing = await Owner.PutAsJsonAsync($"/api/v1/usuarios/{A.CashierUserId}", new { fullName = "Cajero A", isActive = true });
-        var withPin = await Put(Owner, $"/api/v1/usuarios/{A.CashierUserId}", new { fullName = "Cajero A", isActive = true, pin = ApiFactory.CashierPin }, etag);
-        var stale = await Put(Owner, $"/api/v1/usuarios/{A.CashierUserId}", new { fullName = "Cajero A", isActive = true }, etag);
+        var missing = await Owner.PutAsJsonAsync($"/api/v1/users/{A.CashierUserId}", new { fullName = "Cajero A", isActive = true });
+        var withPin = await Put(Owner, $"/api/v1/users/{A.CashierUserId}", new { fullName = "Cajero A", isActive = true, pin = ApiFactory.CashierPin }, etag);
+        var stale = await Put(Owner, $"/api/v1/users/{A.CashierUserId}", new { fullName = "Cajero A", isActive = true }, etag);
 
         Assert.Equal((HttpStatusCode)428, missing.StatusCode);
         Assert.Equal(HttpStatusCode.OK, withPin.StatusCode);
@@ -121,31 +121,31 @@ public sealed class ManagementTests
     [Fact]
     public async Task The_last_owner_cannot_be_removed_or_deactivated()
     {
-        var self = await Owner.GetAsync($"/api/v1/usuarios/{A.OwnerUserId}");
-        var deactivateSelf = await Put(Owner, $"/api/v1/usuarios/{A.OwnerUserId}",
+        var self = await Owner.GetAsync($"/api/v1/users/{A.OwnerUserId}");
+        var deactivateSelf = await Put(Owner, $"/api/v1/users/{A.OwnerUserId}",
             new { fullName = "Propietario A", isActive = false }, self.Headers.ETag!.Tag);
-        var endOwnerRole = await Owner.DeleteAsync($"/api/v1/usuarios/{A.OwnerUserId}/asignaciones/{A.OwnerAssignmentId}");
+        var endOwnerRole = await Owner.DeleteAsync($"/api/v1/users/{A.OwnerUserId}/assignments/{A.OwnerAssignmentId}");
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, deactivateSelf.StatusCode);
-        Assert.Contains("AUTO_DESACTIVACION", await deactivateSelf.Content.ReadAsStringAsync());
+        Assert.Contains("SELF_DEACTIVATION", await deactivateSelf.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.UnprocessableEntity, endOwnerRole.StatusCode);
-        Assert.Contains("ULTIMO_PROPIETARIO", await endOwnerRole.Content.ReadAsStringAsync());
+        Assert.Contains("LAST_OWNER", await endOwnerRole.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task Assignments_are_added_once_and_ended_without_deleting()
     {
-        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await Owner.PostAsJsonAsync("/api/v1/usuarios", new
+        var created = await ApiFactory.ReadAsync<CreatedUserDto>(await Owner.PostAsJsonAsync("/api/v1/users", new
         {
             fullName = "Rotativo", pin = "8642", assignments = new[] { new { roleId = A.CashierRoleId, branchId = A.BranchId } },
         }));
         var userId = created.User.Id;
 
-        var added = await ApiFactory.PostIdempotent(Owner, $"/api/v1/usuarios/{userId}/asignaciones", new { roleId = A.CashierRoleId });
-        var duplicate = await ApiFactory.PostIdempotent(Owner, $"/api/v1/usuarios/{userId}/asignaciones", new { roleId = A.CashierRoleId });
+        var added = await ApiFactory.PostIdempotent(Owner, $"/api/v1/users/{userId}/assignments", new { roleId = A.CashierRoleId });
+        var duplicate = await ApiFactory.PostIdempotent(Owner, $"/api/v1/users/{userId}/assignments", new { roleId = A.CashierRoleId });
         var assignment = await ApiFactory.ReadAsync<AssignmentDto>(added);
-        var ended = await Owner.DeleteAsync($"/api/v1/usuarios/{userId}/asignaciones/{assignment.Id}");
-        var after = await Owner.GetFromJsonAsync<UserDto>($"/api/v1/usuarios/{userId}");
+        var ended = await Owner.DeleteAsync($"/api/v1/users/{userId}/assignments/{assignment.Id}");
+        var after = await Owner.GetFromJsonAsync<UserDto>($"/api/v1/users/{userId}");
 
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, ended.StatusCode);

@@ -69,11 +69,11 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public static FiscalDocument Create(Guid companyId, Guid saleId, FiscalDocumentKind kind, string payload, decimal total, string customerIdentification)
     {
         if (companyId == Guid.Empty || saleId == Guid.Empty)
-            throw new DomainException("VALIDACION", "El documento fiscal necesita empresa y venta.");
+            throw new DomainException("VALIDATION", "El documento fiscal necesita empresa y venta.");
         if (total <= 0)
-            throw new DomainException("VALIDACION", "El total del documento debe ser mayor que 0.");
+            throw new DomainException("VALIDATION", "El total del documento debe ser mayor que 0.");
         if (string.IsNullOrWhiteSpace(customerIdentification))
-            throw new DomainException("VALIDACION", "El documento necesita la identificación del adquirente (o la del consumidor final).");
+            throw new DomainException("VALIDATION", "El documento necesita la identificación del adquirente (o la del consumidor final).");
         var doc = new FiscalDocument
         {
             CompanyId = companyId, SaleId = saleId, Kind = kind, Payload = payload, Total = total,
@@ -87,9 +87,9 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public static FiscalDocument CreateCreditNote(FiscalDocument invoice, Guid sourceId, int reason, string payload, decimal total)
     {
         if (invoice.Kind != FiscalDocumentKind.Invoice)
-            throw new DomainException("VALIDACION", "La nota crédito se emite sobre una factura.");
+            throw new DomainException("VALIDATION", "La nota crédito se emite sobre una factura.");
         if (reason is not (1 or 2))
-            throw new DomainException("VALIDACION", "Motivo de nota crédito: 1 (devolución) o 2 (anulación).");
+            throw new DomainException("VALIDATION", "Motivo de nota crédito: 1 (devolución) o 2 (anulación).");
         var doc = Create(invoice.CompanyId, invoice.SaleId, FiscalDocumentKind.CreditNote, payload, total, invoice.CustomerIdentification);
         doc.InvoiceDocumentId = invoice.Id;
         doc.CreditReason = reason;
@@ -104,7 +104,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public void Cancel(string reason)
     {
         if (Status == FiscalDocumentStatus.Accepted)
-            throw new DomainException("ESTADO_INVALIDO", "Un documento aceptado por la DIAN no se cancela: requiere nota crédito.");
+            throw new DomainException("INVALID_STATE", "Un documento aceptado por la DIAN no se cancela: requiere nota crédito.");
         Status = FiscalDocumentStatus.Cancelled;
         Errors = Truncate(reason);
     }
@@ -113,7 +113,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public void StartSubmission()
     {
         if (IsFinal || Status == FiscalDocumentStatus.Rejected)
-            throw new DomainException("ESTADO_INVALIDO", $"El documento está {Status}: no se envía.");
+            throw new DomainException("INVALID_STATE", $"El documento está {Status}: no se envía.");
         Status = FiscalDocumentStatus.Submitting;
         Attempts++;
     }
@@ -129,7 +129,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public void Accept(string cufe, DateTime at, int retentionYears)
     {
         if (string.IsNullOrWhiteSpace(cufe))
-            throw new DomainException("VALIDACION", "No se acepta un documento sin CUFE/CUDE.");
+            throw new DomainException("VALIDATION", "No se acepta un documento sin CUFE/CUDE.");
         Status = FiscalDocumentStatus.Accepted;
         Cufe = cufe;
         Errors = null;
@@ -159,7 +159,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public void Retry()
     {
         if (Status is not (FiscalDocumentStatus.Rejected or FiscalDocumentStatus.TemporaryError or FiscalDocumentStatus.Unknown))
-            throw new DomainException("ESTADO_INVALIDO", $"Solo se reintenta un documento rechazado, con error o desconocido (está {Status}).");
+            throw new DomainException("INVALID_STATE", $"Solo se reintenta un documento rechazado, con error o desconocido (está {Status}).");
         Status = FiscalDocumentStatus.Pending;
     }
 

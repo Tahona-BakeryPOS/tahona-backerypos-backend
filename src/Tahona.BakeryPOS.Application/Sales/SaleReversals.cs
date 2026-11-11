@@ -101,7 +101,7 @@ public sealed class SaleReversalsHandler :
     public async Task<Result<SaleDto>> Handle(VoidSaleCommand request, CancellationToken ct)
     {
         if (!_tenant.HasPermission(Permissions.SalesVoid))
-            return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Anular ventas requiere el permiso ventas.anular." });
+            return Result.Failure<SaleDto>(Error.PermissionDenied with { Message = "Anular ventas requiere el permiso ventas.anular." });
         var found = await FindAsync(request.SaleId, ct);
         if (found.IsFailure) return Result.Failure<SaleDto>(found.Error);
         var sale = found.Value;
@@ -110,10 +110,10 @@ public sealed class SaleReversalsHandler :
         if (sale.Status != SaleStatus.Confirmed)
             return Result.Failure<SaleDto>(Error.Validation("Solo se anula una venta confirmada; una sin cobrar se cancela."));
         if (sale.RefundedTotal > 0)
-            return Result.Failure<SaleDto>(Error.AnulacionNoPermitida with { Message = "La venta ya tiene devoluciones: registra otra devolución en vez de anularla." });
+            return Result.Failure<SaleDto>(Error.VoidNotAllowed with { Message = "La venta ya tiene devoluciones: registra otra devolución en vez de anularla." });
         var session = await _sessions.FindAsync(sale.CashSessionId, ct);
         if (session is null || !session.IsOpen)
-            return Result.Failure<SaleDto>(Error.AnulacionNoPermitida with { Message = "El turno de esta venta ya se cerró: registra una devolución." });
+            return Result.Failure<SaleDto>(Error.VoidNotAllowed with { Message = "El turno de esta venta ya se cerró: registra una devolución." });
 
         var by = _tenant.UserId!.Value;
         var cash = await _drawer.RecordRefundAsync(sale.CashSessionId, RefundSources.Void, sale.Id, sale.Total, by, ct);
@@ -135,7 +135,7 @@ public sealed class SaleReversalsHandler :
     public async Task<Result<SaleDto>> Handle(CreateSaleReturnCommand request, CancellationToken ct)
     {
         if (!_tenant.HasPermission(Permissions.ReturnsApprove))
-            return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Autorizar devoluciones requiere el permiso devoluciones.aprobar." });
+            return Result.Failure<SaleDto>(Error.PermissionDenied with { Message = "Autorizar devoluciones requiere el permiso devoluciones.aprobar." });
         var found = await FindAsync(request.SaleId, ct);
         if (found.IsFailure) return Result.Failure<SaleDto>(found.Error);
         var sale = found.Value;
@@ -143,7 +143,7 @@ public sealed class SaleReversalsHandler :
             return Result.Failure<SaleDto>(Error.Validation("Solo se devuelve sobre una venta confirmada (no anulada)."));
         var session = await _sessions.FindOpenForRegisterAsync(request.CashRegisterId, ct);
         if (session is null)
-            return Result.Failure<SaleDto>(Error.CajaCerrada with { Message = "La caja no tiene una sesión abierta: el efectivo de la devolución sale de ella." });
+            return Result.Failure<SaleDto>(Error.CashSessionClosed with { Message = "La caja no tiene una sesión abierta: el efectivo de la devolución sale de ella." });
         if (session.BranchId != sale.BranchId)
             return Result.Failure<SaleDto>(Error.Validation("La devolución se hace en una caja de la misma sucursal de la venta."));
 
@@ -212,6 +212,6 @@ public sealed class SaleReversalsHandler :
         var sale = await _db.Sales.Include(s => s.Lines).FirstOrDefaultAsync(s => s.Id == id, ct);
         if (sale is null)
             return Result.Failure<Sale>(Error.NotFound("Venta", id));
-        return _tenant.CanAccessBranch(sale.BranchId) ? Result.Success(sale) : Result.Failure<Sale>(Error.SinAsignacionVigente);
+        return _tenant.CanAccessBranch(sale.BranchId) ? Result.Success(sale) : Result.Failure<Sale>(Error.NoCurrentAssignment);
     }
 }

@@ -9,13 +9,10 @@ Repo: <https://github.com/Tahona-BakeryPOS/tahona-backerypos-backend>
 
 ## Language
 
-Everything technical is in English: database (schemas, tables, columns, constraint values and stored codes), code
-identifiers, code comments, commit messages and documentation. Two things stay Spanish on purpose:
-
-- **What users see**: validation and error messages, and the display names seeded for each company (roles, units, payment
-  methods, adjustment reasons...). The product is for Colombian bakeries.
-- **The current API surface**: route paths (`/ventas`, `/plataforma/empresas`...), error codes (`FACTURACION_NO_CONFIGURADA`...)
-  and the error body keys (`codigo`, `mensaje`, `detalles`). Changing them breaks clients, so they only change with a new API version.
+Everything technical is in English: database (schemas, tables, columns, constraint values and stored codes), API routes and
+query parameters, error codes and error body keys (`code`, `message`, `details`), code identifiers, code comments, logs, commit messages and
+documentation. The only thing that stays Spanish on purpose is **what users read**: validation and error `message` texts, and the display
+names seeded for each company (roles, units, payment methods, adjustment reasons...). The product is for Colombian bakeries.
 
 Stored codes (permissions, system roles, default reasons and payment methods, audit actions) are English, for example
 `sales.void`, `OWNER`, `WASTE`, `CASH`, `create`. A new stored code is added in English.
@@ -61,7 +58,7 @@ per-branch availability), `Inventory` (locations, reasons, insert-only movements
 initial stock, adjustments, count and reconciliation), `Cash` (registers, sessions, cash movements, reasons and
 closing; the expected amount is `CashMovement.Expected`, the signed sum of the movements) and `Payments` (payment
 methods, payments and attempts, encrypted Bold accounts, a card terminal per register; `GatewayPaymentService` charges outside the
-transaction and the webhook `POST /api/v1/webhooks/pagos/bold` approves with a valid signature; see
+transaction and the webhook `POST /api/v1/webhooks/payments/bold` approves with a valid signature; see
 `docs/payment-integration.md` §11) and `Invoicing` (Siigo: configuration, pairings, fiscal documents;
 `IFiscalDocumentIssuer` creates the sale's invoice and the outbox sends it with `FiscalSubmitHandler`; invoicing is **optional per company** (D-17: `FiscalSettings.IsActive`; when off, the sale stays `not_required`, and whatever was already created is still sent); see
 `docs/electronic-invoicing.md` §9). Every stock movement goes through `InventoryLedger` (idempotency by source and the D-06
@@ -116,7 +113,7 @@ tests/
 - **Audit**: automatic in `SaveChangesAsync` (`aud.audit_logs`); do not write it by hand. Sensitive fields
   (PIN, passwords, credentials) are masked by name in `AuditTrail`.
 - **Errors**: `Result`/`Error` with a code in `SharedKernel/Results/Error.cs`; HTTP status in
-  `ResultExtensions.StatusCodeOf`. Body: `{ codigo, mensaje, detalles?, correlationId }`.
+  `ResultExtensions.StatusCodeOf`. Body: `{ code, message, details?, correlationId }`.
 
 ## Commands
 
@@ -151,8 +148,8 @@ LOCKED`. PostgreSQL compares text case-sensitively: codes and emails are normali
 
 First sign-in in development: set `Seed:PlatformAdminEmail` and
 `Seed:PlatformAdminPassword` in user-secrets (and optionally `Seed:PlatformAdminName`); on startup the
-platform administrator is created. With it: `POST /api/v1/auth/login` → `POST /api/v1/plataforma/empresas` (returns the
-owner's one-time password) → the owner signs in and changes it at `/auth/cambiar-contrasena`.
+platform administrator is created. With it: `POST /api/v1/auth/login` → `POST /api/v1/platform/companies` (returns the
+owner's one-time password) → the owner signs in and changes it at `/auth/change-password`.
 
 Development: the API applies migrations on startup only in Development. `Jwt:Secret` goes in user-secrets
 (the project has its own `UserSecretsId`).

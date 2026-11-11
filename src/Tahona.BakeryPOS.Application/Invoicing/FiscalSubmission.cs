@@ -44,7 +44,7 @@ public sealed class FiscalDocumentIssuer : IFiscalDocumentIssuer
     public async Task<Guid> EnqueueSaleInvoiceAsync(SaleFiscalSnapshot sale, CancellationToken ct)
     {
         var settings = await _db.FiscalSettings.AsNoTracking().FirstOrDefaultAsync(s => s.IsActive, ct)
-            ?? throw new Domain.Exceptions.DomainException(Error.FacturacionNoConfigurada.Code, Error.FacturacionNoConfigurada.Message);
+            ?? throw new Domain.Exceptions.DomainException(Error.InvoicingNotConfigured.Code, Error.InvoicingNotConfigured.Message);
         var customer = string.IsNullOrWhiteSpace(sale.CustomerIdentification) ? settings.ConsumerFinalIdentification : sale.CustomerIdentification.Trim();
         var doc = FiscalDocument.Create(_tenant.RequiredCompanyId, sale.SaleId, FiscalDocumentKind.Invoice,
             JsonSerializer.Serialize(sale), sale.Total, customer);
@@ -143,7 +143,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
                 return;
             }
             if (credited.Status != FiscalDocumentStatus.Accepted || credited.ExternalId is null)
-                throw new InvalidOperationException($"La nota crédito {doc.Id} espera a que la factura sea aceptada.");
+                throw new InvalidOperationException($"Credit note {doc.Id} is waiting for the invoice to be accepted.");
             creditedInvoice = credited;
         }
 
@@ -156,7 +156,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
         if (settings is null || !settings.IsComplete)
         {
             await FailTemporarilyAsync(doc, "La configuración de facturación electrónica está incompleta.", ct);
-            throw new InvalidOperationException("Facturación no configurada; se reintenta.");
+            throw new InvalidOperationException("Invoicing is not configured; it will be retried.");
         }
         var credentials = new SiigoCredentials(doc.CompanyId, _secrets.Unprotect(settings.EncryptedUsername), _secrets.Unprotect(settings.EncryptedAccessKey));
 
@@ -264,7 +264,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
             if (!ok)
             {
                 await FailTemporarilyAsync(doc, $"No se pudo crear el producto {line.Sku} en Siigo: {error}", ct);
-                throw new InvalidOperationException("Producto no creado en Siigo; se reintenta.");
+                throw new InvalidOperationException("Product not created in Siigo; it will be retried.");
             }
             var mapping = FiscalMapping.Create(doc.CompanyId, FiscalMappingKind.Product, line.ProductId, line.Sku);
             _db.FiscalMappings.Add(mapping);
@@ -299,13 +299,13 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
                         : await _siigo.StampErrorsAsync(credentials, result.Id, ct));
                     doc.Reject(errors ?? "La DIAN rechazó el documento (sin detalle).");
                     await _db.SaveChangesAsync(ct);
-                    _logger.LogWarning("Factura {DocumentId} rechazada por la DIAN", doc.Id);
+                    _logger.LogWarning("Invoice {DocumentId} rejected by the DIAN", doc.Id);
                     return;
                 }
                 // Draft or no CUFE yet: it is left unknown and queried again.
                 doc.MarkUnknown($"Siigo respondió sin resultado DIAN (estado {result.StampStatus ?? "vacío"}).");
                 await _db.SaveChangesAsync(ct);
-                throw new InvalidOperationException("Factura sin resultado DIAN; se consulta de nuevo.");
+                throw new InvalidOperationException("Invoice with no DIAN result; it will be queried again.");
             case SiigoOutcome.Invalid:
                 doc.Reject(result.Errors ?? $"Siigo rechazó la petición (HTTP {result.HttpStatus}).");
                 await _db.SaveChangesAsync(ct);
@@ -313,7 +313,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
             default:
                 doc.MarkUnknown(result.Errors ?? "Sin respuesta de Siigo.");
                 await _db.SaveChangesAsync(ct);
-                throw new InvalidOperationException("Resultado desconocido; se reintenta con la misma clave.");
+                throw new InvalidOperationException("Unknown result; it will be retried with the same key.");
         }
     }
 

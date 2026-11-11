@@ -3,7 +3,7 @@ namespace Tahona.BakeryPOS.Application.Common.Security;
 /// <summary>
 /// Catálogo global de permisos (claim "permission"). Se siembra por migración desde <see cref="All"/>:
 /// un permiso nuevo se agrega aquí y requiere una migración, si no nadie podrá tenerlo.
-/// Los de la v1 se conservan salvo <c>ventas.sincronizar</c> (sin modo offline en la v2).
+/// No existe <c>ventas.sincronizar</c>: el sistema no tiene modo sin conexión.
 /// </summary>
 public static class Permissions
 {

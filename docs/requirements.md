@@ -3,15 +3,13 @@
 Estado: **borrador para revisión**. No hay código funcional nuevo hasta aprobar este documento y las
 decisiones bloqueantes de [`decisions.md`](decisions.md).
 
-## 1. Punto de partida: estado de la versión 1
+## 1. Punto de partida: el sistema anterior
 
-La v2 parte de una copia de la v1 (`SoftwerePOS/`). La copia está en `SoftwerePOS-v2/backend` y
-`SoftwerePOS-v2/frontend`, sin artefactos de compilación y con su historial de git.
+Este backend parte de un sistema anterior (una API .NET con PostgreSQL y un POS offline-first). Lo reutilizable se conserva; lo demás cambia como indica la tabla.
 
-| Área | v1 (lo que existe) | Qué cambia en v1.1 |
+| Área | Sistema anterior | Qué cambia en el MVP |
 |---|---|---|
 | Backend | .NET 9, Clean Architecture + CQRS (MediatR), EF Core, **PostgreSQL**, JWT, Result pattern | .NET 10 LTS, **PostgreSQL** (I-18), monolito modular con límites explícitos |
-| Frontend | Angular 22, PWA **offline-first** (IndexedDB/Dexie, cola de ventas) | Angular 22 **en línea**: el modo offline queda fuera del MVP |
 | Empresas | Una organización demo por seed; sin alta de empresas | Alta y configuración de empresas (onboarding) |
 | Seguridad | Roles Propietario/Cajero, permisos como claims, PIN por dispositivo vinculado, login backoffice por correo | Se conserva; se añade pertenencia usuario–empresa y pruebas de aislamiento |
 | Catálogo | Productos, categorías, impuestos, lista de precios con vigencia | Precios **por sucursal** |
@@ -115,7 +113,7 @@ Formato: *Como … quiero … para …* · **CA** = criterios de aceptación ver
 - **HU-6.2** Como cajero quiero aplicar descuentos con motivo (requiere permiso `ventas.descuento` o autorización).
 - **HU-6.3** Como cajero quiero identificar al cliente (consumidor final por defecto, o NIT/cédula si pide factura).
 - **HU-6.4** Como cajero quiero cobrar en efectivo (con cambio), con medios electrónicos de la pasarela, o con pago mixto.
-  **CA:** la venta solo se confirma cuando todos sus pagos están aprobados por el backend; el frontend nunca marca un pago como aprobado.
+  **CA:** la venta solo se confirma cuando todos sus pagos están aprobados por el backend; ningún cliente marca un pago como aprobado.
 - **HU-6.5** Como cajero quiero ver en pantalla el estado de un pago electrónico (esperando, aprobado, rechazado) y reintentar con otro medio si falla.
 - **HU-6.6** Como cajero quiero imprimir/mostrar el comprobante con el estado del documento fiscal.
 

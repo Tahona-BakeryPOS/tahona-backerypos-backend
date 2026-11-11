@@ -4,8 +4,9 @@ API del punto de venta (POS) SaaS para panaderías en Colombia. Gestiona varias 
 el catálogo y los precios, el inventario, las sesiones de caja, la venta, los cobros con datáfono (Bold) y la
 facturación electrónica (Siigo).
 
-El cliente web (POS y backoffice) está en su propio repositorio:
-[tahona-backerypos-frontend](https://github.com/Tahona-BakeryPOS/tahona-backerypos-frontend).
+Es un repositorio independiente: se compila, prueba, documenta y despliega por sí solo. Cualquier cliente (POS de caja,
+backoffice, otras aplicaciones) consume el API HTTP descrito en [`docs/api-contracts.md`](docs/api-contracts.md) y en
+`/openapi/v1.json`.
 
 ## Qué hace
 
@@ -63,7 +64,7 @@ docs/      requisitos, arquitectura, modelo de datos, contratos del API, decisio
 1. Base de datos de desarrollo (publica el puerto `15432`). Copia `.env.dev.example` a `.env.dev` y ajusta los valores:
 
    ```bash
-   docker compose -p bakerypos-v2-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
+   docker compose -p bakerypos-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
    ```
 
 2. Secretos de desarrollo (user-secrets):
@@ -71,7 +72,7 @@ docs/      requisitos, arquitectura, modelo de datos, contratos del API, decisio
    ```bash
    cd src/Tahona.BakeryPOS.Api
    dotnet user-secrets set "Jwt:Secret" "<un secreto largo>"
-   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=15432;Database=bakerypos_v2;Username=<usuario>;Password=<clave>"
+   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=15432;Database=bakerypos_dev;Username=<usuario>;Password=<clave>"
    dotnet user-secrets set "Seed:PlatformAdminEmail" "<correo>"
    dotnet user-secrets set "Seed:PlatformAdminPassword" "<contraseña>"
    ```
@@ -107,9 +108,10 @@ dotnet ef migrations add <Nombre> \
 
 ## Despliegue
 
-`deploy/` contiene el compose para un VPS (PostgreSQL, migraciones, API y Caddy con HTTPS), el `Caddyfile` y los
+`deploy/` contiene el compose para un VPS (PostgreSQL, migraciones, API y Caddy como proxy HTTPS del API), el `Caddyfile` y los
 scripts `deploy.sh`, `backup.sh`, `restore.sh` y `bootstrap-admin.sh`. Fuera de desarrollo hay que definir
-`ConnectionStrings__DefaultConnection`, `Jwt__Secret` y `DataProtection__KeysPath`. Guía completa en
+`ConnectionStrings__DefaultConnection`, `Jwt__Secret`, `DataProtection__KeysPath` y `Cors__AllowedOrigins__0` (origen del
+cliente web que llama al API desde el navegador). Guía completa en
 [`docs/runbooks.md`](docs/runbooks.md).
 
 ## CI

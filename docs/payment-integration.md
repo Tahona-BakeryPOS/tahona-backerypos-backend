@@ -56,7 +56,7 @@ POS                 API (Payments)                       Wompi
  │                          TX: inbound_event (dedupe) → attempt 'approved' → confirmar venta
  │ ◄── confirmada
 ```
-- **Nunca** se aprueba un pago por una respuesta del frontend o por el retorno de una redirección:
+- **Nunca** se aprueba un pago por una respuesta del cliente o por el retorno de una redirección:
   solo por webhook válido o consulta servidor-a-servidor con llave privada.
 - El monto se envía en centavos y se compara contra el del intento al recibir el evento; si no
   coincide, el intento pasa a `error` y se alerta.

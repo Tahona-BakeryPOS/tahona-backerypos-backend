@@ -1,8 +1,9 @@
-# Tahona.BakeryPOS v2 — Backend
+# Tahona.BakeryPOS — Backend
 
-POS SaaS para panaderías en Colombia (MVP v1.1). Este repo es **solo el backend** (API .NET); el frontend (PWA Angular)
-vive en su propio repo: `tahona-backerypos-frontend`. Cada repo tiene su CI/CD y su documentación.
-Rama de trabajo: `v2` (la v1 queda en el commit base `053f046`).
+POS SaaS para panaderías en Colombia (MVP v1.1). Este repo es el **backend** (API .NET) y es completamente
+independiente: se compila, prueba, documenta y despliega por sí solo, sin código, build ni despliegue de ningún cliente.
+Los clientes consumen solo el contrato del API (`docs/api-contracts.md`; OpenAPI en `/openapi/v1.json`).
+Rama de trabajo: `main`.
 
 Repo: <https://github.com/Tahona-BakeryPOS/tahona-backerypos-backend>
 
@@ -14,7 +15,7 @@ Repo: <https://github.com/Tahona-BakeryPOS/tahona-backerypos-backend>
 4. Estado de los casos de uso y próximos pasos: `docs/estado-casos-de-uso.md` (leerlo al iniciar cada sesión).
 5. Despliegue y operación: `docs/runbooks.md` (archivos en `deploy/`).
 
-El contrato HTTP que consume el frontend está en `docs/api-contracts.md`: un cambio de contrato se avisa al repo del frontend.
+El contrato HTTP está en `docs/api-contracts.md`: un cambio incompatible requiere una versión nueva del API, no romper la actual.
 
 ## Reglas no negociables
 
@@ -124,7 +125,7 @@ dotnet ef migrations add <Nombre> --project src/Tahona.BakeryPOS.Infrastructure 
   5433 = base de la v1). La API es opcional (`--profile api`).
 
 ```bash
-docker compose -p bakerypos-v2-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
+docker compose -p bakerypos-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
 ```
 
 Detalles de la persistencia: la versión de fila (`row_version`, `bytea`) la renueva `AppDbContext` en cada
@@ -133,7 +134,7 @@ de índice usan comillas dobles (`"deleted_at" IS NULL`); el outbox reclama lote
 LOCKED`. PostgreSQL compara textos distinguiendo mayúsculas: códigos y correos se normalizan antes de guardar.
 
 `dotnet ef database update` sin `ConnectionStrings__DefaultConnection` apunta a una base de diseño
-(`bakerypos_design`); para `bakerypos_v2` basta con arrancar la API en Development.
+(`bakerypos_design`); para `bakerypos_dev` basta con arrancar la API en Development.
 
 Primer acceso en desarrollo: define en user-secrets `Seed:PlatformAdminEmail` y
 `Seed:PlatformAdminPassword` (y opcional `Seed:PlatformAdminName`); al arrancar se crea el administrador
@@ -141,7 +142,7 @@ de plataforma. Con él: `POST /api/v1/auth/login` → `POST /api/v1/plataforma/e
 contraseña de un solo uso del propietario) → el propietario entra y la cambia en `/auth/cambiar-contrasena`.
 
 Desarrollo: la API aplica migraciones al arrancar solo en Development. `Jwt:Secret` va en user-secrets
-(la v2 tiene su propio `UserSecretsId`).
+(el proyecto tiene su propio `UserSecretsId`).
 
 En este equipo, Windows App Control bloquea el ejecutable `Tahona.BakeryPOS.Api.exe` recién compilado:
 correr con `dotnet src/Tahona.BakeryPOS.Api/bin/Debug/net10.0/Tahona.BakeryPOS.Api.dll` (o desde Visual Studio).
@@ -155,7 +156,6 @@ desde un gestor de secretos.
 
 ## Despliegue (fase 10, D-10)
 
-`deploy/`: compose de staging/producción (PostgreSQL, bundle de migraciones de `Dockerfile.migrations`, API y Caddy con el
-frontend), `Caddyfile`, `.env.deploy.example` y scripts (`deploy.sh`, `backup.sh`, `restore.sh`, `bootstrap-admin.sh`).
+`deploy/`: compose de staging/producción (PostgreSQL, bundle de migraciones de `Dockerfile.migrations`, API y Caddy como proxy HTTPS del API; sin frontend), `Caddyfile`, `.env.deploy.example` y scripts (`deploy.sh`, `backup.sh`, `restore.sh`, `bootstrap-admin.sh`).
 Fuera de desarrollo la API exige `DataProtection__KeysPath` y detrás de Caddy usa `ReverseProxy__Enabled=true`. Guía
 completa: `docs/runbooks.md`. Prueba de carga: `tests/load/sales-load.js` (k6).

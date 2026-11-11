@@ -1,10 +1,10 @@
-# Caddy: HTTPS automático (Let's Encrypt), frontend estático y proxy de /api hacia la API.
-# DOMAIN y ACME_EMAIL llegan del .env (deploy/docker-compose.yml).
+# Caddy: HTTPS automático (Let's Encrypt) y proxy de todo el tráfico hacia la API.
+# API_DOMAIN y ACME_EMAIL llegan del .env (deploy/docker-compose.yml).
 {
 	email {$ACME_EMAIL}
 }
 
-{$DOMAIN} {
+{$API_DOMAIN} {
 	encode zstd gzip
 
 	header {
@@ -16,22 +16,7 @@
 		-Server
 	}
 
-	# API (incluye el webhook de Bold: https://DOMAIN/api/v1/webhooks/pagos/bold).
-	handle /api/* {
-		reverse_proxy api:8080
-	}
-
-	# Salud para el monitoreo externo (runbook): responde la API con su chequeo de PostgreSQL.
-	handle /health {
-		reverse_proxy api:8080
-	}
-
-	# PWA: el index y los archivos del service worker nunca se cachean, para que una versión nueva llegue a las cajas.
-	handle {
-		root * /srv
-		@nocache path / /index.html /ngsw.json /ngsw-worker.js /safety-worker.js /manifest.webmanifest
-		header @nocache Cache-Control "no-cache"
-		try_files {path} /index.html
-		file_server
-	}
+	# API (incluye el webhook de Bold: https://API_DOMAIN/api/v1/webhooks/pagos/bold) y la salud para el
+	# monitoreo externo (/health: responde la API con su chequeo de PostgreSQL).
+	reverse_proxy api:8080
 }

@@ -137,7 +137,7 @@ cliente si los da y, si no, como consumidor final. **Confirmar con el contador.*
 | Pruebas | No hay ambiente de pruebas separado documentado; el ambiente (habilitación o producción) es el de la empresa en Siigo Nube. El Blueprint usa una cuenta de ejemplo `sandbox@siigoapi.com` |
 
 **Consecuencias en el diseño (I-24):**
-1. La numeración y las resoluciones las lleva Siigo (tipo de comprobante FV electrónico); la v2 guarda el prefijo y
+1. La numeración y las resoluciones las lleva Siigo (tipo de comprobante FV electrónico); el sistema guarda el prefijo y
    número que devuelve Siigo. "Numeraciones" muestra los tipos de comprobante de Siigo, no rangos propios.
 2. Cada empresa necesita su cuenta Siigo Nube con API; sus llaves se guardan cifradas como las de Bold.
 3. Los productos deben existir en Siigo con el mismo código (SKU): se crean en Siigo la primera vez que se facturan

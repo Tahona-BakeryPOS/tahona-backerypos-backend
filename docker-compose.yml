@@ -1,7 +1,7 @@
 # Base común. No se usa solo: se combina con docker-compose.dev.yml.
 # Todo valor sensible sale de .env.dev (no versionado); nada de secretos en este archivo.
 # JWT_SECRET: mínimo 32 caracteres.
-#   docker compose -p bakerypos-v2-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
+#   docker compose -p bakerypos-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
 services:
   api:
     environment:

@@ -13,8 +13,8 @@ Estado: **borrador para revisión**.
 | TypeScript | 6.0 | Según Angular 22 |
 | PostgreSQL | 17 (contenedor) | Desarrollo: contenedor `postgres:17-alpine` como en la v1 (I-18) |
 | Docker | 29.8 | Compose para PostgreSQL en desarrollo y pruebas de integración |
-| Git | 2.56 | Dos repos (backend, frontend) como en v1 — ver D-13 |
-| Pruebas | xUnit (backend), Vitest (frontend) | + pruebas de integración con PostgreSQL real y E2E (ver testing-strategy) |
+| Git | 2.56 | Repo propio e independiente de cualquier cliente — ver D-13 |
+| Pruebas | xUnit (unitarias, integración y arquitectura) | + pruebas de integración con PostgreSQL real y E2E (ver testing-strategy) |
 
 ## 2. Estilo: monolito modular
 
@@ -128,15 +128,20 @@ Estados separados (detalle en `data-model.md`):
 - **Sin simulaciones en producción**: los adaptadores de prueba (fakes) existen solo en pruebas; en
   producción el arranque falla si el proveedor no está configurado.
 
-## 6. Frontend
+## 6. Clientes del API
 
-- Angular 22 standalone, signals, OnPush/zoneless, rutas con guards (como v1).
-- Se retira IndexedDB/cola offline; el POS requiere conexión y lo indica en pantalla.
-- Estado del pago y del documento fiscal con *polling* corto al backend (o SSE en una fase posterior).
-- Gateways HTTP por módulo (`PosApi`, `BackofficeApi` → se dividen por módulo).
+El backend no depende de ningún cliente: expone un API HTTP/JSON versionado (`/api/v1`, documento OpenAPI en
+`/openapi/v1.json`) y se compila, prueba y despliega por sí solo. Los clientes (por ejemplo, una PWA para el POS y el
+backoffice) viven en repositorios propios y dependen solo del contrato (`api-contracts.md`).
 
-## 7. Despliegue (propuesta, a decidir en D-10)
+Lo que el API exige a cualquier cliente:
+- Requiere conexión: no existe modo sin conexión ni sincronización.
+- `Idempotency-Key` en los POST reintentables e `If-Match` en los PUT de datos maestros.
+- El estado del pago y del documento fiscal se consulta con *polling* corto.
+- Si el cliente corre en otro origen, ese origen se declara en `Cors:AllowedOrigins`.
 
-Contenedor de la API + PostgreSQL administrado + hosting estático del frontend, en un proveedor
-de nube con región cercana a Colombia. Migraciones como paso del pipeline (`dotnet ef migrations
-bundle`), nunca al arrancar en producción. Docker Compose para desarrollo y pruebas.
+## 7. Despliegue (D-10)
+
+Un VPS por ambiente con Docker Compose (`deploy/`): PostgreSQL, la API, las migraciones (bundle de `dotnet ef`, como paso
+previo y nunca al arrancar en producción) y Caddy como proxy HTTPS del API. No se construye ni se sirve ningún cliente.
+Guía de operación: `runbooks.md`.

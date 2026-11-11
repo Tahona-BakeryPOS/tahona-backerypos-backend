@@ -1,10 +1,10 @@
 name: backend-ci
 
-# CI del backend (independiente del frontend). Las pruebas de integración levantan PostgreSQL real
+# CI del backend (no depende de ningún cliente). Las pruebas de integración levantan PostgreSQL real
 # con Testcontainers (Docker viene instalado en ubuntu-latest).
 on:
   push:
-    branches: [main, v2]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
 
   docker:
     needs: build-test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v2'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,8 @@ jobs:
           ENVIRONMENT: ci
           ASPNETCORE_ENVIRONMENT: Production
           VERSION: ${{ github.sha }}
-          DOMAIN: ci.invalid
+          API_DOMAIN: ci.invalid
+          CORS_ALLOWED_ORIGIN: https://ci.invalid
           ACME_EMAIL: ci@ci.invalid
           POSTGRES_PASSWORD: ci
           JWT_SECRET: ci

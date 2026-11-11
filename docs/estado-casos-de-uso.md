@@ -1,4 +1,4 @@
-# Estado de los casos de uso — Tahona.BakeryPOS v2
+# Estado de los casos de uso — Tahona.BakeryPOS
 
 Punto de partida para cualquier sesión nueva: qué está hecho, qué falta verificar y qué sigue. Actualizado al
 28/10/2026, al cerrar la fase 10. Detalle de cada decisión en `decisions.md`; contrato en `api-contracts.md`;
@@ -101,22 +101,20 @@ operación en `runbooks.md`.
 ### Fase 10 — Despliegue y pruebas (D-10: VPS + Docker Compose)
 | Caso de uso | Estado | Dónde |
 |---|---|---|
-| Desplegar / actualizar / volver atrás | 🔎 (imágenes construyen; nada desplegado) | `backend/deploy/`, `runbooks.md` §2–3 |
+| Desplegar / actualizar / volver atrás | 🔎 (imágenes construyen; nada desplegado) | `deploy/`, `runbooks.md` §2–3 |
 | Backups diarios (base + llaves) y restauración | 🔎 | `backup.sh`, `restore.sh`, `runbooks.md` §4–5 |
-| E2E del flujo de caja | 🔎 (escrito, sin ejecutar) | `tahona-backerypos-frontend/e2e` |
-| Prueba de carga | 🔎 (escrito, sin ejecutar) | `backend/tests/load/sales-load.js` |
+| Prueba de carga | 🔎 (escrito, sin ejecutar) | `tests/load/sales-load.js` |
 
 ## 2. Verificaciones pendientes antes de producción
 
 Lo implementado que todavía no cuenta como terminado (criterios de salida de `testing-strategy.md`):
 
-1. **Probar el flujo en el navegador** con la API local (demo): vincular → PIN → abrir caja → vender → anular → devolver → cerrar → informe.
-2. **Ejecutar las pruebas** unitarias, de integración y de arquitectura (`dotnet test`) y las del frontend (`ng test`).
+1. **Probar el flujo completo** contra la API local (demo): vincular → PIN → abrir caja → vender → anular → devolver → cerrar → informe.
+2. **Ejecutar las pruebas** unitarias, de integración y de arquitectura (`dotnet test`).
 3. **Bold en sandbox**: cobro de prueba, venta con datáfono, webhook firmado real (fase 6).
 4. **Siigo en habilitación**: factura, nota crédito por anulación y por devolución aceptadas con CUFE/CUDE (fases 7 y 9).
-5. **Staging**: primer despliegue, E2E (`npm run e2e`), carga (k6) y una restauración de backup (fase 10).
+5. **Staging**: primer despliegue, un recorrido completo por el API (login, caja, venta, anulación, devolución, cierre), carga (k6) y una restauración de backup (fase 10).
 6. **Contador**: D-17 (facturación opcional; confirmar si la empresa está obligada), D-11 (anulación/devolución), D-15 (5 años), tarifas de impuestos (I-20), permisos del Cajero.
-7. **Commits**: nada tiene commit; revisar y commitear por fase en `backend` y `frontend`.
 
 ## 3. Próximos casos de uso
 
@@ -124,7 +122,6 @@ Lo implementado que todavía no cuenta como terminado (criterios de salida de `t
 | Caso de uso | Por qué | Dependencias |
 |---|---|---|
 | Datos de demostración (empresa, sucursal, caja, productos, cajero y supervisor con PIN) | Hacer la demo sin alta manual | Solo desarrollo |
-| Versionar `docs/` (D-13) | Hoy `SoftwerePOS-v2/docs` no está en ningún repositorio | Decidir: dentro del repo backend o repo propio |
 | Autorización de descuentos por un supervisor | Hoy solo quien tiene `ventas.descuento` puede dar descuento | I-25 |
 | Arqueos (conteo parcial de caja sin cerrar) | Menú "Próximamente" en Ventas y caja | Fase 5 |
 | Conciliación de pagos de Bold contra el extracto | HU-7.4 completo | Bold en sandbox |
@@ -150,7 +147,7 @@ informes de Costos/Márgenes. Cada uno necesita decisiones de negocio (D-xx) ant
 
 1. **Una sesión por tarea acotada** (una fase, un menú o una verificación), no una conversación larga para todo.
    Al empezar: "Lee `CLAUDE.md` y `docs/estado-casos-de-uso.md` y sigue con <tarea>".
-2. **La fuente de verdad son los archivos, no la conversación:** `CLAUDE.md` (raíz, backend y frontend),
+2. **La fuente de verdad son los archivos, no la conversación:** `CLAUDE.md`,
    `docs/decisions.md`, `docs/implementation-plan.md` y este archivo. Al cerrar cada tarea se actualizan.
 3. **Commit al terminar cada tarea** (después de tu revisión): deja un punto de retorno y permite revisar por partes.
 4. **Decisiones de negocio siempre por escrito** en `decisions.md` antes de implementar (las D-xx que bloquean).

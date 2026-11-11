@@ -43,7 +43,7 @@ builder.Services.AddOpenApi("v1", options => options.AddDocumentTransformer((doc
     return Task.CompletedTask;
 }));
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("postgres");
-builder.Services.AddCors(options => options.AddPolicy("Frontend", policy => policy
+builder.Services.AddCors(options => options.AddPolicy("WebClients", policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
     .AllowAnyHeader()
     .AllowAnyMethod()
@@ -84,7 +84,7 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
-app.UseCors("Frontend");
+app.UseCors("WebClients");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

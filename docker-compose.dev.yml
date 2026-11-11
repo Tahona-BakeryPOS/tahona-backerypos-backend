@@ -1,14 +1,14 @@
 # Lower environment (desarrollo local): Postgres en contenedor, igual que la v1.
 # La API normalmente se corre desde Visual Studio / dotnet run contra esta BD;
 # para correrla también en contenedor: añade `--profile api` y `--build`.
-#   docker compose -p bakerypos-v2-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
+#   docker compose -p bakerypos-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
 # Puerto 15432: el 5432 lo usa el PostgreSQL local de Windows y el 5433 la base de la v1.
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: bakerypos_v2
+      POSTGRES_DB: bakerypos_dev
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
@@ -16,7 +16,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d bakerypos_v2"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bakerypos_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,10 +30,10 @@ services:
       db:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=bakerypos_v2;Username=postgres;Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=bakerypos_dev;Username=postgres;Password=${POSTGRES_PASSWORD}
 
 volumes:
   # Nombre fijo: sobrevive a `docker compose down`.
-  # Solo se borra con `down -v` o `docker volume rm bakerypos_v2_pgdata_dev`.
+  # Solo se borra con `down -v` o `docker volume rm bakerypos_dev_pgdata_dev`.
   pgdata:
-    name: bakerypos_v2_pgdata_dev
+    name: bakerypos_dev_pgdata_dev

@@ -331,12 +331,9 @@ flowchart TB
     SIIGO --> DIAN
 ```
 
-El proyecto está dividido en dos repositorios independientes:
-
-| Repositorio | Contenido |
-|---|---|
-| [tahona-backerypos-frontend](https://github.com/Tahona-BakeryPOS/tahona-backerypos-frontend) | Las pantallas: el punto de venta y el backoffice. |
-| [tahona-backerypos-backend](https://github.com/Tahona-BakeryPOS/tahona-backerypos-backend) | El cerebro del sistema: reglas del negocio, base de datos y conexión con Bold y Siigo. |
+El sistema separa el "cerebro" de las pantallas: las reglas del negocio, la base de datos y la conexión con Bold y Siigo
+se publican como un **API**, y las pantallas (punto de venta y backoffice) son clientes que lo consumen. El API funciona,
+se prueba y se despliega por sí solo, sin depender de ninguna pantalla.
 
 ---
 

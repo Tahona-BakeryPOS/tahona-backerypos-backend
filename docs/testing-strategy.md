@@ -15,8 +15,7 @@ y nunca para declarar una integración terminada.
 | Arquitectura | NetArchTest (D-16) | Un módulo no referencia el dominio ni las tablas de otro | CI |
 | Integración con pasarela | Sandbox del proveedor | Crear transacción, webhook firmado real, consulta de estado, reembolso | Manual/nocturno con credenciales de sandbox |
 | Integración fiscal | Ambiente de pruebas del proveedor/DIAN | Emitir, consultar, rechazo, nota crédito | Manual/nocturno |
-| Frontend unitarias | Vitest (Angular 22) | Stores, cálculos, componentes | CI |
-| E2E | Playwright (D-16), `tahona-backerypos-frontend/e2e` | Flujo completo del POS y backoffice contra API real + PostgreSQL (efectivo, anulación, devolución, cierre, informe) | Staging, antes de cada paso a producción (`npm run e2e`); en CI solo compila |
+| Recorrido de API en staging | Contra `/api/v1` (OpenAPI en `/openapi/v1.json`) | Flujo completo: login, vincular caja, abrir caja, venta en efectivo, anulación, devolución, cierre e informe | Staging, antes de cada paso a producción |
 | Carga | k6, `backend/tests/load/sales-load.js` | 20 cajas vendiendo en efectivo: p95 < 800 ms, < 1 % de errores | Staging, antes de producción |
 
 ## Escenarios críticos de fallo (automatizados)

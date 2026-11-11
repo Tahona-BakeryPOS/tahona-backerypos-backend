@@ -22,7 +22,7 @@ compose() { docker compose --env-file "$ENV_FILE" -f docker-compose.yml "$@"; }
 # Copia de seguridad del estado actual antes de reemplazarlo.
 bash ./scripts/backup.sh "$ENV_FILE"
 
-compose stop api web
+compose stop api proxy
 compose up -d db
 compose exec -T db sh -c 'until pg_isready -U bakerypos -d bakerypos; do sleep 2; done'
 compose exec -T db pg_restore -U bakerypos -d bakerypos --clean --if-exists --no-owner < "$DUMP"
@@ -35,5 +35,5 @@ else
   echo "AVISO: no hay archivo de llaves para este backup; las credenciales de Bold y Siigo podrían no leerse."
 fi
 
-compose up -d api web
+compose up -d api proxy
 echo "Restauración terminada. Revisa /health y entra al backoffice."

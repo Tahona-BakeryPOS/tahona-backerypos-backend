@@ -146,7 +146,11 @@ public sealed class IntegrationInfrastructureTests
         Assert.Equal(correlation, response.Headers.GetValues("X-Correlation-Id").Single());
 
         await using var check = Db();
-        var log = await check.AuditLogs.SingleAsync(a => a.CorrelationId == correlation);
+        // Una petición puede auditar varias entidades (la sucursal y lo que se aprovisiona con ella):
+        // todas comparten el correlation id, así que se busca la fila de la sucursal.
+        var logs = await check.AuditLogs.Where(a => a.CorrelationId == correlation).ToListAsync();
+        Assert.All(logs, l => Assert.Equal(_api.Data.CompanyA, l.CompanyId));
+        var log = Assert.Single(logs, l => l.Entity == "org.branches");
         Assert.Equal("org.branches", log.Entity);
         Assert.Equal("creacion", log.Action);
         Assert.Equal(_api.Data.CompanyA, log.CompanyId);

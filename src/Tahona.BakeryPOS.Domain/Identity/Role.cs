@@ -3,7 +3,7 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 
 namespace Tahona.BakeryPOS.Domain.Identity;
 
-/// <summary>Rol de una empresa: un conjunto de permisos. Los roles del sistema se crean en el alta.</summary>
+/// <summary>A company's role: a set of permissions. System roles are created at onboarding.</summary>
 public sealed class Role : AuditableEntity, ITenantEntity
 {
     private readonly List<RolePermission> _permissions = [];
@@ -28,7 +28,7 @@ public sealed class Role : AuditableEntity, ITenantEntity
     }
 }
 
-/// <summary>Permiso concedido a un rol (tabla puente role_permissions).</summary>
+/// <summary>Permission granted to a role (junction table role_permissions).</summary>
 public sealed class RolePermission
 {
     public Guid RoleId { get; private set; }
@@ -43,7 +43,7 @@ public sealed class RolePermission
     }
 }
 
-/// <summary>Permiso global (catálogo sembrado por migración). Viaja en el token como claim "permission".</summary>
+/// <summary>Global permission (catalog seeded by migration). It travels in the token as the "permission" claim.</summary>
 public sealed class Permission
 {
     public Guid Id { get; init; }
@@ -52,10 +52,10 @@ public sealed class Permission
     public string Module { get; init; } = string.Empty;
 }
 
-/// <summary>Códigos de los roles que se crean al dar de alta una empresa.</summary>
+/// <summary>Codes of the roles created when a company is onboarded.</summary>
 public static class SystemRoles
 {
-    public const string Owner = "PROPIETARIO";
-    public const string BranchManager = "ADMIN_SUCURSAL";
-    public const string Cashier = "CAJERO";
+    public const string Owner = "OWNER";
+    public const string BranchManager = "BRANCH_MANAGER";
+    public const string Cashier = "CASHIER";
 }

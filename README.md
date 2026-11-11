@@ -1,135 +1,138 @@
 # Tahona.BakeryPOS — Backend
 
-API del punto de venta (POS) SaaS para panaderías en Colombia. Gestiona varias empresas con sus sucursales y cajas,
-el catálogo y los precios, el inventario, las sesiones de caja, la venta, los cobros con datáfono (Bold) y la
-facturación electrónica (Siigo).
+API for a bakery point-of-sale (POS) SaaS in Colombia. It manages several companies with their branches and cash registers,
+the catalog and prices, inventory, cash sessions, sales, card-terminal payments (Bold) and electronic
+invoicing (Siigo).
 
-Es un repositorio independiente: se compila, prueba, documenta y despliega por sí solo. Cualquier cliente (POS de caja,
-backoffice, otras aplicaciones) consume el API HTTP descrito en [`docs/api-contracts.md`](docs/api-contracts.md) y en
+This is an independent repository: it is built, tested, documented and deployed on its own. Any client (cashier POS,
+backoffice, other applications) consumes the HTTP API described in [`docs/api-contracts.md`](docs/api-contracts.md) and at
 `/openapi/v1.json`.
 
-## Qué hace
+> Code, database and documentation are in English. User-facing messages and the display names seeded for each company are
+> in Spanish, and the API routes and error codes still are too (see the "Language" section of [`CLAUDE.md`](CLAUDE.md)).
 
-| Módulo | Responsabilidad |
+## What it does
+
+| Module | Responsibility |
 |---|---|
-| `Companies` | Empresas, sucursales y alta desde la plataforma |
-| `Identity` | Usuarios, roles y permisos, inicio de sesión, refresh tokens, dispositivos y PIN |
-| `Catalog` | Categorías, unidades, impuestos, productos, precios con vigencia y disponibilidad por sucursal |
-| `Inventory` | Ubicaciones, movimientos, saldos, ajustes, conteo y reconciliación |
-| `Cash` | Cajas, sesiones, ingresos y retiros de efectivo, cierre |
-| `Payments` | Medios de pago, cobro en el datáfono (Bold) y webhook firmado |
-| `Invoicing` | Facturación electrónica con Siigo: numeraciones, emparejamientos y documentos fiscales |
-| `Sales` / `SaleReversals` / `SalesReport` | Venta, anulaciones, devoluciones e informe de ventas |
+| `Companies` | Companies, branches and onboarding from the platform |
+| `Identity` | Users, roles and permissions, sign-in, refresh tokens, devices and PIN |
+| `Catalog` | Categories, units, taxes, products, prices with validity and per-branch availability |
+| `Inventory` | Locations, movements, balances, adjustments, count and reconciliation |
+| `Cash` | Cash registers, sessions, cash income and withdrawals, closing |
+| `Payments` | Payment methods, card-terminal payment (Bold) and signed webhook |
+| `Invoicing` | Electronic invoicing with Siigo: numberings, pairings and fiscal documents |
+| `Sales` / `SaleReversals` / `SalesReport` | Sale, voids, returns and sales report |
 
-## Principios de diseño
+## Design principles
 
-- **Aislamiento por empresa**: toda tabla de negocio lleva `company_id`, con filtro global y validación en cada caso de uso.
-- **Estados separados** para la venta, el pago, el inventario y el documento fiscal.
-- **Nada externo dentro de una transacción SQL**: la pasarela y el proveedor fiscal se llaman fuera; los pasos son
-  idempotentes y los retoman workers (outbox / eventos entrantes).
-- **Un pago solo lo aprueba el backend** (webhook con firma válida o consulta servidor a servidor).
-- **El inventario nunca se edita**: todo cambio es un movimiento idempotente.
-- **Secretos** fuera del repositorio; las credenciales de terceros se guardan cifradas por empresa.
+- **Company isolation**: every business table carries `company_id`, with a global filter and validation in every use case.
+- **Separate states** for the sale, the payment, the inventory and the fiscal document.
+- **Nothing external inside a SQL transaction**: the payment gateway and the tax provider are called outside; steps are
+  idempotent and workers resume them (outbox / inbound events).
+- **A payment is only approved by the backend** (webhook with a valid signature or a server-to-server query).
+- **Inventory is never edited**: every change is an idempotent movement.
+- **Secrets** stay out of the repository; third-party credentials are stored encrypted per company.
 
-## Tecnología
+## Technology
 
-.NET 10 · ASP.NET Core · EF Core 10 · PostgreSQL 17 (Npgsql) · MediatR · FluentValidation · OpenAPI nativo ·
-Serilog · xUnit + Testcontainers + NetArchTest. Arquitectura limpia con CQRS en un monolito modular.
+.NET 10 · ASP.NET Core · EF Core 10 · PostgreSQL 17 (Npgsql) · MediatR · FluentValidation · native OpenAPI ·
+Serilog · xUnit + Testcontainers + NetArchTest. Clean architecture with CQRS in a modular monolith.
 
-## Estructura
+## Structure
 
 ```
 src/
-  Tahona.BakeryPOS.Domain/          entidades y reglas de negocio
-  Tahona.BakeryPOS.Application/     casos de uso (Command/Query + Handler)
-  Tahona.BakeryPOS.Infrastructure/  EF Core, migraciones, outbox, seguridad
-  Tahona.BakeryPOS.Api/             controllers, filtros y middlewares
-  Tahona.BakeryPOS.SharedKernel/    Result, Error y tipos comunes
+  Tahona.BakeryPOS.Domain/          entities and business rules
+  Tahona.BakeryPOS.Application/     use cases (Command/Query + Handler)
+  Tahona.BakeryPOS.Infrastructure/  EF Core, migrations, outbox, security
+  Tahona.BakeryPOS.Api/             controllers, filters and middlewares
+  Tahona.BakeryPOS.SharedKernel/    Result, Error and common types
 tests/
   Tahona.BakeryPOS.UnitTests/
   Tahona.BakeryPOS.ArchitectureTests/
-  Tahona.BakeryPOS.IntegrationTests/   API + PostgreSQL real (Docker)
-  load/                                prueba de carga (k6)
-deploy/    docker compose, Caddyfile y scripts de despliegue, copia de seguridad y restauración
-docs/      requisitos, arquitectura, modelo de datos, contratos del API, decisiones y runbooks
+  Tahona.BakeryPOS.IntegrationTests/   API + real PostgreSQL (Docker)
+  load/                                load test (k6)
+deploy/    docker compose, Caddyfile and deployment, backup and restore scripts
+docs/      requirements, architecture, data model, API contracts, decisions and runbooks
 ```
 
-## Requisitos
+## Requirements
 
 - [.NET SDK 10](https://dotnet.microsoft.com/download)
-- Docker (PostgreSQL de desarrollo y pruebas de integración)
+- Docker (development PostgreSQL and integration tests)
 
-## Puesta en marcha
+## Getting started
 
-1. Base de datos de desarrollo (publica el puerto `15432`). Copia `.env.dev.example` a `.env.dev` y ajusta los valores:
+1. Development database (publishes port `15432`). Copy `.env.dev.example` to `.env.dev` and adjust the values:
 
    ```bash
    docker compose -p bakerypos-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
    ```
 
-2. Secretos de desarrollo (user-secrets):
+2. Development secrets (user-secrets):
 
    ```bash
    cd src/Tahona.BakeryPOS.Api
-   dotnet user-secrets set "Jwt:Secret" "<un secreto largo>"
-   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=15432;Database=bakerypos_dev;Username=<usuario>;Password=<clave>"
-   dotnet user-secrets set "Seed:PlatformAdminEmail" "<correo>"
-   dotnet user-secrets set "Seed:PlatformAdminPassword" "<contraseña>"
+   dotnet user-secrets set "Jwt:Secret" "<a long secret>"
+   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=15432;Database=bakerypos_dev;Username=<user>;Password=<password>"
+   dotnet user-secrets set "Seed:PlatformAdminEmail" "<email>"
+   dotnet user-secrets set "Seed:PlatformAdminPassword" "<password>"
    ```
 
-3. Ejecutar la API (en Development aplica las migraciones al arrancar):
+3. Run the API (in Development it applies migrations on startup):
 
    ```bash
    dotnet run --project src/Tahona.BakeryPOS.Api
    ```
 
-   El documento OpenAPI queda en `/openapi/v1.json`.
+   The OpenAPI document is served at `/openapi/v1.json`.
 
-4. Primer acceso: `POST /api/v1/auth/login` con el administrador de plataforma y luego
-   `POST /api/v1/plataforma/empresas` para crear una empresa. La respuesta incluye la contraseña de un solo uso del
-   propietario, que debe cambiarla en `/api/v1/auth/cambiar-contrasena`.
+4. First sign-in: `POST /api/v1/auth/login` with the platform administrator and then
+   `POST /api/v1/plataforma/empresas` to create a company. The response includes the owner's one-time password, which the
+   owner must change at `/api/v1/auth/cambiar-contrasena`.
 
-## Pruebas
+## Tests
 
 ```bash
 dotnet test tests/Tahona.BakeryPOS.UnitTests
 dotnet test tests/Tahona.BakeryPOS.ArchitectureTests
-dotnet test tests/Tahona.BakeryPOS.IntegrationTests    # requiere Docker
+dotnet test tests/Tahona.BakeryPOS.IntegrationTests    # requires Docker
 ```
 
-## Migraciones
+## Migrations
 
 ```bash
-dotnet ef migrations add <Nombre> \
+dotnet ef migrations add <Name> \
   --project src/Tahona.BakeryPOS.Infrastructure \
   --startup-project src/Tahona.BakeryPOS.Infrastructure \
   --output-dir Persistence/Migrations
 ```
 
-## Despliegue
+## Deployment
 
-`deploy/` contiene el compose para un VPS (PostgreSQL, migraciones, API y Caddy como proxy HTTPS del API), el `Caddyfile` y los
-scripts `deploy.sh`, `backup.sh`, `restore.sh` y `bootstrap-admin.sh`. Fuera de desarrollo hay que definir
-`ConnectionStrings__DefaultConnection`, `Jwt__Secret`, `DataProtection__KeysPath` y `Cors__AllowedOrigins__0` (origen del
-cliente web que llama al API desde el navegador). Guía completa en
+`deploy/` contains the compose file for a VPS (PostgreSQL, migrations, API and Caddy as the API's HTTPS proxy), the `Caddyfile` and the
+scripts `deploy.sh`, `backup.sh`, `restore.sh` and `bootstrap-admin.sh`. Outside development you must define
+`ConnectionStrings__DefaultConnection`, `Jwt__Secret`, `DataProtection__KeysPath` and `Cors__AllowedOrigins__0` (the origin of the
+web client that calls the API from the browser). Full guide in
 [`docs/runbooks.md`](docs/runbooks.md).
 
 ## CI
 
-`.github/workflows/backend-ci.yml`: compila, ejecuta las pruebas unitarias, de arquitectura y de integración, y
-verifica que no haya cambios pendientes del modelo de EF Core.
+`.github/workflows/backend-ci.yml`: builds, runs the unit, architecture and integration tests, and
+checks that there are no pending EF Core model changes.
 
-## Documentación
+## Documentation
 
-- [`docs/guia-general.md`](docs/guia-general.md) — guía general para personas no técnicas, con diagramas
-- [`docs/requirements.md`](docs/requirements.md) — requisitos
-- [`docs/architecture.md`](docs/architecture.md) — arquitectura
-- [`docs/data-model.md`](docs/data-model.md) — modelo de datos
-- [`docs/diagrama-base-de-datos.md`](docs/diagrama-base-de-datos.md) — diagrama de la base de datos (Mermaid)
-- [`docs/api-contracts.md`](docs/api-contracts.md) — contratos del API
-- [`docs/payment-integration.md`](docs/payment-integration.md) — pagos con Bold
-- [`docs/electronic-invoicing.md`](docs/electronic-invoicing.md) — facturación electrónica con Siigo
-- [`docs/inventory.md`](docs/inventory.md) — inventario
-- [`docs/testing-strategy.md`](docs/testing-strategy.md) — estrategia de pruebas
-- [`docs/decisions.md`](docs/decisions.md) — decisiones
-- [`docs/runbooks.md`](docs/runbooks.md) — operación
+- [`docs/general-guide.md`](docs/general-guide.md) — general guide for non-technical readers, with diagrams
+- [`docs/requirements.md`](docs/requirements.md) — requirements
+- [`docs/architecture.md`](docs/architecture.md) — architecture
+- [`docs/data-model.md`](docs/data-model.md) — data model
+- [`docs/database-diagram.md`](docs/database-diagram.md) — database diagram (Mermaid)
+- [`docs/api-contracts.md`](docs/api-contracts.md) — API contracts
+- [`docs/payment-integration.md`](docs/payment-integration.md) — payments with Bold
+- [`docs/electronic-invoicing.md`](docs/electronic-invoicing.md) — electronic invoicing with Siigo
+- [`docs/inventory.md`](docs/inventory.md) — inventory
+- [`docs/testing-strategy.md`](docs/testing-strategy.md) — testing strategy
+- [`docs/decisions.md`](docs/decisions.md) — decisions
+- [`docs/runbooks.md`](docs/runbooks.md) — operations

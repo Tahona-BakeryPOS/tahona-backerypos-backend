@@ -30,7 +30,7 @@ public enum SaleInventoryStatus
 
 public enum SaleFiscalStatus
 {
-    /// <summary>La empresa no tiene facturación activa al confirmar.</summary>
+    /// <summary>The company has no active invoicing when confirming.</summary>
     NotRequired,
     Pending,
     Accepted,
@@ -39,9 +39,9 @@ public enum SaleFiscalStatus
 }
 
 /// <summary>
-/// Venta como proceso persistente (architecture.md §4): borrador con precios e impuestos congelados por el
-/// servidor → pendiente de pago → confirmada cuando los pagos aprobados cubren el total. Venta, pago,
-/// inventario y documento fiscal tienen cada uno su estado.
+/// Sale as a persistent process (architecture.md §4): draft with prices and taxes frozen by the
+/// server → pending payment → confirmed when approved payments cover the total. Sale, payment,
+/// inventory and fiscal document each have their own status.
 /// </summary>
 public sealed class Sale : AuditableEntity, ITenantEntity
 {
@@ -52,9 +52,9 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     public Guid CashRegisterId { get; private set; }
     public Guid CashSessionId { get; private set; }
     public Guid CashierId { get; private set; }
-    /// <summary>NIT o cédula si el cliente pide factura con sus datos; null = consumidor final.</summary>
+    /// <summary>NIT or ID if the customer asks for an invoice with their data; null = final consumer.</summary>
     public string? CustomerIdentification { get; private set; }
-    /// <summary>Consecutivo interno por empresa, asignado al confirmar.</summary>
+    /// <summary>Internal consecutive number per company, assigned on confirmation.</summary>
     public long? Number { get; private set; }
     public SaleStatus Status { get; private set; } = SaleStatus.Draft;
     public SalePaymentStatus PaymentStatus { get; private set; } = SalePaymentStatus.Unpaid;
@@ -64,7 +64,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     public decimal DiscountTotal { get; private set; }
     public decimal TaxTotal { get; private set; }
     public decimal Total { get; private set; }
-    /// <summary>Quien autorizó vender sin existencias productos con política "bloquear" (D-06).</summary>
+    /// <summary>Who authorized selling products with a "block" policy without stock (D-06).</summary>
     public Guid? StockAuthorizedBy { get; private set; }
     public Guid? FiscalDocumentId { get; private set; }
     public DateTime? ConfirmedAt { get; private set; }
@@ -72,7 +72,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     public DateTime? VoidedAt { get; private set; }
     public string? VoidReason { get; private set; }
     public Guid? VoidedBy { get; private set; }
-    /// <summary>Dinero devuelto al cliente por anulación o devoluciones.</summary>
+    /// <summary>Money returned to the customer through a void or returns.</summary>
     public decimal RefundedTotal { get; private set; }
 
     public IReadOnlyList<SaleLine> Lines => _lines.AsReadOnly();
@@ -119,7 +119,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
         StockAuthorizedBy = authorizedBy;
     }
 
-    /// <summary>Hay al menos un pago en curso o aprobado: ya no se agregan líneas.</summary>
+    /// <summary>There is at least one payment in progress or approved: lines can no longer be added.</summary>
     public void MarkPendingPayment(decimal approvedTotal)
     {
         EnsureEditable();
@@ -127,7 +127,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
         PaymentStatus = approvedTotal <= 0 ? SalePaymentStatus.Unpaid : approvedTotal < Total ? SalePaymentStatus.PartiallyPaid : SalePaymentStatus.Paid;
     }
 
-    /// <summary>Confirma cuando lo aprobado cubre el total exacto. Idempotente para una venta ya confirmada.</summary>
+    /// <summary>Confirms when what was approved covers the exact total. Idempotent for an already confirmed sale.</summary>
     public bool Confirm(decimal approvedTotal, long number, DateTime at)
     {
         if (Status == SaleStatus.Confirmed) return false;
@@ -152,8 +152,8 @@ public sealed class Sale : AuditableEntity, ITenantEntity
     }
 
     /// <summary>
-    /// D-11: anulación total de una venta confirmada mientras su turno sigue abierto (lo valida el llamador) y sin
-    /// devoluciones previas. Se reembolsa todo y se reversa el inventario.
+    /// D-11: a full void of a confirmed sale while its shift is still open (validated by the caller) and with no
+    /// previous returns. Everything is refunded and the inventory is reversed.
     /// </summary>
     public void Void(string reason, Guid by, DateTime at)
     {
@@ -173,7 +173,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
             InventoryStatus = SaleInventoryStatus.Reversed;
     }
 
-    /// <summary>Registra el dinero de una devolución; no puede superar lo cobrado.</summary>
+    /// <summary>Records the money of a return; it cannot exceed what was charged.</summary>
     public void RegisterReturn(decimal amount)
     {
         if (Status != SaleStatus.Confirmed)
@@ -184,7 +184,7 @@ public sealed class Sale : AuditableEntity, ITenantEntity
         PaymentStatus = RefundedTotal == Total ? SalePaymentStatus.Refunded : SalePaymentStatus.PartiallyRefunded;
     }
 
-    /// <summary>Cancela una venta que nunca se pagó (sin pagos aprobados ni en curso; lo valida el llamador).</summary>
+    /// <summary>Cancels a sale that was never paid (no approved or in-progress payments; validated by the caller).</summary>
     public void Cancel(DateTime at)
     {
         EnsureEditable();
@@ -208,8 +208,8 @@ public sealed class Sale : AuditableEntity, ITenantEntity
 }
 
 /// <summary>
-/// Línea con copia histórica de nombre, precio e impuesto. Con precio que incluye impuesto (D-07):
-/// bruto = cantidad × precio − descuento; base = bruto / (1 + tarifa); impuesto = bruto − base. Si no lo
+/// Line with a historical copy of name, price and tax. With a price that includes tax (D-07):
+/// gross = quantity × price − discount; base = gross / (1 + rate); tax = gross − base. If it does not
 /// incluye: base = cantidad × precio − descuento; impuesto = base × tarifa. Redondeo a 2 decimales.
 /// </summary>
 public sealed class SaleLine : AuditableEntity, ITenantEntity
@@ -232,7 +232,7 @@ public sealed class SaleLine : AuditableEntity, ITenantEntity
     public decimal TaxAmount { get; private set; }
     public decimal LineTotal { get; private set; }
 
-    /// <summary>Precio unitario con impuesto incluido (lo que recibe el proveedor fiscal).</summary>
+    /// <summary>Unit price with tax included (what the fiscal provider receives).</summary>
     public decimal UnitPriceWithTax => PriceIncludesTax ? UnitPrice : decimal.Round(UnitPrice * (1 + TaxRate / 100m), 2);
 
     private SaleLine() { }
@@ -240,7 +240,7 @@ public sealed class SaleLine : AuditableEntity, ITenantEntity
     internal static SaleLine Create(Sale sale, int lineNo, Guid productId, string sku, string description, string unitCode, decimal quantity,
         decimal unitPrice, bool priceIncludesTax, decimal discountAmount, string? discountReason, Guid taxId, decimal taxRate)
     {
-        // Máximo 2 decimales: es lo que admite la factura electrónica (Siigo, items.quantity).
+        // At most 2 decimals: it is what the electronic invoice accepts (Siigo, items.quantity).
         if (quantity <= 0 || decimal.Round(quantity, 2) != quantity)
             throw new DomainException("VALIDACION", "La cantidad debe ser mayor que 0 con máximo 2 decimales.");
         if (unitPrice < 0 || discountAmount < 0 || decimal.Round(discountAmount, 2) != discountAmount)
@@ -273,7 +273,7 @@ public sealed class SaleLine : AuditableEntity, ITenantEntity
     }
 }
 
-/// <summary>Consecutivo interno de ventas por empresa (la versión de fila evita repetir números).</summary>
+/// <summary>Internal consecutive number of sales per company (the row version prevents repeating numbers).</summary>
 public sealed class SaleCounter : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }

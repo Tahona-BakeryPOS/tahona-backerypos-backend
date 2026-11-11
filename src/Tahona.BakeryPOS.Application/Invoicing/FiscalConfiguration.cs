@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Invoicing;
 
-/// <summary>Configuración de Siigo de la empresa; nunca incluye el usuario ni la llave en claro.</summary>
+/// <summary>The company's Siigo configuration; it never includes the user or the key in clear text.</summary>
 public sealed record FiscalSettingsDto(string Provider, bool HasCredentials, long? InvoiceDocumentTypeId, long? CreditNoteDocumentTypeId,
     long? SellerId, long? ProductAccountGroupId, string ConsumerFinalIdentification, int RetentionYears, bool IsComplete, bool IsActive);
 
@@ -22,19 +22,19 @@ public sealed record FiscalMappingDto(string Kind, Guid LocalId, string External
 public sealed record GetFiscalSettingsQuery : IRequest<Result<FiscalSettingsDto>>;
 
 /// <summary>
-/// Guarda la configuración. <paramref name="Username"/>/<paramref name="AccessKey"/> null conservan los guardados.
-/// Activar exige configuración completa.
+/// Saves the configuration. <paramref name="Username"/>/<paramref name="AccessKey"/> null keep the stored ones.
+/// Activating requires a complete configuration.
 /// </summary>
 public sealed record SaveFiscalSettingsCommand(string? Username, string? AccessKey, long? InvoiceDocumentTypeId, long? CreditNoteDocumentTypeId,
     long? SellerId, long? ProductAccountGroupId, string ConsumerFinalIdentification, int RetentionYears, bool Activate)
     : IRequest<Result<FiscalSettingsDto>>;
 
-/// <summary>Catálogos en vivo de Siigo para configurar y emparejar (comprobantes, vendedores, impuestos, medios de pago).</summary>
+/// <summary>Live Siigo catalogs to configure and pair (document types, sellers, taxes, payment methods).</summary>
 public sealed record GetSiigoCatalogsQuery : IRequest<Result<SiigoCatalogsDto>>;
 
 public sealed record GetFiscalMappingsQuery : IRequest<Result<IReadOnlyList<FiscalMappingDto>>>;
 
-/// <summary>Reemplaza los emparejamientos de impuestos y medios de pago (los de productos los crea el envío).</summary>
+/// <summary>Replaces the tax and payment-method pairings (the product ones are created by the submission).</summary>
 public sealed record SaveFiscalMappingsCommand(IReadOnlyList<FiscalMappingDto> Mappings) : IRequest<Result<IReadOnlyList<FiscalMappingDto>>>;
 
 public sealed class SaveFiscalSettingsValidator : AbstractValidator<SaveFiscalSettingsCommand>

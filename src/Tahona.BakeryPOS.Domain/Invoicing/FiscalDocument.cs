@@ -11,24 +11,24 @@ public enum FiscalDocumentKind
 
 public enum FiscalDocumentStatus
 {
-    /// <summary>Creado con la venta; espera su envío (outbox).</summary>
+    /// <summary>Created with the sale; waiting to be sent (outbox).</summary>
     Pending,
     Submitting,
-    /// <summary>Aceptado por la DIAN con CUFE: solo con respuesta verificable del proveedor.</summary>
+    /// <summary>Accepted by the DIAN with a CUFE: only with a verifiable response from the provider.</summary>
     Accepted,
-    /// <summary>Rechazado (DIAN o validación del proveedor): no se reintenta solo.</summary>
+    /// <summary>Rejected (DIAN or provider validation): not retried automatically.</summary>
     Rejected,
-    /// <summary>Falla transitoria antes de saber nada (configuración, red): se reintenta.</summary>
+    /// <summary>Transient failure before knowing anything (configuration, network): it is retried.</summary>
     TemporaryError,
-    /// <summary>No se sabe si el proveedor lo recibió: se consulta antes de reenviar, con la misma clave.</summary>
+    /// <summary>It is unknown whether the provider received it: it is queried before resending, with the same key.</summary>
     Unknown,
     Cancelled,
 }
 
 /// <summary>
-/// Documento fiscal electrónico (factura o nota crédito) de una venta. Su estado es propio. Nunca se marca
-/// aceptado sin respuesta verificable del proveedor; un resultado desconocido se reenvía con la misma
-/// <see cref="IdempotencyKey"/>, que en Siigo devuelve el documento ya creado (electronic-invoicing.md §9).
+/// Electronic fiscal document (invoice or credit note) of a sale. Its status is its own. It is never marked
+/// accepted without a verifiable response from the provider; an unknown result is resent with the same
+/// <see cref="IdempotencyKey"/>, which in Siigo returns the document already created (electronic-invoicing.md §9).
 /// </summary>
 public sealed class FiscalDocument : AuditableEntity, ITenantEntity
 {
@@ -39,13 +39,13 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public FiscalDocumentKind Kind { get; private set; }
     public string Provider { get; private set; } = Siigo;
     public FiscalDocumentStatus Status { get; private set; } = FiscalDocumentStatus.Pending;
-    /// <summary>Clave de idempotencia del proveedor (id del documento en base 36, 25 caracteres).</summary>
+    /// <summary>Provider idempotency key (the document id in base 36, 25 characters).</summary>
     public string IdempotencyKey { get; private set; } = string.Empty;
-    /// <summary>Lo que se factura (líneas, pagos, cliente), fijado al crear el documento.</summary>
+    /// <summary>What is invoiced (lines, payments, customer), fixed when the document is created.</summary>
     public string Payload { get; private set; } = string.Empty;
     public decimal Total { get; private set; }
     public string CustomerIdentification { get; private set; } = string.Empty;
-    /// <summary>Id del documento en el proveedor (GUID de Siigo).</summary>
+    /// <summary>Id of the document at the provider (Siigo GUID).</summary>
     public string? ExternalId { get; private set; }
     public string? Prefix { get; private set; }
     public long? Number { get; private set; }
@@ -53,13 +53,13 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     public string? Errors { get; private set; }
     public int Attempts { get; private set; }
     public DateTime? AcceptedAt { get; private set; }
-    /// <summary>Hasta cuándo se conserva (D-15).</summary>
+    /// <summary>Until when it is kept (D-15).</summary>
     public DateTime? RetainUntil { get; private set; }
-    /// <summary>Nota crédito: factura que corrige.</summary>
+    /// <summary>Credit note: the invoice it corrects.</summary>
     public Guid? InvoiceDocumentId { get; private set; }
-    /// <summary>Nota crédito: motivo DIAN (1 = devolución parcial, 2 = anulación de la factura).</summary>
+    /// <summary>Credit note: DIAN reason (1 = partial return, 2 = invoice void).</summary>
     public int? CreditReason { get; private set; }
-    /// <summary>Nota crédito: anulación (id de la venta) o devolución (id de la devolución). Una nota por origen.</summary>
+    /// <summary>Credit note: void (sale id) or return (return id). One note per source.</summary>
     public Guid? SourceId { get; private set; }
 
     public bool IsFinal => Status is FiscalDocumentStatus.Accepted or FiscalDocumentStatus.Cancelled;
@@ -83,7 +83,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
         return doc;
     }
 
-    /// <summary>Nota crédito sobre una factura de la misma venta.</summary>
+    /// <summary>Credit note against an invoice of the same sale.</summary>
     public static FiscalDocument CreateCreditNote(FiscalDocument invoice, Guid sourceId, int reason, string payload, decimal total)
     {
         if (invoice.Kind != FiscalDocumentKind.Invoice)
@@ -98,8 +98,8 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     }
 
     /// <summary>
-    /// Sin efecto fiscal: factura rechazada de una venta anulada, o nota crédito de una factura que nunca fue
-    /// válida. Un documento aceptado no se cancela (eso exige nota crédito).
+    /// Without fiscal effect: a rejected invoice of a voided sale, or a credit note of an invoice that was never
+    /// valid. An accepted document is not cancelled (that requires a credit note).
     /// </summary>
     public void Cancel(string reason)
     {
@@ -109,7 +109,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
         Errors = Truncate(reason);
     }
 
-    /// <summary>Comienza un intento de envío. Solo desde estados no finales y no rechazados.</summary>
+    /// <summary>Starts a submission attempt. Only from non-final and non-rejected states.</summary>
     public void StartSubmission()
     {
         if (IsFinal || Status == FiscalDocumentStatus.Rejected)
@@ -118,7 +118,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
         Attempts++;
     }
 
-    /// <summary>El proveedor devolvió el documento creado (aún sin resultado DIAN o con él).</summary>
+    /// <summary>The provider returned the created document (with or without a DIAN result yet).</summary>
     public void RecordCreated(string externalId, string? prefix, long? number)
     {
         ExternalId = externalId;
@@ -155,7 +155,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
         Errors = Truncate(detail);
     }
 
-    /// <summary>Reintento manual de un rechazado tras corregir la causa (configuración o datos).</summary>
+    /// <summary>Manual retry of a rejected one after fixing the cause (configuration or data).</summary>
     public void Retry()
     {
         if (Status is not (FiscalDocumentStatus.Rejected or FiscalDocumentStatus.TemporaryError or FiscalDocumentStatus.Unknown))
@@ -165,7 +165,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
 
     private static string Truncate(string text) => text.Length > 2000 ? text[..2000] : text;
 
-    /// <summary>GUID en base 36: 25 caracteres alfanuméricos (Siigo admite hasta 30 en Idempotency-Key).</summary>
+    /// <summary>GUID in base 36: 25 alphanumeric characters (Siigo accepts up to 30 in Idempotency-Key).</summary>
     public static string Base36(Guid id)
     {
         const string digits = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -180,7 +180,7 @@ public sealed class FiscalDocument : AuditableEntity, ITenantEntity
     }
 }
 
-/// <summary>Registro de cada intento de envío (requisito: no reenviar un desconocido sin consulta registrada).</summary>
+/// <summary>Record of each submission attempt (requirement: do not resend an unknown one without a recorded query).</summary>
 public sealed class FiscalSubmissionAttempt : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }

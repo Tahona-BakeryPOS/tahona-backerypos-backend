@@ -10,9 +10,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Companies.Platform;
 
 /// <summary>
-/// Alta de empresa por el administrador de plataforma (HU-1.1, D-09): crea la empresa, sus roles del
-/// sistema y el propietario, todo en una transacción. Medios de pago, impuestos y ubicación de
-/// inventario por defecto llegan con sus módulos (fases 3, 4 y 6).
+/// Company onboarding by the platform administrator (US-1.1, D-09): creates the company, its system
+/// roles and the owner, all in one transaction. Default payment methods, taxes and inventory
+/// location arrive with their modules (phases 3, 4 and 6).
 /// </summary>
 public sealed record CreateCompanyCommand(
     string LegalName,
@@ -30,10 +30,10 @@ public sealed record CreateCompanyCommand(
 
 public sealed record OwnerInput(string FullName, string Email);
 
-/// <param name="Owner">La contraseña de un solo uso solo se muestra en esta respuesta; no se guarda en claro.</param>
+/// <param name="Owner">The one-time password is only shown in this response; it is not stored in clear text.</param>
 public sealed record CreatedCompanyDto(CompanyDto Company, ProvisionedOwner Owner);
 
-/// <summary>Vista de plataforma: estado de las empresas, sin datos de su operación.</summary>
+/// <summary>Platform view: status of the companies, with no data about their operation.</summary>
 public sealed record GetCompaniesQuery : IRequest<Result<IReadOnlyList<PlatformCompanyDto>>>;
 
 public sealed record PlatformCompanyDto(Guid Id, string LegalName, string? TradeName, string Nit, int NitCheckDigit, string Status, DateTime CreatedAt);

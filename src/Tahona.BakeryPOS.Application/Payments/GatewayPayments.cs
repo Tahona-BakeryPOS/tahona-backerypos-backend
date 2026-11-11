@@ -12,23 +12,23 @@ using Microsoft.Extensions.Logging;
 namespace Tahona.BakeryPOS.Application.Payments;
 
 /// <param name="Status"><c>pending</c>, <c>approved</c>, <c>declined</c>, <c>cancelled</c>, <c>refunded</c>…</param>
-/// <param name="AttemptStatus">Estado del último intento en la pasarela (<c>pending</c>, <c>unknown</c>, <c>error</c>…).</param>
+/// <param name="AttemptStatus">Status of the last attempt at the gateway (<c>pending</c>, <c>unknown</c>, <c>error</c>…).</param>
 public sealed record PaymentDto(Guid Id, string Purpose, Guid? SaleId, Guid CashSessionId, Guid PaymentMethodId, string PaymentMethodName,
     decimal Amount, string Status, string? AttemptStatus, string? AttemptError, string? Reference, bool ResolvedManually,
     string? ResolutionNote, DateTime CreatedAt, DateTime? ResolvedAt);
 
-/// <summary>Cobro de prueba de la integración, sin venta (I-23): va al datáfono de la caja indicada.</summary>
+/// <summary>Integration test charge, without a sale (I-23): it goes to the indicated register's card terminal.</summary>
 public sealed record StartTestChargeCommand(Guid CashRegisterId, Guid PaymentMethodId, decimal Amount) : IRequest<Result<PaymentDto>>;
 
-/// <summary>Estado de un pago (el POS lo consulta cada pocos segundos mientras espera el datáfono).</summary>
+/// <summary>Status of a payment (the POS queries it every few seconds while waiting for the card terminal).</summary>
 public sealed record GetPaymentQuery(Guid Id) : IRequest<Result<PaymentDto>>;
 
-/// <summary>Pagos por fecha de creación, estado y sesión de caja, del más reciente al más antiguo.</summary>
+/// <summary>Payments by creation date, status and cash session, newest to oldest.</summary>
 public sealed record GetPaymentsQuery(DateTime? From, DateTime? To, string? Status, Guid? CashSessionId) : IRequest<Result<IReadOnlyList<PaymentDto>>>;
 
 /// <summary>
-/// Resolución manual (I-23) de un pago de pasarela que quedó sin respuesta: <c>approved</c> con el número
-/// de aprobación del recibo, <c>declined</c> o <c>cancelled</c>; nota obligatoria. Queda auditado.
+/// Manual resolution (I-23) of a gateway payment that was left with no response: <c>approved</c> with the
+/// approval number from the receipt, <c>declined</c> or <c>cancelled</c>; a note is mandatory. It is audited.
 /// </summary>
 public sealed record ResolvePaymentCommand(Guid Id, string Resolution, string? ApprovalNumber, string Note) : IRequest<Result<PaymentDto>>;
 
@@ -40,7 +40,7 @@ public enum WebhookOutcome
     InvalidSignature,
 }
 
-/// <summary>Webhook de Bold: cuerpo crudo (para la firma) y encabezado <c>x-bold-signature</c>.</summary>
+/// <summary>Bold webhook: raw body (for the signature) and <c>x-bold-signature</c> header.</summary>
 public sealed record ProcessBoldWebhookCommand(string RawBody, string? Signature) : IRequest<WebhookOutcome>;
 
 public sealed class StartTestChargeValidator : AbstractValidator<StartTestChargeCommand>
@@ -63,9 +63,9 @@ public sealed class ResolvePaymentValidator : AbstractValidator<ResolvePaymentCo
 }
 
 /// <summary>
-/// Cobro por el datáfono Bold (payment-integration.md §4 y §11): guarda pago + intento, llama a Bold fuera
-/// de la transacción y guarda el resultado de la petición. La aprobación solo llega por el webhook firmado
-/// o por resolución manual auditada. La usan el cobro de prueba y, en la fase 8, la venta.
+/// Charge through the Bold card terminal (payment-integration.md §4 and §11): stores payment + attempt, calls Bold outside
+/// the transaction and stores the result of the request. Approval only arrives through the signed webhook
+/// or an audited manual resolution. It is used by the test charge and, in phase 8, by the sale.
 /// </summary>
 public sealed class GatewayPaymentService
 {
@@ -105,7 +105,7 @@ public sealed class GatewayPaymentService
         _db.PaymentAttempts.Add(attempt);
         await _db.SaveChangesAsync(ct);
 
-        // Fuera de la transacción: el cobro llega al datáfono.
+        // Outside the transaction: the charge reaches the card terminal.
         var result = await _bold.CreateCheckoutAsync(_secrets.Unprotect(account.EncryptedIdentityKey), new BoldCheckoutRequest(
             amount, taxes, method.GatewayMethod!, terminal.TerminalModel, terminal.TerminalSerial, attempt.Reference,
             account.SellerEmail, description), ct);
@@ -233,9 +233,9 @@ public sealed class GatewayPaymentsHandler :
 }
 
 /// <summary>
-/// Webhook de Bold (payment-integration.md §11): busca el intento por la referencia, valida la firma con la
-/// llave secreta de esa empresa, deduplica por id de notificación y aplica el resultado. Un monto distinto
-/// al del intento lo deja en error sin aprobar el pago.
+/// Bold webhook (payment-integration.md §11): finds the attempt by reference, validates the signature with that
+/// company's secret key, deduplicates by notification id and applies the result. An amount different
+/// from the attempt's leaves it in error without approving the payment.
 /// </summary>
 public sealed class BoldWebhookHandler : IRequestHandler<ProcessBoldWebhookCommand, WebhookOutcome>
 {
@@ -274,10 +274,10 @@ public sealed class BoldWebhookHandler : IRequestHandler<ProcessBoldWebhookComma
             return WebhookOutcome.InvalidSignature;
         }
 
-        // Sin sesión de empresa: el intento se busca por su referencia y de él sale la empresa.
+        // No company session: the attempt is looked up by its reference and the company comes from it.
         var attempt = evt.Reference is null ? null : await _db.PaymentAttempts.IgnoreQueryFilters([QueryFilters.Tenant])
             .FirstOrDefaultAsync(a => a.Provider == PaymentAttempt.Bold && a.Reference == evt.Reference, ct);
-        // Solo la llave del ambiente del intento: la de pruebas es vacía y no puede validar un cobro de producción.
+        // Only the key of the attempt's environment: the test one is empty and cannot validate a production charge.
         var account = attempt is null ? null : await _db.GatewayAccounts.IgnoreQueryFilters([QueryFilters.Tenant]).AsNoTracking()
             .FirstOrDefaultAsync(a => a.CompanyId == attempt.CompanyId && a.Environment == attempt.Environment, ct);
         var valid = account is not null && (account.Environment == GatewayEnvironment.Sandbox || account.EncryptedSecretKey is not null)
@@ -311,7 +311,7 @@ public sealed class BoldWebhookHandler : IRequestHandler<ProcessBoldWebhookComma
             case "SALE_APPROVED" when attempt.IsOpen:
                 if (evt.Total != attempt.Amount)
                 {
-                    // Nunca se aprueba un monto distinto (payment-integration.md §4).
+                    // A different amount is never approved (payment-integration.md §4).
                     attempt.ApplyResult(AttemptStatus.Error, evt.Type, evt.PaymentId, now);
                     note = $"Monto distinto: Bold {evt.Total}, intento {attempt.Amount}";
                     _logger.LogError("Pago {PaymentId}: {Note}", payment.Id, note);
@@ -325,7 +325,7 @@ public sealed class BoldWebhookHandler : IRequestHandler<ProcessBoldWebhookComma
                 if (payment.IsPending) payment.DeclineByGateway(now);
                 return WebhookOutcome.Processed;
             default:
-                // Ya resuelto (p. ej. a mano), anulaciones o tipos desconocidos: se guarda el evento sin cambiar nada.
+                // Already resolved (e.g. by hand), voids or unknown types: the event is stored without changing anything.
                 note = $"Sin cambios: {evt.Type} con intento {attempt.Status} y pago {payment.Status}";
                 if (evt.Type == "SALE_APPROVED" && payment.Status != PaymentStatus.Approved)
                     _logger.LogError("Pago {PaymentId}: Bold aprobó después de resolverse como {Status}; revisar en la conciliación", payment.Id, payment.Status);
@@ -349,7 +349,7 @@ public sealed class BoldWebhookHandler : IRequestHandler<ProcessBoldWebhookComma
     }
 }
 
-/// <summary>Pagos sin resolver de una sesión de caja: bloquean su cierre (D-12).</summary>
+/// <summary>Unresolved payments of a cash session: they block its close (D-12).</summary>
 public sealed class PendingPaymentsProbe : IPendingPaymentsProbe
 {
     private readonly IAppDbContext _db;

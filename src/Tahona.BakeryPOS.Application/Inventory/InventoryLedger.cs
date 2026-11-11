@@ -7,21 +7,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Inventory;
 
-/// <param name="Quantity">Con signo: positivo entra, negativo sale.</param>
-/// <param name="SourceLineId">Línea del origen (p. ej. línea de venta); parte de la clave idempotente.</param>
+/// <param name="Quantity">Signed: positive goes in, negative goes out.</param>
+/// <param name="SourceLineId">Line of the source (e.g. a sale line); part of the idempotent key.</param>
 public sealed record StockPostingLine(Guid ProductId, decimal Quantity, Guid SourceLineId);
 
-/// <param name="SkipUntracked">Ventas: los productos sin control de existencias se ignoran. Ajustes: son un error.</param>
-/// <param name="AuthorizedBy">Quien autoriza dejar saldo negativo en productos con política "bloquear" (D-06).</param>
+/// <param name="SkipUntracked">Sales: products that do not track stock are ignored. Adjustments: it is an error.</param>
+/// <param name="AuthorizedBy">Who authorizes leaving a negative balance on products with a "block" policy (D-06).</param>
 public sealed record StockPosting(Guid LocationId, StockMovementKind Kind, string SourceType, Guid SourceId,
     IReadOnlyList<StockPostingLine> Lines, Guid? ReasonId = null, Guid? AuthorizedBy = null, string? Note = null,
     bool SkipUntracked = false);
 
 /// <summary>
-/// Única puerta para mover existencias (docs/inventory.md): crea los movimientos y actualiza los saldos
-/// en la transacción del llamador (no guarda). Aplica la política D-06 y la idempotencia por origen: si
-/// el mismo hecho ya se registró, devuelve sus movimientos sin volver a mover el saldo. La usan los
-/// ajustes de esta fase y la confirmación de ventas (fase 8).
+/// The only door for moving stock (docs/inventory.md): it creates the movements and updates the balances
+/// in the caller's transaction (it does not save). It applies the D-06 policy and idempotency by source: if
+/// the same fact was already recorded, it returns its movements without moving the balance again. It is used by
+/// the adjustments and by sale confirmation (phase 8).
 /// </summary>
 public sealed class InventoryLedger
 {
@@ -38,7 +38,7 @@ public sealed class InventoryLedger
         _clock = clock;
     }
 
-    /// <summary>Ubicación activa de la empresa y dentro del alcance por sucursal del token.</summary>
+    /// <summary>Active location of the company and within the token's branch scope.</summary>
     public async Task<Result<StockLocation>> FindLocationAsync(Guid locationId, CancellationToken ct)
     {
         var location = await _db.StockLocations.AsNoTracking().FirstOrDefaultAsync(l => l.Id == locationId, ct);
@@ -74,7 +74,7 @@ public sealed class InventoryLedger
             lines.Add(line);
         }
 
-        // Idempotencia: las líneas ya registradas para este origen no se repiten.
+        // Idempotency: lines already recorded for this source are not repeated.
         var lineIds = lines.Select(l => l.SourceLineId).ToList();
         var existing = await _db.StockMovements.AsNoTracking()
             .Where(m => m.Kind == posting.Kind && m.SourceType == posting.SourceType && m.SourceId == posting.SourceId
@@ -117,7 +117,7 @@ public sealed class InventoryLedger
         return Result.Success<IReadOnlyList<StockMovement>>([.. existing, .. created]);
     }
 
-    /// <summary>Saldo actual de un producto en una ubicación (0 si nunca se movió).</summary>
+    /// <summary>Current balance of a product at a location (0 if it never moved).</summary>
     public async Task<decimal> OnHandAsync(Guid locationId, Guid productId, CancellationToken ct) =>
         await _db.StockBalances.Where(b => b.LocationId == locationId && b.ProductId == productId)
             .Select(b => (decimal?)b.OnHand).FirstOrDefaultAsync(ct) ?? 0m;

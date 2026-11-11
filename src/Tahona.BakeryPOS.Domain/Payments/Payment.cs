@@ -15,38 +15,38 @@ public enum PaymentStatus
 
 public enum PaymentPurpose
 {
-    /// <summary>Pago de una venta (la venta llega en la fase 8).</summary>
+    /// <summary>Payment of a sale (the sale arrives in phase 8).</summary>
     Sale,
-    /// <summary>Cobro de prueba de la integración, sin venta (I-23).</summary>
+    /// <summary>Integration test charge, without a sale (I-23).</summary>
     Test,
 }
 
 /// <summary>
-/// Pago lógico (de una venta o de prueba). Su estado es propio y no se mezcla con el de la venta. Un
-/// pago por pasarela queda pendiente hasta su webhook firmado o una resolución manual auditada (I-23).
+/// Logical payment (of a sale or a test). Its status is its own and is not mixed with the sale's. A
+/// gateway payment stays pending until its signed webhook or an audited manual resolution (I-23).
 /// </summary>
 public sealed class Payment : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }
     public PaymentPurpose Purpose { get; private set; }
-    /// <summary>Venta pagada; null en cobros de prueba. Sin FK hasta que exista el módulo de ventas.</summary>
+    /// <summary>Paid sale; null on test charges. No FK until the sales module exists.</summary>
     public Guid? SaleId { get; private set; }
     public Guid CashSessionId { get; private set; }
     public Guid PaymentMethodId { get; private set; }
     public PaymentMethodKind MethodKind { get; private set; }
     public decimal Amount { get; private set; }
-    /// <summary>Efectivo recibido (solo efectivo); <see cref="ChangeAmount"/> = recibido − monto.</summary>
+    /// <summary>Cash received (cash only); <see cref="ChangeAmount"/> = received − amount.</summary>
     public decimal? AmountTendered { get; private set; }
     public decimal? ChangeAmount { get; private set; }
     public PaymentStatus Status { get; private set; } = PaymentStatus.Pending;
-    /// <summary>Referencia del medio (transferencia, datáfono externo) o número de aprobación.</summary>
+    /// <summary>Reference of the method (transfer, external card terminal) or approval number.</summary>
     public string? Reference { get; private set; }
     public DateTime? ResolvedAt { get; private set; }
-    /// <summary>Quién lo resolvió a mano; null si lo resolvió la pasarela.</summary>
+    /// <summary>Who resolved it by hand; null if the gateway resolved it.</summary>
     public Guid? ResolvedBy { get; private set; }
     public bool ResolvedManually { get; private set; }
     public string? ResolutionNote { get; private set; }
-    /// <summary>Lo devuelto al cliente por anulación o devoluciones de la venta (fase 9).</summary>
+    /// <summary>What was returned to the customer through a void or the sale's returns (phase 9).</summary>
     public decimal RefundedAmount { get; private set; }
 
     public bool IsPending => Status == PaymentStatus.Pending;
@@ -71,8 +71,8 @@ public sealed class Payment : AuditableEntity, ITenantEntity
     }
 
     /// <summary>
-    /// Pago que no pasa por la pasarela y se aprueba al registrarlo: efectivo (con cambio), transferencia
-    /// o datáfono externo (con referencia obligatoria; se concilian a mano).
+    /// A payment that does not go through the gateway and is approved when recorded: cash (with change), transfer
+    /// or external card terminal (with a mandatory reference; they are reconciled by hand).
     /// </summary>
     public static Payment RecordImmediate(Guid companyId, Guid saleId, Guid cashSessionId, PaymentMethod method, decimal amount,
         decimal? amountTendered, string? reference, DateTime at)
@@ -105,7 +105,7 @@ public sealed class Payment : AuditableEntity, ITenantEntity
         };
     }
 
-    /// <summary>Aprobado por la pasarela (webhook firmado y monto coincidente).</summary>
+    /// <summary>Approved by the gateway (signed webhook and matching amount).</summary>
     public void ApproveByGateway(DateTime at, string? approvalNumber)
     {
         EnsurePending();
@@ -114,7 +114,7 @@ public sealed class Payment : AuditableEntity, ITenantEntity
         Reference = approvalNumber ?? Reference;
     }
 
-    /// <summary>La pasarela rechazó la petición: el cobro nunca llegó al datáfono y se puede intentar otra vez.</summary>
+    /// <summary>The gateway rejected the request: the charge never reached the card terminal and it can be tried again.</summary>
     public void CancelNotSent(DateTime at, string reason)
     {
         EnsurePending();
@@ -131,8 +131,8 @@ public sealed class Payment : AuditableEntity, ITenantEntity
     }
 
     /// <summary>
-    /// Resolución manual (I-23) cuando el webhook no llegó: aprobado exige el número de aprobación del
-    /// recibo; cancelado solo tras verificar en el datáfono que no se cobró. Queda auditado.
+    /// Manual resolution (I-23) when the webhook did not arrive: approved requires the approval number from the
+    /// receipt; cancelled only after checking on the card terminal that it was not charged. It is audited.
     /// </summary>
     public void ResolveManually(PaymentStatus resolution, Guid by, DateTime at, string? approvalNumber, string note)
     {
@@ -151,7 +151,7 @@ public sealed class Payment : AuditableEntity, ITenantEntity
         if (resolution == PaymentStatus.Approved) Reference = approvalNumber!.Trim();
     }
 
-    /// <summary>Descuenta un reembolso del pago aprobado (parcial o total).</summary>
+    /// <summary>Deducts a refund from the approved payment (partial or full).</summary>
     public void ApplyRefund(decimal amount)
     {
         if (Status is not (PaymentStatus.Approved or PaymentStatus.PartiallyRefunded))
@@ -177,14 +177,14 @@ public enum AttemptStatus
     Declined,
     Voided,
     Error,
-    /// <summary>No se supo si la pasarela recibió el cobro (timeout): no se reenvía a ciegas.</summary>
+    /// <summary>It is unknown whether the gateway received the charge (timeout): it is not resent blindly.</summary>
     Unknown,
     Expired,
 }
 
 /// <summary>
-/// Intento de cobro en la pasarela. <see cref="Reference"/> es el id del intento y viaja como
-/// <c>reference</c> a Bold, que lo devuelve en el webhook. Los estados solo avanzan.
+/// Charge attempt at the gateway. <see cref="Reference"/> is the attempt's id and travels as
+/// <c>reference</c> to Bold, which returns it in the webhook. States only move forward.
 /// </summary>
 public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
 {
@@ -193,12 +193,12 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
     public Guid CompanyId { get; private set; }
     public Guid PaymentId { get; private set; }
     public string Provider { get; private set; } = Bold;
-    /// <summary>Ambiente de la cuenta con que se creó: el webhook se valida solo con la llave de ese ambiente.</summary>
+    /// <summary>Environment of the account it was created with: the webhook is only validated with that environment's key.</summary>
     public GatewayEnvironment Environment { get; private set; }
     public string Reference { get; private set; } = string.Empty;
-    /// <summary><c>data.payment_id</c> del webhook.</summary>
+    /// <summary>The webhook's <c>data.payment_id</c>.</summary>
     public string? ExternalId { get; private set; }
-    /// <summary><c>payload.integration_id</c> de la creación (para soporte de Bold).</summary>
+    /// <summary>The creation's <c>payload.integration_id</c> (for Bold support).</summary>
     public string? IntegrationId { get; private set; }
     public AttemptStatus Status { get; private set; } = AttemptStatus.Created;
     public string? RawStatus { get; private set; }
@@ -224,7 +224,7 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
         return attempt;
     }
 
-    /// <summary>La pasarela recibió el cobro (201): queda esperando el webhook.</summary>
+    /// <summary>The gateway received the charge (201): it stays waiting for the webhook.</summary>
     public void MarkSent(string? integrationId)
     {
         EnsureOpen();
@@ -232,7 +232,7 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
         IntegrationId = integrationId;
     }
 
-    /// <summary>La pasarela rechazó la petición (4xx con código): el cobro nunca llegó al datáfono.</summary>
+    /// <summary>The gateway rejected the request (4xx with a code): the charge never reached the card terminal.</summary>
     public void MarkRejectedBeforeSending(string code, string message)
     {
         EnsureOpen();
@@ -241,7 +241,7 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
         ErrorMessage = message;
     }
 
-    /// <summary>Timeout o error de red: no se sabe si llegó.</summary>
+    /// <summary>Timeout or network error: it is unknown whether it arrived.</summary>
     public void MarkUnknown(string message)
     {
         EnsureOpen();
@@ -260,7 +260,7 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
         LastEventAt = at;
     }
 
-    /// <summary>Cierra el intento cuando el pago se resolvió a mano (I-23).</summary>
+    /// <summary>Closes the attempt when the payment was resolved by hand (I-23).</summary>
     public void CloseManually(AttemptStatus status)
     {
         if (!IsOpen) return;
@@ -276,15 +276,15 @@ public sealed class PaymentAttempt : AuditableEntity, ITenantEntity
 
 public enum RefundMethod
 {
-    /// <summary>Efectivo de la caja abierta (D-11: toda devolución se paga en efectivo, también las de pasarela).</summary>
+    /// <summary>Cash from the open register (D-11: every return is paid in cash, also gateway ones).</summary>
     Cash,
     Gateway,
     Manual,
 }
 
 /// <summary>
-/// Reembolso de un pago por una anulación o devolución (payment-integration.md §8). Su estado es propio; con
-/// efectivo se completa al registrarse. Único por (pago, origen).
+/// Refund of a payment for a void or return (payment-integration.md §8). Its status is its own; with
+/// cash it is completed when recorded. Unique per (payment, source).
 /// </summary>
 public sealed class Refund : AuditableEntity, ITenantEntity
 {
@@ -296,7 +296,7 @@ public sealed class Refund : AuditableEntity, ITenantEntity
     public Guid SourceId { get; private set; }
     public decimal Amount { get; private set; }
     public RefundMethod Method { get; private set; }
-    /// <summary><c>completed</c> (efectivo); <c>pending</c>/<c>failed</c> quedan para reembolsos por pasarela.</summary>
+    /// <summary><c>completed</c> (cash); <c>pending</c>/<c>failed</c> are left for gateway refunds.</summary>
     public string Status { get; private set; } = "completed";
     public DateTime OccurredAt { get; private set; }
 

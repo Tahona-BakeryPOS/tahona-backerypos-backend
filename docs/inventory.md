@@ -1,65 +1,65 @@
-# Inventario básico
+# Basic inventory
 
-Estado: **implementado en la fase 4** (D-06 = opción C; detalles en I-21). Controla existencias de productos vendibles; sin recetas,
-producción, lotes ni transferencias.
+Status: **implemented in phase 4** (D-06 = option C; details in I-21). It tracks stock of sellable products; no recipes,
+production, batches or transfers.
 
-## 1. Modelo
+## 1. Model
 
-- **Ubicación** (`inv.stock_locations`): cada sucursal tiene una ubicación por defecto ("Mostrador").
-  Se pueden crear más (p. ej. "Vitrina", "Bodega") pero no hay transferencias en el MVP.
-- **Movimiento** (`inv.stock_movements`): libro mayor de solo inserción. Cantidad con signo.
-- **Saldo** (`inv.stock_balances`): proyección `on_hand` por (ubicación, producto), actualizada en la
-  **misma transacción** que el movimiento, con concurrencia optimista (`row_version`).
-- Solo los productos con `track_stock = true` generan movimientos.
+- **Location** (`inv.stock_locations`): each branch has a default location ("Mostrador", code `COUNTER`).
+  More can be created (e.g. "Vitrina", "Bodega") but there are no transfers in the MVP.
+- **Movement** (`inv.stock_movements`): insert-only ledger. Signed quantity.
+- **Balance** (`inv.stock_balances`): `on_hand` projection per (location, product), updated in the
+  **same transaction** as the movement, with optimistic concurrency (`row_version`).
+- Only products with `track_stock = true` generate movements.
 
-## 2. Tipos de movimiento
+## 2. Movement types
 
-| Tipo | Signo | Origen | Autorización |
+| Type | Sign | Origin | Authorization |
 |---|---|---|---|
-| `initial` | + | Registro inicial por sucursal | `inventario.ajustar` |
-| `sale` | − | Línea de venta confirmada | Automático |
-| `return` | + | Línea de devolución aprobada (si el producto vuelve a la venta) | `devoluciones.aprobar` |
-| `void_reversal` | + | Anulación de venta confirmada | `ventas.anular` |
-| `adjustment_in` / `adjustment_out` | ± | Conteo, merma, daño, consumo interno | `inventario.ajustar` + motivo |
+| `initial` | + | Initial registration per branch | `inventory.adjust` |
+| `sale` | − | Confirmed sale line | Automatic |
+| `return` | + | Approved return line (if the product goes back on sale) | `returns.approve` |
+| `void_reversal` | + | Void of a confirmed sale | `sales.void` |
+| `adjustment_in` / `adjustment_out` | ± | Count, waste, damage, internal use | `inventory.adjust` + reason |
 
-Las mermas de panadería (producto del día no vendido) se registran como `adjustment_out` con motivo
-"Merma" en el MVP; su costeo queda fuera.
+Bakery waste (unsold product of the day) is recorded as `adjustment_out` with the "Merma" reason (code `WASTE`) in the
+MVP; costing it is out of scope.
 
-## 3. Reglas
+## 3. Rules
 
-1. **No existe edición directa del saldo.** Cualquier cambio es un movimiento.
-2. **Idempotencia**: índice único `(company_id, kind, source_type, source_id, source_line_id)`.
-   Confirmar dos veces la misma venta no descuenta dos veces.
-3. **Descuento por venta confirmada**: ocurre en la transacción de confirmación (paso 4 del flujo),
-   nunca al agregar al carrito ni al crear la venta en borrador.
-4. **Devolución**: movimiento compensatorio; la devolución puede indicar "no reingresa" (producto
-   dañado), y entonces no genera movimiento `return` sino solo el registro de la devolución.
-5. **Anulación**: `void_reversal` por cada línea, enlazado a la venta.
-6. **Auditoría**: cada movimiento registra usuario, dispositivo, motivo y autorizador.
+1. **There is no direct balance editing.** Any change is a movement.
+2. **Idempotency**: unique index `(company_id, kind, source_type, source_id, source_line_id)`.
+   Confirming the same sale twice does not deduct twice.
+3. **Deduction per confirmed sale**: it happens in the confirmation transaction (step 4 of the flow),
+   never when adding to the cart or when creating the draft sale.
+4. **Return**: a compensating movement; the return may state "does not restock" (damaged
+   product), in which case it generates no `return` movement, only the return record.
+5. **Void**: `void_reversal` for each line, linked to the sale.
+6. **Audit**: each movement records user, device, reason and authorizer.
 
-## 4. Política de existencias insuficientes — D-06 aprobada: opción C
+## 4. Insufficient stock policy — D-06 approved: option C
 
-| Opción | Comportamiento | Ventajas | Riesgos |
+| Option | Behavior | Advantages | Risks |
 |---|---|---|---|
-| A. Bloquear siempre | La venta no se confirma si `on_hand < cantidad` | Saldos siempre ≥ 0 | En panadería el pan se produce y vende sin registrar entradas a tiempo; frena la caja |
-| B. Permitir negativo con aviso | Se vende y el saldo queda negativo; alerta al administrador | Nunca frena la venta | Saldos poco confiables si nadie corrige |
-| **C. Configurable por producto + autorización (recomendada)** | Cada producto define `negative_stock_policy` = `block` o `allow`. En `block`, el cajero puede pedir autorización del propietario (PIN) y queda auditado | Pan del día en `allow`, productos empacados en `block` | Algo más de configuración |
+| A. Always block | The sale is not confirmed if `on_hand < quantity` | Balances always ≥ 0 | In a bakery bread is produced and sold without entries being recorded in time; it stalls the register |
+| B. Allow negative with a warning | It sells and the balance goes negative; alert to the administrator | Never stalls the sale | Unreliable balances if nobody corrects them |
+| **C. Configurable per product + authorization (recommended)** | Each product defines `negative_stock_policy` = `block` or `allow`. With `block`, the cashier can ask for the owner's authorization (PIN) and it is audited | Daily bread on `allow`, packaged products on `block` | A bit more configuration |
 
-Aprobada la C (27/10/2026): `products.negative_stock_policy` (`allow` por defecto). La aplica `InventoryLedger`: con
-`block`, un movimiento que dejaría el saldo negativo exige `authorized_by`.
+Option C approved (27/10/2026): `products.negative_stock_policy` (`allow` by default). `InventoryLedger` applies it: with
+`block`, a movement that would leave the balance negative requires `authorized_by`.
 
-## 5. Reconciliación
+## 5. Reconciliation
 
-- Consulta `GET /inventario/reconciliacion`: compara `stock_balances.on_hand` con `Σ stock_movements`
-  por (ubicación, producto) y lista diferencias (deberían ser cero).
-- Job nocturno por empresa: ejecuta la reconciliación y registra el resultado; una diferencia genera
-  alerta (indica un error de software, no de operación).
-- Conteo físico: el administrador registra el conteo y el sistema propone `adjustment_in/out` por la
-  diferencia, que se confirman con motivo "Conteo físico".
+- Query `GET /inventario/reconciliacion`: compares `stock_balances.on_hand` with `Σ stock_movements`
+  per (location, product) and lists differences (they should be zero).
+- Nightly job per company: runs the reconciliation and records the result; a difference raises an
+  alert (it indicates a software error, not an operational one).
+- Physical count: the administrator records the count and the system proposes `adjustment_in/out` for the
+  difference, which are confirmed with the "Conteo físico" reason (code `PHYSICAL_COUNT`).
 
-## 6. Concurrencia
+## 6. Concurrency
 
-Dos cajas venden el mismo producto a la vez: la actualización del saldo usa `row_version`; ante
-conflicto se reintenta la transacción de confirmación (hasta 3 veces). Con la política `block`, la
-verificación de existencias se hace dentro de esa transacción con bloqueo de fila
-(`UPDLOCK, ROWLOCK`) para no vender dos veces la última unidad.
+Two registers sell the same product at the same time: the balance update uses `row_version`; on
+conflict the confirmation transaction is retried (up to 3 times). With the `block` policy, the
+stock check is done inside that transaction with a row lock
+(`SELECT … FOR UPDATE`) so the last unit is not sold twice.

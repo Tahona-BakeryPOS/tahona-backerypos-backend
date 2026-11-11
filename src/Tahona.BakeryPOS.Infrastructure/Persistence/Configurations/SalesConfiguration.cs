@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
-/// <summary>Módulo Sales — esquema <c>sales</c>.</summary>
+/// <summary>Sales module — schema <c>sales</c>.</summary>
 internal sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
 {
     public void Configure(EntityTypeBuilder<Sale> builder)

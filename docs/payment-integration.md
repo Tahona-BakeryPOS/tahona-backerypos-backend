@@ -1,151 +1,150 @@
-# Integración con pasarela de pagos
+# Payment gateway integration
 
-Estado: **D-03 aprobada: Bold, con su API de datáfono ("API Integrations")** (27/10/2026). Lo verificado
-en la documentación oficial está en la sección 11; lo que sigue *por verificar* se confirma en el sandbox
-del comercio antes de producción. Nada se implementa sin estar en la documentación oficial.
+Status: **D-03 approved: Bold, with its card-terminal API ("API Integrations")** (27/10/2026). What was verified
+in the official documentation is in section 11; whatever is still *to verify* is confirmed in the merchant's sandbox
+before production. Nothing is implemented unless it is in the official documentation.
 
-## 1. Contexto: pago presencial en una panadería
+## 1. Context: in-person payment in a bakery
 
-El cobro es presencial. En Colombia los medios relevantes son efectivo, tarjeta en datáfono,
-Nequi/Daviplata, QR bancario (Bre-B/Bancolombia) y transferencias. Las pasarelas con API pública
-están orientadas a comercio electrónico (el cliente paga desde su celular o con un link/QR); la
-integración de **datáfonos físicos** por API no tiene documentación pública verificada.
+Payment is in person. In Colombia the relevant methods are cash, card on a terminal,
+Nequi/Daviplata, bank QR (Bre-B/Bancolombia) and transfers. Gateways with a public API
+are oriented to e-commerce (the customer pays from their phone or with a link/QR); integrating
+**physical card terminals** through an API has no verified public documentation.
 
-## 2. Opciones evaluadas
+## 2. Options evaluated
 
-| Criterio | Wompi (Bancolombia) | Bold | Otras (PayU, Mercado Pago, ePayco) |
+| Criterion | Wompi (Bancolombia) | Bold | Others (PayU, Mercado Pago, ePayco) |
 |---|---|---|---|
-| Documentación pública de API | **Sí** (docs.wompi.co) | Parcial: existe portal de desarrolladores; detalles vistos solo en fuentes de terceros | Sí (no evaluadas a fondo) |
-| Sandbox | **Sí**, con URL de eventos separada para sandbox y producción | *Por verificar* | — |
-| Métodos útiles en mostrador | `NEQUI` (push al celular), `BANCOLOMBIA_QR` (escanear en la app; solo personas naturales), `CARD` (sin presencia de tarjeta), `DAVIPLATA` (OTP) | Link de pago / botón; datáfono propio | — |
-| Consulta de estado | **Sí**: `GET /v1/transactions/{id}` con llave privada | *Por verificar* | — |
-| Estados | **`PENDING`, `APPROVED`, `DECLINED`, `VOIDED` (solo tarjeta), `ERROR`** | *Por verificar* | — |
-| Webhooks firmados | **Sí**: evento `transaction.updated`; checksum SHA256 de los campos de `signature.properties` + `timestamp` + secreto de eventos; header `X-Event-Checksum`; 3 reintentos en 24 h | Webhook mencionado por terceros | — |
-| Referencia única | **Sí**: `reference` debe ser única | *Por verificar* | — |
-| Idempotencia explícita en la creación | No documentada en lo revisado | *Por verificar* | — |
-| Datáfono integrado por API | No | Posible, sin documentación pública | — |
+| Public API documentation | **Yes** (docs.wompi.co) | Partial: a developer portal exists; details seen only in third-party sources | Yes (not evaluated in depth) |
+| Sandbox | **Yes**, with separate event URLs for sandbox and production | *To verify* | — |
+| Methods useful at the counter | `NEQUI` (push to the phone), `BANCOLOMBIA_QR` (scan in the app; natural persons only), `CARD` (card not present), `DAVIPLATA` (OTP) | Payment link / button; own card terminal | — |
+| Status query | **Yes**: `GET /v1/transactions/{id}` with the private key | *To verify* | — |
+| States | **`PENDING`, `APPROVED`, `DECLINED`, `VOIDED` (card only), `ERROR`** | *To verify* | — |
+| Signed webhooks | **Yes**: `transaction.updated` event; SHA256 checksum of the `signature.properties` fields + `timestamp` + events secret; `X-Event-Checksum` header; 3 retries in 24 h | Webhook mentioned by third parties | — |
+| Unique reference | **Yes**: `reference` must be unique | *To verify* | — |
+| Explicit idempotency on creation | Not documented in what was reviewed | *To verify* | — |
+| Card terminal integrated by API | No | Possible, with no public documentation | — |
 
-Fuentes revisadas (27/10/2026): [Eventos Wompi](https://docs.wompi.co/en/docs/colombia/eventos/),
-[Seguimiento de transacciones Wompi](https://docs.wompi.co/en/docs/colombia/seguimiento-de-transacciones/),
-[Métodos de pago Wompi](https://docs.wompi.co/en/docs/colombia/metodos-de-pago/). Sobre Bold no se
-encontró documentación oficial accesible; lo visto (endpoint de links de pago, URL base) proviene de
-plugins de terceros y **no se usará** como base.
+Sources reviewed (27/10/2026): [Wompi events](https://docs.wompi.co/en/docs/colombia/eventos/),
+[Wompi transaction tracking](https://docs.wompi.co/en/docs/colombia/seguimiento-de-transacciones/),
+[Wompi payment methods](https://docs.wompi.co/en/docs/colombia/metodos-de-pago/). No accessible official
+documentation was found for Bold; what was seen (payment-links endpoint, base URL) comes from
+third-party plugins and **will not be used** as a basis.
 
-## 3. Recomendación (para aprobar)
+## 3. Recommendation (to approve)
 
-1. **Wompi** como pasarela del MVP para pagos electrónicos iniciados desde el POS: `NEQUI` (push) y
-   `BANCOLOMBIA_QR` (QR en pantalla), y opcionalmente link de pago con tarjeta.
-2. **Tarjeta en datáfono externo** (Bold, Redeban, etc.) como medio **no integrado**: el cajero cobra
-   en el datáfono y registra el número de aprobación. Se marca como `external_card` y entra en la
-   conciliación manual. Es explícito que **no** es una confirmación de la pasarela.
-3. Antes de implementar: crear cuenta sandbox, confirmar con Wompi los puntos *por verificar* de la
-   sección 7 y validar comisiones/tiempos de abono con el dueño.
+1. **Wompi** as the MVP gateway for electronic payments started from the POS: `NEQUI` (push) and
+   `BANCOLOMBIA_QR` (QR on screen), and optionally a card payment link.
+2. **Card on an external terminal** (Bold, Redeban, etc.) as a **non-integrated** method: the cashier charges
+   on the terminal and records the approval number. It is marked `external_card` and goes into
+   manual reconciliation. It is explicit that it is **not** a gateway confirmation.
+3. Before implementing: create a sandbox account, confirm the points *to verify* in
+   section 7 with Wompi and validate fees/settlement times with the owner.
 
-## 4. Flujo de pago con pasarela
+## 4. Payment flow with a gateway
 
 ```
 POS                 API (Payments)                       Wompi
  │ POST /ventas/{id}/pagos ─► TX: payment + attempt 'created'
  │                          (reference = attempt.id)
- │                          fuera de TX: POST transacción ──────────►
- │                          ◄── id externo, PENDING (o timeout)
- │                          TX: attempt 'pending' (+ external_id) | 'unknown' si timeout
+ │                          outside TX: POST transaction ──────────►
+ │                          ◄── external id, PENDING (or timeout)
+ │                          TX: attempt 'pending' (+ external_id) | 'unknown' on timeout
  │ ◄── { estado, accion: QR / push }
  │ GET /ventas/{id}/estado (polling 2–3 s)
- │                                       ◄── webhook transaction.updated (firmado)
- │                          TX: inbound_event (dedupe) → attempt 'approved' → confirmar venta
- │ ◄── confirmada
+ │                                       ◄── webhook transaction.updated (signed)
+ │                          TX: inbound_event (dedupe) → attempt 'approved' → confirm sale
+ │ ◄── confirmed
 ```
-- **Nunca** se aprueba un pago por una respuesta del cliente o por el retorno de una redirección:
-  solo por webhook válido o consulta servidor-a-servidor con llave privada.
-- El monto se envía en centavos y se compara contra el del intento al recibir el evento; si no
-  coincide, el intento pasa a `error` y se alerta.
+- A payment is **never** approved from a client response or from a redirect return:
+  only by a valid webhook or a server-to-server query with the private key.
+- The amount is sent in cents and compared with the attempt's when the event arrives; if it does not
+  match, the attempt moves to `error` and an alert is raised.
 
-## 5. Idempotencia y duplicados
+## 5. Idempotency and duplicates
 
-| Riesgo | Control |
+| Risk | Control |
 |---|---|
-| El POS reintenta "cobrar" | `Idempotency-Key` en `POST /ventas/{id}/pagos` → mismo intento |
-| Dos intentos activos para la misma venta | Un solo intento `pending/unknown` por pago; uno nuevo solo si el anterior es final no aprobado |
-| Webhook repetido | `inbound_events` UQ(provider, external_event_id) o (provider, transaction id, status) — *clave exacta por verificar* |
-| Webhook falsificado | Checksum validado con el secreto de eventos; evento inválido → 401 y auditoría |
-| Timeout al crear | Estado `unknown`; consulta por id externo o por referencia antes de crear otro intento |
+| The POS retries "charge" | `Idempotency-Key` on `POST /ventas/{id}/pagos` → same attempt |
+| Two active attempts for the same sale | A single `pending/unknown` attempt per payment; a new one only if the previous one is final and not approved |
+| Repeated webhook | `inbound_events` UQ(provider, external_event_id) or (provider, transaction id, status) — *exact key to verify* |
+| Forged webhook | Checksum validated with the events secret; invalid event → 401 and audit |
+| Timeout on create | State `unknown`; query by external id or by reference before creating another attempt |
 
-## 6. Recuperación de resultados desconocidos
+## 6. Recovering unknown results
 
-Worker cada 15 s para intentos `pending`/`unknown`:
-1. Si hay `external_id` → `GET /v1/transactions/{id}`.
-2. Si no hay `external_id` (timeout al crear) → buscar por referencia (*endpoint por verificar*).
-   Si no existe en la pasarela tras N minutos → `expired`, se permite un nuevo intento.
-3. Pasado el tiempo máximo del método (p. ej. Nequi) sin estado final → alerta al cajero y al dueño;
-   la venta queda `pending_payment` y bloquea el cierre de caja hasta resolverse (D-12).
+A worker every 15 s for `pending`/`unknown` attempts:
+1. If there is an `external_id` → `GET /v1/transactions/{id}`.
+2. If there is no `external_id` (timeout on create) → search by reference (*endpoint to verify*).
+   If it does not exist at the gateway after N minutes → `expired`, and a new attempt is allowed.
+3. After the method's maximum time (e.g. Nequi) with no final state → alert the cashier and the owner;
+   the sale stays `pending_payment` and blocks the cash close until resolved (D-12).
 
-## 7. Por verificar con el proveedor antes de implementar
+## 7. To verify with the provider before implementing
 
-1. Endpoint y payload de creación de transacciones para `NEQUI` y `BANCOLOMBIA_QR`; vigencia del QR.
-2. Consulta de transacción por `reference`.
-3. Clave única de evento para deduplicar webhooks.
-4. Reembolsos/anulaciones: `VOIDED` aplica solo a tarjeta según la documentación; cómo se reembolsa
-   un pago Nequi o QR (¿API o proceso manual?).
-5. Firma de integridad requerida al crear transacciones (si aplica) y formato de llaves por ambiente.
-6. Tiempos de abono, comisiones y certificaciones exigidas al comercio.
+1. Endpoint and payload for creating transactions for `NEQUI` and `BANCOLOMBIA_QR`; QR validity.
+2. Transaction query by `reference`.
+3. Unique event key to deduplicate webhooks.
+4. Refunds/voids: `VOIDED` only applies to cards according to the documentation; how a Nequi or QR
+   payment is refunded (API or manual process?).
+5. Integrity signature required when creating transactions (if applicable) and key format per environment.
+6. Settlement times, fees and certifications required of the merchant.
 
-## 8. Reembolsos y devoluciones
+## 8. Refunds and returns
 
-- Devolución de una venta pagada en efectivo → reembolso en efectivo desde la caja abierta
+- Return of a sale paid in cash → cash refund from the open register
   (`cash_movements.refund_cash`).
-- Pagada por pasarela → reembolso por API si el proveedor lo soporta para ese método; si no, reembolso
-  **manual** registrado con soporte y aprobado por el propietario. El estado del reembolso es propio
-  (`refunds.status`) y no se mezcla con el de la devolución.
+- Paid through a gateway → refund by API if the provider supports it for that method; otherwise a **manual**
+  refund recorded with supporting evidence and approved by the owner. The refund's state is its own
+  (`refunds.status`) and is not mixed with the return's.
 
-## 9. Conciliación
+## 9. Reconciliation
 
-Diaria por empresa: pagos aprobados en la pasarela (consulta/reportes del proveedor, *por verificar*)
-vs. intentos aprobados vs. ventas confirmadas. Diferencias → informe con acciones (reembolsar,
-confirmar venta, investigar).
+Daily per company: payments approved at the gateway (provider query/reports, *to verify*)
+vs. approved attempts vs. confirmed sales. Differences → a report with actions (refund,
+confirm sale, investigate).
 
-## 10. Credenciales
+## 10. Credentials
 
-Llave pública, llave privada y secreto de eventos **por empresa y ambiente** en
-`pay.gateway_accounts`, cifradas con Data Protection; nunca devueltas por la API ni escritas en logs.
-Sandbox y producción en registros separados; el arranque en producción rechaza llaves de sandbox.
-No se guardan datos de tarjeta (si se usa `CARD`, la tokenización ocurre en el widget/checkout del
-proveedor).
+Public key, private key and events secret **per company and environment** in
+`pay.gateway_accounts`, encrypted with Data Protection; never returned by the API or written to logs.
+Sandbox and production in separate records; startup in production rejects sandbox keys.
+No card data is stored (if `CARD` is used, tokenization happens in the provider's widget/checkout).
 
-## 11. Bold — API de datáfono (verificado en developers.bold.co, 27/10/2026)
+## 11. Bold — card-terminal API (verified at developers.bold.co, 27/10/2026)
 
-Fuentes: [API Integrations](https://developers.bold.co/api-integrations/integration),
+Sources: [API Integrations](https://developers.bold.co/api-integrations/integration),
 [Sandbox](https://developers.bold.co/api-integrations/integration-sandbox), [Webhook](https://developers.bold.co/webhook),
-[Llaves](https://developers.bold.co/pagos-en-linea/llaves-de-integracion),
-[Consulta de transacciones](https://developers.bold.co/pagos-en-linea/consulta-de-transacciones).
-La búsqueda previa (sección 2) no encontró la documentación; sí existe y es la base de esta integración.
+[Keys](https://developers.bold.co/pagos-en-linea/llaves-de-integracion),
+[Transaction query](https://developers.bold.co/pagos-en-linea/consulta-de-transacciones).
+The earlier search (section 2) did not find the documentation; it does exist and is the basis of this integration.
 
-| Tema | Verificado |
+| Topic | Verified |
 |---|---|
-| URL base | `https://integrations.api.bold.co` (la misma para pruebas y producción; el ambiente lo define la llave) |
-| Autenticación | `Authorization: x-api-key <llave_de_identidad>`; llaves de pruebas y de producción en panel.bold.co → Integraciones → API datáfono |
-| Métodos habilitados | `GET /payments/payment-methods` → `POS` (tarjeta en el datáfono), `NEQUI`, `PAY_BY_QR_BOLD`, `PAY_BY_LINK` |
-| Datáfonos | `GET /payments/binded-terminals` → `terminal_model`, `terminal_serial`, `status`, `name` |
-| Crear cobro | `POST /payments/app-checkout` con `amount` (`currency`, total, `taxes`, propina), `user_email` (vendedor), `payment_method`, `terminal_model`, `terminal_serial`, `reference`; 201 → `payload.integration_id` (solo para soporte). Errores AP001–AP006 |
-| Resultado | **Solo por webhook**: `SALE_APPROVED`, `SALE_REJECTED`, `VOID_APPROVED`, `VOID_REJECTED`; `data.metadata.reference` trae nuestra referencia y `data.payment_id` el id de Bold |
-| Firma del webhook | Encabezado `x-bold-signature` = HMAC-SHA256 en hexadecimal del **cuerpo en Base64**, con la llave secreta; en pruebas la llave es vacía |
-| Reintentos del webhook | Responder 200 en ≤ 2 s; hasta 5 reintentos (15 min, 1 h, 4 h, 8 h, 24 h). Bold puede notificar varias veces la misma transacción: se deduplica por `id` de la notificación y se valida por `payment_id` |
-| Sandbox | Resultado por monto: 1.000–2.000.000 aprobado; 111.111, 222.222, 333.333, 444.444 y 999.999 rechazos simulados. Los datáfonos de pruebas son los mismos del comercio |
-| Consulta de estado | **No existe para app-checkout** (la de `payment-voucher` es solo del botón de pagos) |
-| Cancelación remota | No existe: el cobro no se puede cancelar desde el sistema |
+| Base URL | `https://integrations.api.bold.co` (the same for test and production; the environment is defined by the key) |
+| Authentication | `Authorization: x-api-key <identity_key>`; test and production keys at panel.bold.co → Integraciones → API datáfono |
+| Enabled methods | `GET /payments/payment-methods` → `POS` (card on the terminal), `NEQUI`, `PAY_BY_QR_BOLD`, `PAY_BY_LINK` |
+| Terminals | `GET /payments/binded-terminals` → `terminal_model`, `terminal_serial`, `status`, `name` |
+| Create a charge | `POST /payments/app-checkout` with `amount` (`currency`, total, `taxes`, tip), `user_email` (seller), `payment_method`, `terminal_model`, `terminal_serial`, `reference`; 201 → `payload.integration_id` (for support only). Errors AP001–AP006 |
+| Result | **Only by webhook**: `SALE_APPROVED`, `SALE_REJECTED`, `VOID_APPROVED`, `VOID_REJECTED`; `data.metadata.reference` carries our reference and `data.payment_id` Bold's id |
+| Webhook signature | `x-bold-signature` header = hexadecimal HMAC-SHA256 of the **Base64 body**, with the secret key; in tests the key is empty |
+| Webhook retries | Answer 200 within 2 s; up to 5 retries (15 min, 1 h, 4 h, 8 h, 24 h). Bold may notify the same transaction several times: deduplicate by the notification `id` and validate by `payment_id` |
+| Sandbox | Result by amount: 1,000–2,000,000 approved; 111,111, 222,222, 333,333, 444,444 and 999,999 simulated rejections. The test terminals are the merchant's own |
+| Status query | **There is none for app-checkout** (the `payment-voucher` one is only for the payment button) |
+| Remote cancellation | There is none: the charge cannot be cancelled from the system |
 
-**Por verificar en el sandbox del comercio:**
-1. Nombres de los campos del monto: la tabla de la documentación dice `amount.total` y `amount.tip`, el
-   ejemplo usa `total_amount` y `tip_amount`. Se implementó el del ejemplo (`BoldClient`); si el sandbox
-   responde AP005/AP006 se cambia en un solo lugar.
-2. Si los webhooks de transacciones de prueba de API Integrations llegan al webhook de pruebas (la página
-   tiene dos frases que se contradicen).
-3. Unicidad de `reference` (no está documentada; se envía el id del intento, que es único).
-4. Reembolso o anulación de pagos Nequi/QR por API (no documentado): reembolso manual (sección 8).
+**To verify in the merchant's sandbox:**
+1. Names of the amount fields: the documentation table says `amount.total` and `amount.tip`, the
+   example uses `total_amount` and `tip_amount`. The example's was implemented (`BoldClient`); if the sandbox
+   answers AP005/AP006 it is changed in a single place.
+2. Whether the webhooks of API Integrations test transactions reach the test webhook (the page
+   has two sentences that contradict each other).
+3. Uniqueness of `reference` (not documented; the attempt id is sent, which is unique).
+4. Refund or void of Nequi/QR payments by API (not documented): manual refund (section 8).
 
-**Consecuencias en el diseño (I-23):** sin consulta de estado no hay worker de recuperación que pregunte
-a Bold; un intento sin respuesta queda `pending`/`unknown` hasta que llegue el webhook. Si no llega, un
-superior con `pagos.resolver` lo resuelve a mano: **aprobado** registrando el número de aprobación del
-recibo del datáfono (queda marcado "aprobado manualmente", auditado y señalado en la conciliación),
-**rechazado** o **cancelado**. Como no hay cancelación remota, antes de cancelar hay que verificar en el
-datáfono que el cobro no se hizo.
+**Design consequences (I-23):** with no status query there is no recovery worker that asks
+Bold; an attempt with no response stays `pending`/`unknown` until the webhook arrives. If it does not arrive, a
+supervisor with `payments.resolve` resolves it by hand: **approved** by recording the approval number from the
+terminal receipt (it is marked "manually approved", audited and flagged in reconciliation),
+**declined** or **cancelled**. Since there is no remote cancellation, before cancelling it must be checked on the
+terminal that the charge was not made.

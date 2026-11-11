@@ -1,16 +1,16 @@
 namespace Tahona.BakeryPOS.Application.Common.Abstractions;
 
 /// <summary>
-/// Bandeja de salida: registra un mensaje en la misma transacción del cambio que lo origina
-/// (se guarda con el próximo SaveChanges). Un proceso en segundo plano lo entrega a su handler,
-/// con reintentos; así las llamadas externas nunca ocurren dentro de una transacción SQL.
+/// Outbox: records a message in the same transaction as the change that originates it
+/// (saved with the next SaveChanges). A background process delivers it to its handler,
+/// with retries; this way external calls never happen inside a SQL transaction.
 /// </summary>
 public interface IOutbox
 {
     void Enqueue(string type, object payload);
 }
 
-/// <summary>Procesa un tipo de mensaje de la bandeja de salida. Debe ser idempotente.</summary>
+/// <summary>Processes one outbox message type. It must be idempotent.</summary>
 public interface IOutboxHandler
 {
     string Type { get; }
@@ -18,5 +18,5 @@ public interface IOutboxHandler
     Task HandleAsync(OutboxEnvelope message, CancellationToken cancellationToken);
 }
 
-/// <param name="Payload">JSON tal como se guardó.</param>
+/// <param name="Payload">JSON as it was stored.</param>
 public sealed record OutboxEnvelope(Guid Id, Guid? CompanyId, string Type, string Payload, int Attempt);

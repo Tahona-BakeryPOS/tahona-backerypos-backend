@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
-/// <summary>Módulo Invoicing — esquema <c>fis</c>.</summary>
+/// <summary>Invoicing module — schema <c>fis</c>.</summary>
 internal sealed class FiscalSettingsConfiguration : IEntityTypeConfiguration<FiscalSettings>
 {
     public void Configure(EntityTypeBuilder<FiscalSettings> builder)
@@ -60,10 +60,10 @@ internal sealed class FiscalDocumentConfiguration : IEntityTypeConfiguration<Fis
         builder.Ignore(e => e.IsFinal);
         builder.HasIndex(e => new { e.Provider, e.IdempotencyKey }).IsUnique();
         builder.HasIndex(e => new { e.Provider, e.ExternalId }).IsUnique().HasFilter("\"external_id\" IS NOT NULL");
-        // Una factura por venta (las notas crédito, fase 9, pueden ser varias).
+        // One invoice per sale (credit notes, phase 9, can be several).
         builder.HasIndex(e => e.SaleId).IsUnique().HasFilter("\"kind\" = 'invoice'").HasDatabaseName("ux_fiscal_documents_invoice_per_sale");
         builder.HasIndex(e => new { e.CompanyId, e.Status });
-        // Fase 9: una nota crédito por anulación o devolución.
+        // Phase 9: one credit note per void or return.
         builder.HasIndex(e => e.SourceId).IsUnique().HasFilter("\"kind\" = 'credit_note'").HasDatabaseName("ux_fiscal_documents_credit_note_per_source");
         builder.HasOne<FiscalDocument>().WithMany().HasForeignKey(e => e.InvoiceDocumentId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.HasAlternateKey(e => new { e.CompanyId, e.Id });

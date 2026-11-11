@@ -8,9 +8,9 @@ public enum UnitKind
 }
 
 /// <summary>
-/// Unidad de medida (catálogo global, sembrado por migración). Las de masa y volumen admiten
-/// cantidades decimales (HU-3.1). <see cref="DianCode"/> es el código UN/ECE Rec. 20 que usa la
-/// factura electrónica (verificar contra el anexo técnico en la fase 7).
+/// Unit of measure (global catalog, seeded by migration). Mass and volume ones accept
+/// decimal quantities (US-3.1). <see cref="DianCode"/> is the UN/ECE Rec. 20 code used by the
+/// electronic invoice (verify against the technical annex in phase 7).
 /// </summary>
 public sealed class Unit
 {
@@ -23,7 +23,7 @@ public sealed class Unit
     public bool AllowsDecimals => Kind != UnitKind.Count;
 }
 
-/// <summary>Unidades sembradas. Agregar una aquí exige una migración.</summary>
+/// <summary>Seeded units. Adding one here requires a migration.</summary>
 public static class Units
 {
     public const string Unidad = "UND";

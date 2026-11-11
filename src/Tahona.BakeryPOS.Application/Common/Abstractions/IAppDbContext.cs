@@ -11,10 +11,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Common.Abstractions;
 
 /// <summary>
-/// Unidad de trabajo de la aplicación. Una sola base y un solo contexto para que la confirmación de
-/// una venta (ventas, pagos, inventario, caja, documento fiscal, outbox) sea una transacción.
-/// Cada módulo usa solo sus propios DbSet; las pruebas de arquitectura lo verifican. Lo que un módulo
-/// necesita de otro lo pide por los contratos de <c>Common/Contracts</c>.
+/// The application's unit of work. A single database and a single context so that confirming
+/// a sale (sales, payments, inventory, cash, fiscal document, outbox) is one transaction.
+/// Each module uses only its own DbSets; the architecture tests verify it. What a module
+/// needs from another it asks for through the contracts in <c>Common/Contracts</c>.
 /// </summary>
 public interface IAppDbContext
 {
@@ -74,8 +74,8 @@ public interface IAppDbContext
     DbSet<FiscalSubmissionAttempt> FiscalSubmissionAttempts { get; }
 
     /// <summary>
-    /// Fija la versión (rowversion) que el cliente leyó: si la fila cambió desde entonces, guardar falla
-    /// con CONFLICTO_VERSION (412). Así se implementa If-Match.
+    /// Sets the version (rowversion) the client read: if the row changed since then, saving fails
+    /// with CONFLICTO_VERSION (412). This is how If-Match is implemented.
     /// </summary>
     void ExpectVersion<T>(T entity, byte[] version) where T : class;
 
@@ -83,8 +83,8 @@ public interface IAppDbContext
 }
 
 /// <summary>
-/// Nombres de los filtros globales del DbContext. Solo se apaga <see cref="Tenant"/> en flujos sin
-/// empresa en sesión que buscan por un secreto (login, refresh, vinculación, PIN de dispositivo).
+/// Names of the DbContext's global filters. Only <see cref="Tenant"/> is turned off in flows with no
+/// company in session that look up by a secret (login, refresh, pairing, device PIN).
 /// </summary>
 public static class QueryFilters
 {

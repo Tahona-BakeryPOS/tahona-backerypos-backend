@@ -15,26 +15,26 @@ public sealed record CashSessionDto(Guid Id, Guid BranchId, string BranchName, G
     decimal? ExpectedAmount, decimal? CountedAmount, decimal? Difference, string? Notes);
 
 /// <param name="Kind"><c>opening</c>, <c>sale_cash</c>, <c>change_given</c>, <c>refund_cash</c>, <c>income</c> o <c>expense</c>.</param>
-/// <param name="SignedAmount">Con signo para el esperado.</param>
+/// <param name="SignedAmount">Signed, for the expected amount.</param>
 public sealed record CashMovementDto(Guid Id, DateTime OccurredAt, string Kind, decimal Amount, decimal SignedAmount, string? ReasonName,
     string? UserName, string? AuthorizedByName, string? Note);
 
-/// <summary>Desglose del esperado (HU-5.4) y pagos que bloquean el cierre (D-12).</summary>
+/// <summary>Breakdown of the expected amount (US-5.4) and payments that block the close (D-12).</summary>
 public sealed record CashSessionSummaryDto(Guid SessionId, decimal OpeningAmount, decimal CashSales, decimal ChangeGiven, decimal CashRefunds,
     decimal Incomes, decimal Expenses, decimal Expected, int PendingPayments);
 
 /// <param name="Kind"><c>income</c> o <c>expense</c>.</param>
 public sealed record CashReasonDto(Guid Id, string Kind, string Name, bool IsActive);
 
-/// <summary>Abre la sesión de la caja (HU-5.2): una sola abierta por caja; efectivo inicial ≥ 0.</summary>
+/// <summary>Opens the register's session (US-5.2): only one open per register; opening cash ≥ 0.</summary>
 public sealed record OpenCashSessionCommand(Guid CashRegisterId, decimal OpeningAmount) : IRequest<Result<CashSessionDto>>;
 
-/// <summary>Sesión abierta de la caja; 404 si no hay (relevo de cajero o equipo reinstalado).</summary>
+/// <summary>The register's open session; 404 if there is none (cashier handover or reinstalled device).</summary>
 public sealed record GetOpenCashSessionQuery(Guid CashRegisterId) : IRequest<Result<CashSessionDto>>;
 
 /// <summary>
-/// Ingreso o retiro de efectivo con motivo (HU-5.3). El retiro exige <c>caja.retiro</c> (el superior que
-/// autoriza envía su propio token) y no puede superar el esperado.
+/// Cash income or withdrawal with a reason (US-5.3). A withdrawal requires <c>cash.withdrawal</c> (the supervisor who
+/// authorizes sends their own token) and cannot exceed the expected amount.
 /// </summary>
 public sealed record RegisterCashMovementCommand(Guid SessionId, string Kind, decimal Amount, Guid ReasonId, string? Note)
     : IRequest<Result<CashMovementDto>>;
@@ -43,10 +43,10 @@ public sealed record GetCashMovementsQuery(Guid SessionId) : IRequest<Result<IRe
 
 public sealed record GetCashSessionSummaryQuery(Guid SessionId) : IRequest<Result<CashSessionSummaryDto>>;
 
-/// <summary>Cierra con el efectivo contado (HU-5.4). Bloqueado si hay pagos pendientes (D-12).</summary>
+/// <summary>Closes with the counted cash (US-5.4). Blocked if there are pending payments (D-12).</summary>
 public sealed record CloseCashSessionCommand(Guid SessionId, decimal CountedAmount, string? Notes) : IRequest<Result<CashSessionDto>>;
 
-/// <summary>Sesiones por fecha de apertura (en UTC), sucursal y estado, de la más reciente a la más antigua.</summary>
+/// <summary>Sessions by opening date (in UTC), branch and status, newest to oldest.</summary>
 public sealed record GetCashSessionsQuery(DateTime? From, DateTime? To, Guid? BranchId, string? Status) : IRequest<Result<IReadOnlyList<CashSessionDto>>>;
 
 public sealed record GetCashReasonsQuery : IRequest<Result<IReadOnlyList<CashReasonDto>>>;
@@ -126,7 +126,7 @@ public sealed class CashSessionsHandler :
             return Result.Failure<CashSessionDto>(Error.SinAsignacionVigente);
         if (!register.IsActive)
             return Result.Failure<CashSessionDto>(Error.Validation("La caja está desactivada."));
-        // El índice único filtrado resuelve la carrera entre dos equipos que abren a la vez.
+        // The filtered unique index resolves the race between two devices opening at the same time.
         if (await _db.CashSessions.AnyAsync(s => s.CashRegisterId == register.Id && s.Status != CashSessionStatus.Closed, ct))
             return Result.Failure<CashSessionDto>(Error.CajaYaAbierta);
 
@@ -157,7 +157,7 @@ public sealed class CashSessionsHandler :
             return Result.Failure<CashMovementDto>(Error.CajaCerrada);
 
         var kind = request.Kind == "expense" ? CashMovementKind.Expense : CashMovementKind.Income;
-        if (kind == CashMovementKind.Expense && !_tenant.HasPermission(Permissions.CajaRetiro))
+        if (kind == CashMovementKind.Expense && !_tenant.HasPermission(Permissions.CashWithdrawal))
             return Result.Failure<CashMovementDto>(Error.SinPermiso with { Message = "Los retiros los autoriza un superior (permiso caja.retiro)." });
 
         var reason = await _db.CashReasons.AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.ReasonId, ct);
@@ -242,7 +242,7 @@ public sealed class CashSessionsHandler :
         return Result.Success(list);
     }
 
-    /// <summary>Sesión de la empresa y dentro del alcance por sucursal; 404 si no.</summary>
+    /// <summary>A session of the company and within the branch scope; 404 otherwise.</summary>
     private async Task<Result<CashSession>> FindSessionAsync(Guid id, bool tracked, CancellationToken ct)
     {
         var source = tracked ? _db.CashSessions : _db.CashSessions.AsNoTracking();
@@ -285,7 +285,7 @@ public sealed class CashSessionsHandler :
         string.Concat(kind.ToString().Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
 }
 
-/// <summary>Motivos de caja por defecto de cada empresa (I-22).</summary>
+/// <summary>Default cash reasons of each company (I-22).</summary>
 public sealed class CashProvisioning : ICashProvisioning
 {
     private readonly IAppDbContext _db;
@@ -302,7 +302,7 @@ public sealed class CashProvisioning : ICashProvisioning
     }
 }
 
-/// <summary>El efectivo de una venta entra a la gaveta: recibido (sale_cash) y cambio entregado (change_given).</summary>
+/// <summary>A sale's cash goes into the drawer: received (sale_cash) and change given (change_given).</summary>
 public sealed class CashDrawer : ICashDrawer
 {
     public const string SaleSource = "sale";
@@ -322,7 +322,7 @@ public sealed class CashDrawer : ICashDrawer
     {
         if (received <= 0)
             return;
-        // Idempotente: una venta deja su efectivo una sola vez (índice único por tipo y origen).
+        // Idempotent: a sale leaves its cash only once (unique index by kind and source).
         if (await _db.CashMovements.AnyAsync(m => m.SourceType == SaleSource && m.SourceId == saleId, ct))
             return;
         var session = await _db.CashSessions.FirstAsync(s => s.Id == cashSessionId, ct);
@@ -351,7 +351,7 @@ public sealed class CashDrawer : ICashDrawer
     }
 }
 
-/// <summary>Lo que otros módulos pueden consultar de las sesiones de caja.</summary>
+/// <summary>What other modules can query from cash sessions.</summary>
 public sealed class CashSessionDirectory : ICashSessionDirectory
 {
     private readonly IAppDbContext _db;

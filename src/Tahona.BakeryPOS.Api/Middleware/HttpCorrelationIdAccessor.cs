@@ -2,7 +2,7 @@ using Tahona.BakeryPOS.Infrastructure.Persistence;
 
 namespace Tahona.BakeryPOS.Api.Middleware;
 
-/// <summary>Expone el id de correlación de la petición a la capa de persistencia (auditoría).</summary>
+/// <summary>Exposes the request's correlation id to the persistence layer (audit).</summary>
 public sealed class HttpCorrelationIdAccessor : ICorrelationIdAccessor
 {
     private readonly IHttpContextAccessor _http;

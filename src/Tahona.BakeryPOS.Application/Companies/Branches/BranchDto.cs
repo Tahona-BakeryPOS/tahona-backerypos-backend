@@ -4,7 +4,7 @@ using Tahona.BakeryPOS.Domain.Companies;
 
 namespace Tahona.BakeryPOS.Application.Companies.Branches;
 
-/// <param name="Version">ETag para If-Match en PUT.</param>
+/// <param name="Version">ETag for If-Match on PUT.</param>
 public sealed record BranchDto(Guid Id, string Code, string Name, string? Address, string? CityCode, string? Phone, bool IsActive, string Version)
 {
     public static readonly Expression<Func<Branch, BranchDto>> Projection = b =>

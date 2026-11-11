@@ -4,8 +4,8 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Invoicing;
 
 /// <summary>
-/// Configuración de facturación electrónica de la empresa con Siigo. El usuario y la llave de acceso de la
-/// API se guardan cifrados (los cifra la infraestructura). Los ids son los de los catálogos de Siigo.
+/// The company's electronic invoicing configuration with Siigo. The API user and access key are
+/// stored encrypted (infrastructure encrypts them). The ids are those of Siigo's catalogs.
 /// </summary>
 public sealed class FiscalSettings : AuditableEntity, ITenantEntity
 {
@@ -16,16 +16,16 @@ public sealed class FiscalSettings : AuditableEntity, ITenantEntity
     public string Provider { get; private set; } = FiscalDocument.Siigo;
     public string EncryptedUsername { get; private set; } = string.Empty;
     public string EncryptedAccessKey { get; private set; } = string.Empty;
-    /// <summary>Tipo de comprobante FV electrónico en Siigo (<c>/v1/document-types?type=FV</c>).</summary>
+    /// <summary>Electronic FV document type in Siigo (<c>/v1/document-types?type=FV</c>).</summary>
     public long? InvoiceDocumentTypeId { get; private set; }
-    /// <summary>Tipo de comprobante NC electrónico (notas crédito, fase 9).</summary>
+    /// <summary>Electronic NC document type (credit notes, phase 9).</summary>
     public long? CreditNoteDocumentTypeId { get; private set; }
-    /// <summary>Vendedor en Siigo (<c>/v1/users</c>).</summary>
+    /// <summary>Seller in Siigo (<c>/v1/users</c>).</summary>
     public long? SellerId { get; private set; }
-    /// <summary>Grupo de inventario con que se crean los productos en Siigo.</summary>
+    /// <summary>Inventory group with which products are created in Siigo.</summary>
     public long? ProductAccountGroupId { get; private set; }
     public string ConsumerFinalIdentification { get; private set; } = DefaultConsumerFinal;
-    /// <summary>Años de conservación de los documentos (D-15).</summary>
+    /// <summary>Years the documents are kept (D-15).</summary>
     public int RetentionYears { get; private set; } = DefaultRetentionYears;
     public bool IsActive { get; private set; }
 
@@ -71,11 +71,11 @@ public enum FiscalMappingKind
 {
     Tax,
     PaymentMethod,
-    /// <summary>Producto ya creado en Siigo con su código (SKU).</summary>
+    /// <summary>Product already created in Siigo with its code (SKU).</summary>
     Product,
 }
 
-/// <summary>Emparejamiento de un dato propio con su par en Siigo (impuesto, medio de pago, producto).</summary>
+/// <summary>Pairing of an own datum with its counterpart in Siigo (tax, payment method, product).</summary>
 public sealed class FiscalMapping : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }

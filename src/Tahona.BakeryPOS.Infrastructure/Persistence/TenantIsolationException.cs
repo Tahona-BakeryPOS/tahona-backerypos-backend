@@ -1,8 +1,8 @@
 namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 
 /// <summary>
-/// Se intentó guardar una fila de otra empresa, o cambiar la empresa de una fila existente.
-/// Nunca es un error de usuario: indica un defecto o un intento de acceso indebido.
+/// An attempt was made to save a row of another company, or to change the company of an existing row.
+/// It is never a user error: it indicates a defect or an improper access attempt.
 /// </summary>
 public sealed class TenantIsolationException : Exception
 {

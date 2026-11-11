@@ -1,101 +1,101 @@
-# Runbooks de operación (fase 10, D-10)
+# Operations runbooks (phase 10, D-10)
 
-Un VPS por ambiente (staging y producción) con Docker Compose: PostgreSQL 17, API, migraciones (bundle) y Caddy
-(proxy con HTTPS automático del API). Archivos en este repo, carpeta `deploy/`. Los clientes web se despliegan por separado. Todos los comandos se corren en el
-VPS desde `deploy/` con un usuario que puede usar Docker.
+One VPS per environment (staging and production) with Docker Compose: PostgreSQL 17, API, migrations (bundle) and Caddy
+(automatic-HTTPS proxy for the API). Files are in this repo, in the `deploy/` folder. Web clients are deployed separately. All commands are run on the
+VPS from `deploy/` with a user that can use Docker.
 
-> Nada de esto se ha ejecutado todavía: es la guía para el primer despliegue. Credenciales reales solo en el `.env`
-> del VPS (permisos 600) y en tu gestor de secretos; nunca en el repo ni en el chat.
+> None of this has been run yet: it is the guide for the first deployment. Real credentials only in the VPS `.env`
+> (permissions 600) and in your secrets manager; never in the repo or in chat.
 
-## 1. Preparar un VPS nuevo
+## 1. Preparing a new VPS
 
-1. Ubuntu 24.04 LTS, 2 vCPU y 4 GB de RAM alcanzan para varias panaderías. Abrir solo 22 (SSH con llave), 80 y 443:
+1. Ubuntu 24.04 LTS, 2 vCPU and 4 GB of RAM are enough for several bakeries. Open only 22 (SSH with a key), 80 and 443:
    `ufw allow OpenSSH && ufw allow 80,443/tcp && ufw allow 443/udp && ufw enable`.
-2. Instalar Docker Engine con el plugin de Compose (repositorio oficial de Docker) y git.
-3. DNS: registro A del dominio del API (p. ej. `api-staging.tupanaderia.co` o `api.tupanaderia.co`, el `API_DOMAIN` del `.env`) hacia la IP del VPS.
-4. Clonar este repo en `/opt/bakerypos/backend`.
-5. `cp deploy/.env.deploy.example deploy/.env.production` (o `.env.staging`), `chmod 600`, y llenar los valores
-   (generar contraseñas con `openssl rand -base64 128 | tr -dc 'A-Za-z0-9' | head -c 64`). Distintos por ambiente.
+2. Install Docker Engine with the Compose plugin (Docker's official repository) and git.
+3. DNS: an A record for the API domain (e.g. `api-staging.tubakery.co` or `api.tubakery.co`, the `API_DOMAIN` in the `.env`) pointing to the VPS IP.
+4. Clone this repo into `/opt/bakerypos/backend`.
+5. `cp deploy/.env.deploy.example deploy/.env.production` (or `.env.staging`), `chmod 600`, and fill in the values
+   (generate passwords with `openssl rand -base64 128 | tr -dc 'A-Za-z0-9' | head -c 64`). Different per environment.
 
-## 2. Primer despliegue
+## 2. First deployment
 
 ```bash
 bash ./scripts/deploy.sh .env.production
 ```
 
-Hace backup (vacío la primera vez), construye las imágenes, aplica las migraciones con el bundle y levanta la API y el proxy.
-Caddy pide el certificado al primer acceso. Luego:
+It takes a backup (empty the first time), builds the images, applies the migrations with the bundle and starts the API and the proxy.
+Caddy requests the certificate on first access. Then:
 
 1. `curl https://API_DOMAIN/health` → `Healthy`.
-2. Crear el administrador de plataforma (solo si no existe ninguno; pide los datos por la terminal):
-   `VERSION=<versión que imprimió deploy.sh> bash ./scripts/bootstrap-admin.sh .env.production`.
-3. Con ese administrador, `POST https://API_DOMAIN/api/v1/auth/login` y `POST /api/v1/plataforma/empresas` crean la primera empresa (la respuesta trae la contraseña de un solo uso del propietario).
-4. Programar el backup diario (sección 4) y el monitoreo (sección 7).
+2. Create the platform administrator (only if none exists; it asks for the data in the terminal):
+   `VERSION=<version printed by deploy.sh> bash ./scripts/bootstrap-admin.sh .env.production`.
+3. With that administrator, `POST https://API_DOMAIN/api/v1/auth/login` and `POST /api/v1/plataforma/empresas` create the first company (the response carries the owner's one-time password).
+4. Schedule the daily backup (section 4) and monitoring (section 7).
 
-## 3. Actualizar a una versión nueva
+## 3. Updating to a new version
 
-1. `git -C /opt/bakerypos/backend pull` (la rama/etiqueta aprobada).
-2. Fuera de la hora pico: `bash ./scripts/deploy.sh .env.production`. El script hace backup antes de migrar; si la
-   migración falla, la API anterior sigue corriendo.
-3. Verificar `/health` y hacer una venta de prueba en una caja de la sede de pruebas.
+1. `git -C /opt/bakerypos/backend pull` (the approved branch/tag).
+2. Outside peak hours: `bash ./scripts/deploy.sh .env.production`. The script takes a backup before migrating; if the
+   migration fails, the previous API keeps running.
+3. Check `/health` and make a test sale on a register of the test branch.
 
-**Volver a la versión anterior** (solo si la migración nueva no se aplicó o fue aditiva, como todas hasta hoy):
-`VERSION=<versión anterior> docker compose --env-file .env.production -f docker-compose.yml up -d api proxy`
-(las imágenes anteriores siguen en el VPS: `docker image ls bakerypos-api`). Si hace falta deshacer datos, sección 5.
+**Rolling back to the previous version** (only if the new migration was not applied or was additive, like all of them so far):
+`VERSION=<previous version> docker compose --env-file .env.production -f docker-compose.yml up -d api proxy`
+(the previous images stay on the VPS: `docker image ls bakerypos-api`). If data must be undone, section 5.
 
 ## 4. Backups
 
-- `bash ./scripts/backup.sh .env.production`: `pg_dump` (formato custom) **y** las llaves de Data Protection en
-  `BACKUP_DIR`, con retención de `BACKUP_RETENTION_DAYS` días.
-- Diario por cron (a las 3:30 del servidor):
+- `bash ./scripts/backup.sh .env.production`: `pg_dump` (custom format) **and** the Data Protection keys into
+  `BACKUP_DIR`, with a retention of `BACKUP_RETENTION_DAYS` days.
+- Daily by cron (at 3:30 server time):
   `30 3 * * * cd /opt/bakerypos/backend/deploy && bash ./scripts/backup.sh .env.production >> /var/log/bakerypos-backup.log 2>&1`
-- **Fuera del servidor** (obligatorio en producción): copiar `BACKUP_DIR` a otro proveedor cada día (p. ej. `rclone`
-  hacia un bucket con versionado, o `rsync` a otro equipo). Un backup que solo vive en el VPS no sirve si se pierde el VPS.
-- Probar una restauración en staging al menos una vez al mes (sección 5).
-- Las llaves de Data Protection cifran las credenciales de Bold y Siigo: sin ellas hay que volver a escribirlas en
-  Configuración → Integraciones y Facturación electrónica. Guárdalas con el mismo cuidado que los backups.
+- **Off the server** (mandatory in production): copy `BACKUP_DIR` to another provider every day (e.g. `rclone`
+  to a versioned bucket, or `rsync` to another machine). A backup that only lives on the VPS is useless if the VPS is lost.
+- Test a restore on staging at least once a month (section 5).
+- The Data Protection keys encrypt the Bold and Siigo credentials: without them the credentials must be typed again in
+  Configuración → Integraciones and Facturación electrónica. Keep them with the same care as the backups.
 
-## 5. Restaurar un backup
+## 5. Restoring a backup
 
 ```bash
-bash ./scripts/restore.sh .env.production /var/backups/bakerypos/bakerypos-production-AAAAMMDDTHHMMSSZ.dump
+bash ./scripts/restore.sh .env.production /var/backups/bakerypos/bakerypos-production-YYYYMMDDTHHMMSSZ.dump
 ```
 
-Pide escribir el nombre del ambiente, hace un backup del estado actual, detiene la API y el proxy, restaura la base (y las
-llaves si está su archivo) y vuelve a levantar todo. Después: `/health`, una consulta de ventas, y avisar a las sedes que las ventas
-posteriores al backup se perdieron (revisar contra los comprobantes y los documentos en Siigo).
+It asks you to type the environment name, takes a backup of the current state, stops the API and the proxy, restores the database (and the
+keys if their file is present) and brings everything back up. Afterwards: `/health`, a sales query, and tell the branches that sales
+made after the backup were lost (check against the receipts and the documents in Siigo).
 
-## 6. Recuperación ante incidentes
+## 6. Incident recovery
 
-| Síntoma | Qué revisar | Acción |
+| Symptom | What to check | Action |
 |---|---|---|
-| `/health` no responde | `docker compose ... ps`, `docker compose ... logs --tail=200 api proxy` | `docker compose ... up -d`; si el VPS no arranca, nuevo VPS + sección 1 + restaurar el último backup |
-| `/health` responde `Unhealthy` | `logs db`, espacio en disco (`df -h`) | Liberar disco (backups viejos, `docker image prune`) y `up -d db` |
-| La API no arranca tras desplegar | `logs api`: falta `Jwt__Secret` (≥ 32), `DataProtection__KeysPath` o la cadena | Corregir el `.env` y `up -d api`, o volver a la versión anterior (sección 3) |
-| Certificado HTTPS vencido o no emitido | `logs proxy` (Let's Encrypt) | DNS correcto y puertos 80/443 abiertos; `docker compose ... restart proxy` |
-| Cobros de Bold quedan "pendientes" | Pagos (consulta de pagos del API); webhook `https://API_DOMAIN/api/v1/webhooks/pagos/bold` configurado en Bold | Resolver a mano con el número de aprobación (I-23) |
-| Facturas en "sin confirmar" o "reintentando" | Facturas electrónicas → intentos; estado de Siigo | Corregir la causa (credenciales, emparejamientos) y reintentar; nunca marcar aceptada a mano |
-| Credenciales de Bold/Siigo ilegibles | Se perdió el volumen de llaves | Restaurar las llaves del backup o volver a escribir las credenciales |
-| Una caja no puede cerrar | Pagos pendientes de esa sesión (D-12) | Resolver los pagos pendientes y cerrar |
+| `/health` does not respond | `docker compose ... ps`, `docker compose ... logs --tail=200 api proxy` | `docker compose ... up -d`; if the VPS does not boot, a new VPS + section 1 + restore the latest backup |
+| `/health` responds `Unhealthy` | `logs db`, disk space (`df -h`) | Free disk (old backups, `docker image prune`) and `up -d db` |
+| The API does not start after deploying | `logs api`: missing `Jwt__Secret` (≥ 32), `DataProtection__KeysPath` or the connection string | Fix the `.env` and `up -d api`, or roll back (section 3) |
+| HTTPS certificate expired or not issued | `logs proxy` (Let's Encrypt) | Correct DNS and ports 80/443 open; `docker compose ... restart proxy` |
+| Bold payments stay "pending" | Payments (the API's payment query); webhook `https://API_DOMAIN/api/v1/webhooks/pagos/bold` configured in Bold | Resolve by hand with the approval number (I-23) |
+| Invoices "unconfirmed" or "retrying" | Electronic invoices → attempts; Siigo status | Fix the cause (credentials, pairings) and retry; never mark as accepted by hand |
+| Bold/Siigo credentials unreadable | The keys volume was lost | Restore the keys from the backup or type the credentials again |
+| A register cannot close | Pending payments of that session (D-12) | Resolve the pending payments and close |
 
-Rotación de secretos: `JWT_SECRET` (cierra todas las sesiones: los cajeros vuelven a entrar con PIN);
-`POSTGRES_PASSWORD` solo cambia con `ALTER USER bakerypos PASSWORD '...'` dentro de `db` y luego en el `.env`.
+Secret rotation: `JWT_SECRET` (closes all sessions: cashiers sign in again with their PIN);
+`POSTGRES_PASSWORD` only changes with `ALTER USER bakerypos PASSWORD '...'` inside `db` and then in the `.env`.
 
-## 7. Monitoreo mínimo
+## 7. Minimum monitoring
 
-- Un monitor externo de disponibilidad (p. ej. UptimeRobot o Better Stack, gratis) sobre `https://API_DOMAIN/health`
-  cada 5 minutos, con alerta al correo/WhatsApp del dueño.
-- Logs: `docker compose --env-file .env.production -f docker-compose.yml logs -f api` (Serilog a consola). Para
-  conservarlos, configurar la rotación de logs de Docker (`/etc/docker/daemon.json`, `max-size` y `max-file`).
-- Revisar cada semana: espacio en disco, `/var/log/bakerypos-backup.log` y que haya copias fuera del servidor.
+- An external availability monitor (e.g. UptimeRobot or Better Stack, free) on `https://API_DOMAIN/health`
+  every 5 minutes, with an alert to the owner's email/WhatsApp.
+- Logs: `docker compose --env-file .env.production -f docker-compose.yml logs -f api` (Serilog to console). To
+  keep them, configure Docker log rotation (`/etc/docker/daemon.json`, `max-size` and `max-file`).
+- Review weekly: disk space, `/var/log/bakerypos-backup.log` and that off-server copies exist.
 
-## 8. Pruebas antes de producción
+## 8. Tests before production
 
-1. **Recorrido de API** en staging (OpenAPI en `/openapi/v1.json`): login, vincular caja, abrir caja, venta en efectivo, anulación, devolución, cierre e informe.
-2. **Bold** (criterio de la fase 6): cuenta en sandbox, webhook apuntando a staging, cobro de prueba desde
-   Configuración → Integraciones y una venta con datáfono; confirmar que llega el webhook firmado.
-3. **Siigo** (fases 7 y 9): empresa en habilitación, factura de prueba, una venta facturada, una anulación (nota
-   crédito motivo 2) y una devolución (motivo 1) aceptadas con CUFE/CUDE. Verificar `taxed_price` y descuentos en las notas.
-4. **Carga**: `k6 run ... backend/tests/load/sales-load.js` contra staging (variables en el encabezado del script);
-   umbrales: p95 < 800 ms y menos de 1 % de errores con 20 cajas simultáneas.
-5. **Restauración**: restaurar en staging el backup de la noche anterior.
+1. **API walkthrough** on staging (OpenAPI at `/openapi/v1.json`): sign in, pair a register, open the cash session, cash sale, void, return, close and report.
+2. **Bold** (phase 6 criterion): a sandbox account, the webhook pointing to staging, a test charge from
+   Configuración → Integraciones and a card-terminal sale; confirm the signed webhook arrives.
+3. **Siigo** (phases 7 and 9): a company in the test environment, a test invoice, an invoiced sale, a void (credit
+   note reason 2) and a return (reason 1) accepted with CUFE/CUDE. Check `taxed_price` and discounts in the notes.
+4. **Load**: `k6 run ... tests/load/sales-load.js` against staging (variables in the script header);
+   thresholds: p95 < 800 ms and less than 1 % errors with 20 simultaneous registers.
+5. **Restore**: restore last night's backup on staging.

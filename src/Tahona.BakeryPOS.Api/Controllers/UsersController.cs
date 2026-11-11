@@ -10,14 +10,14 @@ using Microsoft.AspNetCore.Mvc;
 namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>
-/// Usuarios de la empresa y sus roles por sucursal (HU-2.1). La creación no usa Idempotency-Key: la
-/// respuesta puede traer una contraseña de un solo uso que no debe quedar guardada.
+/// The company's users and their per-branch roles (US-2.1). Creation does not use Idempotency-Key: the
+/// response may carry a one-time password that must not be stored.
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.OrganizacionGestionar)]
+[RequirePermission(Permissions.OrganizationManage)]
 public sealed class UsersController : ControllerBase
 {
     private readonly ISender _mediator;
@@ -48,7 +48,7 @@ public sealed class UsersController : ControllerBase
         return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/usuarios/{result.Value.User.Id}" : null);
     }
 
-    /// <summary>Nombre, estado y PIN en esta empresa. Requiere If-Match con el ETag leído.</summary>
+    /// <summary>Name, status and PIN in this company. Requires If-Match with the ETag read.</summary>
     [HttpPut("usuarios/{id:guid}")]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -67,7 +67,7 @@ public sealed class UsersController : ControllerBase
         (await _mediator.Send(new AddAssignmentCommand(id, body.RoleId, body.BranchId, body.ValidFrom, body.ValidTo), ct))
             .ToCreatedResult(HttpContext);
 
-    /// <summary>Cierra la vigencia de la asignación; no la borra.</summary>
+    /// <summary>Closes the assignment's validity; it does not delete it.</summary>
     [HttpDelete("usuarios/{id:guid}/asignaciones/{asignacionId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

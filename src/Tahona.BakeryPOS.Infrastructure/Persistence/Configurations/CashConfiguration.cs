@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
-/// <summary>Módulo Cash — esquema <c>cash</c> (sesiones, movimientos y motivos; las cajas están con Identity).</summary>
+/// <summary>Cash module — schema <c>cash</c> (sessions, movements and reasons; the registers are with Identity).</summary>
 internal sealed class CashSessionConfiguration : IEntityTypeConfiguration<CashSession>
 {
     public void Configure(EntityTypeBuilder<CashSession> builder)
@@ -24,7 +24,7 @@ internal sealed class CashSessionConfiguration : IEntityTypeConfiguration<CashSe
             .HasPrincipalKey(r => new { r.CompanyId, r.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Branch>().WithMany().HasForeignKey(e => new { e.CompanyId, e.BranchId })
             .HasPrincipalKey(b => new { b.CompanyId, b.Id }).OnDelete(DeleteBehavior.Restrict);
-        // Una sola sesión no cerrada por caja (HU-5.2).
+        // A single non-closed session per register (US-5.2).
         builder.HasIndex(e => e.CashRegisterId).IsUnique().HasFilter("\"status\" <> 'closed'")
             .HasDatabaseName("ux_cash_sessions_open_per_register");
         builder.HasIndex(e => new { e.CompanyId, e.BranchId, e.OpenedAt });
@@ -51,7 +51,7 @@ internal sealed class CashMovementConfiguration : IEntityTypeConfiguration<CashM
         builder.HasOne<CashSession>().WithMany().HasForeignKey(e => new { e.CompanyId, e.CashSessionId })
             .HasPrincipalKey(s => new { s.CompanyId, s.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<CashReason>().WithMany().HasForeignKey(e => e.ReasonId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
-        // Derivados de ventas y devoluciones (fase 8): un solo movimiento por (tipo, origen).
+        // Derived from sales and returns (phase 8): a single movement per (kind, source).
         builder.HasIndex(e => new { e.CompanyId, e.Kind, e.SourceType, e.SourceId }).IsUnique()
             .HasFilter("\"source_id\" IS NOT NULL").HasDatabaseName("ux_cash_movements_source");
         builder.HasIndex(e => new { e.CashSessionId, e.OccurredAt });

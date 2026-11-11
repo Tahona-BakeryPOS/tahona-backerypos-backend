@@ -4,7 +4,7 @@ using Tahona.BakeryPOS.Domain.Inventory;
 
 namespace Tahona.BakeryPOS.Application.Inventory;
 
-/// <summary>Motivos de ajuste por defecto de cada empresa y ubicación "Mostrador" de cada sucursal (I-21).</summary>
+/// <summary>Default adjustment reasons of each company and the "Mostrador" location of each branch (I-21).</summary>
 public sealed class InventoryProvisioning : IInventoryProvisioning
 {
     private readonly IAppDbContext _db;

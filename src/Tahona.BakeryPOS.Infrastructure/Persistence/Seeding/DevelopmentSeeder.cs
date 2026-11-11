@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Seeding;
 
 /// <summary>
-/// Solo en desarrollo: crea el administrador de plataforma con las credenciales de user-secrets
-/// (<c>Seed:PlatformAdminEmail</c>, <c>Seed:PlatformAdminPassword</c>). Las empresas se crean después
-/// por <c>POST /api/v1/plataforma/empresas</c>, igual que en producción. Nunca registra la contraseña.
+/// Development only: creates the platform administrator with the credentials from user-secrets
+/// (<c>Seed:PlatformAdminEmail</c>, <c>Seed:PlatformAdminPassword</c>). Companies are created afterwards
+/// through <c>POST /api/v1/plataforma/empresas</c>, the same as in production. It never logs the password.
 /// </summary>
 public static class DevelopmentSeeder
 {

@@ -1,11 +1,11 @@
 namespace Tahona.BakeryPOS.Application.Common.Abstractions;
 
 /// <summary>
-/// Quién hace la petición y en qué empresa. Sale del token; nunca de parámetros del cliente.
+/// Who makes the request and in which company. It comes from the token; never from client parameters.
 /// </summary>
 public interface ITenantContext
 {
-    /// <summary>Empresa del token; null en peticiones anónimas, de plataforma o de procesos internos.</summary>
+    /// <summary>The token's company; null in anonymous, platform or internal-process requests.</summary>
     Guid? CompanyId { get; }
 
     Guid? UserId { get; }
@@ -15,18 +15,18 @@ public interface ITenantContext
     bool HasPermission(string permission);
 
     /// <summary>
-    /// Alcance por sucursal del token: true si el usuario tiene asignación en todas las sucursales o
-    /// en esta. Los módulos con datos por sucursal (precios locales, inventario, caja) lo validan.
+    /// The token's branch scope: true if the user has an assignment at all branches or
+    /// at this one. Modules with per-branch data (local prices, inventory, cash) validate it.
     /// </summary>
     bool CanAccessBranch(Guid branchId);
 
-    /// <summary>Empresa del token o excepción: para handlers que solo tienen sentido dentro de una empresa.</summary>
+    /// <summary>The token's company or an exception: for handlers that only make sense inside a company.</summary>
     Guid RequiredCompanyId { get; }
 }
 
 /// <summary>
-/// Solo para procesos internos sin petición HTTP (outbox, workers): actúa como la empresa indicada, con
-/// alcance a todas sus sucursales y sin permisos de usuario. Mantiene el filtro y la protección por empresa.
+/// Only for internal processes with no HTTP request (outbox, workers): acts as the indicated company, with
+/// scope over all its branches and no user permissions. It keeps the company filter and protection.
 /// </summary>
 public interface IBackgroundTenant
 {

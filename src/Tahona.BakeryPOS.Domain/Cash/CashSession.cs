@@ -6,15 +6,15 @@ namespace Tahona.BakeryPOS.Domain.Cash;
 public enum CashSessionStatus
 {
     Open,
-    /// <summary>Reservado para un cierre en dos pasos; el MVP pasa de abierta a cerrada.</summary>
+    /// <summary>Reserved for a two-step close; the MVP goes from open to closed.</summary>
     Closing,
     Closed,
 }
 
 /// <summary>
-/// Sesión (turno) de una caja (HU-5.2, HU-5.4): una sola abierta por caja. El efectivo esperado es la
-/// suma con signo de sus movimientos (apertura, ventas en efectivo, cambio, reembolsos, ingresos y
-/// retiros). Al cerrar se guardan esperado, contado y diferencia; una sesión cerrada no cambia.
+/// A cash register's session (shift) (US-5.2, US-5.4): only one open per register. The expected cash is the
+/// signed sum of its movements (opening, cash sales, change, refunds, income and
+/// withdrawals). On closing, the expected, counted and difference are stored; a closed session does not change.
 /// </summary>
 public sealed class CashSession : AuditableEntity, ITenantEntity
 {
@@ -49,7 +49,7 @@ public sealed class CashSession : AuditableEntity, ITenantEntity
         };
     }
 
-    /// <summary>Cierra con el efectivo contado; el esperado lo calcula el llamador desde los movimientos.</summary>
+    /// <summary>Closes with the counted cash; the expected amount is computed by the caller from the movements.</summary>
     public void Close(decimal expected, decimal counted, Guid closedBy, DateTime at, string? notes)
     {
         EnsureOpen();
@@ -81,8 +81,8 @@ public enum CashMovementKind
 }
 
 /// <summary>
-/// Movimiento de efectivo de una sesión: solo inserción, monto siempre positivo; el tipo da el signo.
-/// Los derivados de ventas (fase 8) llevan origen y son únicos por (tipo, origen).
+/// Cash movement of a session: insert-only, amount always positive; the kind gives the sign.
+/// Those derived from sales (phase 8) carry a source and are unique per (kind, source).
 /// </summary>
 public sealed class CashMovement : AuditableEntity, ITenantEntity
 {
@@ -98,7 +98,7 @@ public sealed class CashMovement : AuditableEntity, ITenantEntity
     public string? Note { get; private set; }
     public DateTime OccurredAt { get; private set; }
 
-    /// <summary>Monto con signo para el esperado: entra a la gaveta (+) o sale (−).</summary>
+    /// <summary>Signed amount for the expected total: it enters the drawer (+) or leaves it (−).</summary>
     public decimal SignedAmount => IsInflow(Kind) ? Amount : -Amount;
 
     private CashMovement() { }
@@ -122,8 +122,8 @@ public sealed class CashMovement : AuditableEntity, ITenantEntity
         kind is CashMovementKind.Opening or CashMovementKind.SaleCash or CashMovementKind.Income;
 
     /// <summary>
-    /// Esperado en gaveta = inicial + efectivo neto de ventas (recibido − cambio) − efectivo devuelto
-    /// + ingresos − retiros (HU-5.4) = suma con signo de los movimientos.
+    /// Expected in the drawer = opening + net cash from sales (received − change) − cash returned
+    /// + income − withdrawals (US-5.4) = signed sum of the movements.
     /// </summary>
     public static decimal Expected(IEnumerable<CashMovement> movements) => movements.Sum(m => m.SignedAmount);
 }
@@ -134,7 +134,7 @@ public enum CashReasonKind
     Expense,
 }
 
-/// <summary>Motivo de un ingreso o retiro de efectivo.</summary>
+/// <summary>Reason for a cash income or withdrawal.</summary>
 public sealed class CashReason : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }
@@ -152,7 +152,7 @@ public sealed class CashReason : AuditableEntity, ITenantEntity
     }
 }
 
-/// <summary>Motivos con que nace cada empresa (los de la v1). Supuesto por confirmar (I-22).</summary>
+/// <summary>Reasons each company is born with (those of the previous system). Assumption to confirm (I-22).</summary>
 public static class DefaultCashReasons
 {
     public static readonly IReadOnlyList<(CashReasonKind Kind, string Name)> All =

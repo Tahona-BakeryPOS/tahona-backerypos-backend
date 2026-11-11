@@ -3,20 +3,20 @@ using System.Text;
 
 namespace Tahona.BakeryPOS.Application.Payments.Gateway;
 
-/// <summary>Una línea de impuesto del cobro (Bold: <c>IVA_19</c>, <c>IVA_5</c>, <c>IAC_8</c>, o <c>VAT</c>/<c>CONSUMPTION</c> por valor).</summary>
+/// <summary>A tax line of the charge (Bold: <c>IVA_19</c>, <c>IVA_5</c>, <c>IAC_8</c>, or <c>VAT</c>/<c>CONSUMPTION</c> by value).</summary>
 public sealed record BoldTax(string Type, decimal? Base, decimal? Value);
 
-/// <param name="Reference">Id del intento: Bold lo devuelve en <c>data.metadata.reference</c> del webhook.</param>
+/// <param name="Reference">The attempt's id: Bold returns it in the webhook's <c>data.metadata.reference</c>.</param>
 public sealed record BoldCheckoutRequest(decimal Total, IReadOnlyList<BoldTax> Taxes, string PaymentMethod, string TerminalModel,
     string TerminalSerial, string Reference, string SellerEmail, string? Description);
 
 public enum BoldCheckoutOutcome
 {
-    /// <summary>201: el cobro llegó al datáfono; el resultado vendrá por webhook.</summary>
+    /// <summary>201: the charge reached the card terminal; the result will come by webhook.</summary>
     Sent,
-    /// <summary>4xx/5xx con código AP00x: el cobro no se creó.</summary>
+    /// <summary>4xx/5xx with an AP00x code: the charge was not created.</summary>
     Rejected,
-    /// <summary>Timeout o error de red: no se sabe si se creó.</summary>
+    /// <summary>Timeout or network error: it is unknown whether it was created.</summary>
     Unknown,
 }
 
@@ -27,8 +27,8 @@ public sealed record BoldTerminal(string Model, string Serial, string Status, st
 public sealed record BoldMethodStatus(string Name, bool Enabled);
 
 /// <summary>
-/// Cliente de la API de datáfono de Bold (payment-integration.md §11). Se llama siempre fuera de una
-/// transacción SQL. No reintenta la creación: un cobro repetido llegaría dos veces al datáfono.
+/// Client of Bold's card-terminal API (payment-integration.md §11). It is always called outside a
+/// SQL transaction. It does not retry the creation: a repeated charge would reach the card terminal twice.
 /// </summary>
 public interface IBoldGateway
 {
@@ -39,15 +39,15 @@ public interface IBoldGateway
     Task<IReadOnlyList<BoldMethodStatus>> ListMethodsAsync(string identityKey, CancellationToken ct);
 }
 
-/// <summary>La pasarela no respondió o respondió con error en una consulta (nunca en un cobro): 503.</summary>
+/// <summary>The gateway did not respond or responded with an error on a query (never on a charge): 503.</summary>
 public sealed class GatewayUnavailableException(string message) : Exception(message);
 
-/// <summary>Firma del webhook de Bold: HMAC-SHA256 en hexadecimal del cuerpo en Base64, con la llave secreta.</summary>
+/// <summary>Bold webhook signature: hexadecimal HMAC-SHA256 of the Base64 body, with the secret key.</summary>
 public static class BoldSignature
 {
     public const string Header = "x-bold-signature";
 
-    /// <param name="secretKey">Llave secreta; en pruebas Bold firma con llave vacía.</param>
+    /// <param name="secretKey">Secret key; in tests Bold signs with an empty key.</param>
     public static string Compute(string rawBody, string? secretKey)
     {
         var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(rawBody));
@@ -55,7 +55,7 @@ public static class BoldSignature
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
-    /// <summary>Comparación en tiempo constante.</summary>
+    /// <summary>Constant-time comparison.</summary>
     public static bool IsValid(string rawBody, string? secretKey, string? received)
     {
         if (string.IsNullOrWhiteSpace(received))

@@ -43,7 +43,7 @@ public class SaleReversalTests
     [Fact]
     public void Return_amount_is_proportional_and_the_last_unit_takes_the_rest()
     {
-        // 3 × 333,33 = 999,99: un tercio redondea a 333,33 y lo último devuelve el resto exacto.
+        // 3 × 333.33 = 999.99: a third rounds to 333.33 and the last one returns the exact remainder.
         var (sale, line) = ConfirmedSale(quantity: 3, price: 333.33m);
         var first = SaleReturn.Create(sale, Guid.NewGuid(), "Pan quemado", Guid.NewGuid(), Now);
         var a = first.AddLine(line, 1, (0, 0), restock: false);

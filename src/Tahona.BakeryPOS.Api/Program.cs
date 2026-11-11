@@ -50,8 +50,8 @@ builder.Services.AddCors(options => options.AddPolicy("WebClients", policy => po
     .WithExposedHeaders(CorrelationIdMiddleware.Header, "ETag")));
 builder.Services.AddAuthRateLimiting(builder.Configuration);
 
-// Detrás de Caddy (deploy/): el esquema https y la IP real del cliente (límite de intentos de login) llegan en
-// X-Forwarded-*. Solo se confía en ellos si ReverseProxy:Enabled: la API no publica su puerto fuera de la red de Docker.
+// Behind Caddy (deploy/): the https scheme and the client's real IP (login attempt limit) arrive in
+// X-Forwarded-*. They are only trusted if ReverseProxy:Enabled: the API does not publish its port outside the Docker network.
 var behindProxy = builder.Configuration.GetValue<bool>("ReverseProxy:Enabled");
 if (behindProxy)
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -61,15 +61,15 @@ if (behindProxy)
         options.KnownProxies.Clear();
     });
 
-// Staging y producción: las llaves de Data Protection (cifran las credenciales de Bold y Siigo) deben sobrevivir a un
-// redespliegue; sin ellas las credenciales guardadas no se pueden leer.
+// Staging and production: the Data Protection keys (they encrypt the Bold and Siigo credentials) must survive a
+// redeploy; without them the stored credentials cannot be read.
 if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing")
     && string.IsNullOrWhiteSpace(builder.Configuration["DataProtection:KeysPath"]))
     throw new InvalidOperationException("DataProtection:KeysPath es obligatorio fuera de desarrollo (variable DataProtection__KeysPath, volumen persistente).");
 
 var app = builder.Build();
 
-// Primer administrador de plataforma de un ambiente nuevo (docs/runbooks.md): crea y termina, no levanta la API.
+// First platform administrator of a new environment (docs/runbooks.md): it creates and exits, it does not start the API.
 if (args.Contains(PlatformAdminBootstrap.Command))
 {
     var (created, message) = await PlatformAdminBootstrap.CreateAsync(app.Services, Environment.GetEnvironmentVariable("BOOTSTRAP_ADMIN_NAME"),
@@ -93,7 +93,7 @@ app.MapOpenApi("/openapi/{documentName}.json");
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-// Las migraciones se aplican solas solo en desarrollo; en otros ambientes van como paso del pipeline (bundle).
+// Migrations are only applied automatically in development; in other environments they run as a pipeline step (bundle).
 if (app.Environment.IsDevelopment())
 {
     await using var scope = app.Services.CreateAsyncScope();
@@ -104,5 +104,5 @@ if (app.Environment.IsDevelopment())
 await app.RunAsync();
 return 0;
 
-/// <summary>Punto de entrada visible para WebApplicationFactory en las pruebas de integración.</summary>
+/// <summary>Visible entry point for WebApplicationFactory in the integration tests.</summary>
 public partial class Program;

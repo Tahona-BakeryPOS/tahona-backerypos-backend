@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 
 /// <summary>
-/// Convención de nombres del diseño: columnas, claves e índices en snake_case. Las tablas y esquemas
-/// se nombran explícitamente en cada configuración (<c>ToTable("branches", "org")</c>).
+/// Design naming convention: columns, keys and indexes in snake_case. Tables and schemas
+/// are named explicitly in each configuration (<c>ToTable("branches", "org")</c>).
 /// </summary>
 internal static class SnakeCaseNaming
 {

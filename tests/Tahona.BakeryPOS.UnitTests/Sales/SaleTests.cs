@@ -62,7 +62,7 @@ public class SaleTests
     {
         var company = Guid.NewGuid();
         var cash = PaymentMethod.Create(company, PaymentMethod.CashCode, "Efectivo", PaymentMethodKind.Cash, null, false, 0);
-        var transfer = PaymentMethod.Create(company, "TRANSFERENCIA", "Transferencia", PaymentMethodKind.TransferManual, null, true, 1);
+        var transfer = PaymentMethod.Create(company, "TRANSFER", "Transferencia", PaymentMethodKind.TransferManual, null, true, 1);
 
         var p = Payment.RecordImmediate(company, Guid.NewGuid(), Guid.NewGuid(), cash, 7_500m, 10_000m, null, Now);
         Assert.Equal(PaymentStatus.Approved, p.Status);

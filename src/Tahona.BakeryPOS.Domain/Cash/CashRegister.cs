@@ -4,8 +4,8 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Cash;
 
 /// <summary>
-/// Caja física de una sucursal. En la fase 2 solo existe como registro para vincular equipos;
-/// sesiones y movimientos de caja llegan en la fase 5.
+/// A branch's physical cash register. In phase 2 it only exists as a record to pair devices;
+/// cash sessions and movements arrive in phase 5.
 /// </summary>
 public sealed class CashRegister : AuditableEntity, ITenantEntity
 {

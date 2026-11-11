@@ -9,12 +9,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Tahona.BakeryPOS.Api.Controllers;
 
-/// <summary>Sucursales de la empresa del token (HU-1.3). Un id de otra empresa responde 404.</summary>
+/// <summary>Branches of the token's company (US-1.3). An id of another company answers 404.</summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/sucursales")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.OrganizacionGestionar)]
+[RequirePermission(Permissions.OrganizationManage)]
 public sealed class BranchesController : ControllerBase
 {
     private readonly ISender _mediator;
@@ -45,7 +45,7 @@ public sealed class BranchesController : ControllerBase
         return result.ToCreatedResult(HttpContext, result.IsSuccess ? $"/api/v1/sucursales/{result.Value.Id}" : null);
     }
 
-    /// <summary>Edita la sucursal. Requiere If-Match con el ETag leído.</summary>
+    /// <summary>Edits the branch. Requires If-Match with the ETag read.</summary>
     [HttpPut("{id:guid}")]
     [ProducesResponseType<BranchDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

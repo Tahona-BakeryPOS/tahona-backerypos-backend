@@ -11,19 +11,19 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Sales;
 
 /// <summary>
-/// D-11: anulación total de una venta confirmada mientras su turno sigue abierto. Lo envía quien tiene
-/// <c>ventas.anular</c> con su propio token (en el POS: el superior digita su PIN). En una transacción: efectivo de
-/// vuelta desde la caja de la venta, reverso de inventario, reembolso de los pagos y nota crédito si hay factura.
+/// D-11: a full void of a confirmed sale while its shift is still open. It is sent by whoever holds
+/// <c>sales.void</c> with their own token (in the POS: the supervisor enters their PIN). In one transaction: cash
+/// back from the sale's register, inventory reversal, refund of the payments and a credit note if there is an invoice.
 /// </summary>
 public sealed record VoidSaleCommand(Guid SaleId, string Reason) : IRequest<Result<SaleDto>>;
 
-/// <param name="Restock">El producto vuelve a la venta; false si está dañado o es perecedero (no genera movimiento).</param>
+/// <param name="Restock">The product goes back on sale; false if it is damaged or perishable (it generates no movement).</param>
 public sealed record SaleReturnLineInput(Guid SaleLineId, decimal Quantity, bool Restock = true);
 
 /// <summary>
-/// HU-9.2: devolución total o parcial. La autoriza en el momento quien tiene <c>devoluciones.aprobar</c> enviando su
-/// propio token (PIN en el POS). El dinero sale en efectivo de la sesión abierta de la caja indicada (D-11), aunque la
-/// venta se haya pagado con pasarela; lo marcado reingresa al inventario y, si la venta tiene factura, se emite nota crédito.
+/// US-9.2: full or partial return. It is authorized on the spot by whoever holds <c>returns.approve</c> sending their
+/// own token (PIN in the POS). The money leaves in cash from the open session of the indicated register (D-11), even if the
+/// sale was paid through the gateway; what is marked goes back into inventory and, if the sale has an invoice, a credit note is issued.
 /// </summary>
 public sealed record CreateSaleReturnCommand(Guid SaleId, Guid CashRegisterId, string Reason, IReadOnlyList<SaleReturnLineInput> Lines)
     : IRequest<Result<SaleDto>>;
@@ -31,7 +31,7 @@ public sealed record CreateSaleReturnCommand(Guid SaleId, Guid CashRegisterId, s
 public sealed record SaleReturnListItemDto(Guid Id, Guid SaleId, long? SaleNumber, Guid BranchId, DateTime OccurredAt, string Reason,
     string? ApprovedByName, decimal Total, int LineCount, string? CreditNoteStatus);
 
-/// <summary>Devoluciones por fecha y sucursal, de la más reciente a la más antigua.</summary>
+/// <summary>Returns by date and branch, newest to oldest.</summary>
 public sealed record GetSaleReturnsQuery(DateTime? From, DateTime? To, Guid? BranchId, int Page = 1, int PageSize = 50)
     : IRequest<Result<PagedResult<SaleReturnListItemDto>>>;
 
@@ -100,7 +100,7 @@ public sealed class SaleReversalsHandler :
 
     public async Task<Result<SaleDto>> Handle(VoidSaleCommand request, CancellationToken ct)
     {
-        if (!_tenant.HasPermission(Permissions.VentasAnular))
+        if (!_tenant.HasPermission(Permissions.SalesVoid))
             return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Anular ventas requiere el permiso ventas.anular." });
         var found = await FindAsync(request.SaleId, ct);
         if (found.IsFailure) return Result.Failure<SaleDto>(found.Error);
@@ -134,7 +134,7 @@ public sealed class SaleReversalsHandler :
 
     public async Task<Result<SaleDto>> Handle(CreateSaleReturnCommand request, CancellationToken ct)
     {
-        if (!_tenant.HasPermission(Permissions.DevolucionesAprobar))
+        if (!_tenant.HasPermission(Permissions.ReturnsApprove))
             return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Autorizar devoluciones requiere el permiso devoluciones.aprobar." });
         var found = await FindAsync(request.SaleId, ct);
         if (found.IsFailure) return Result.Failure<SaleDto>(found.Error);
@@ -147,7 +147,7 @@ public sealed class SaleReversalsHandler :
         if (session.BranchId != sale.BranchId)
             return Result.Failure<SaleDto>(Error.Validation("La devolución se hace en una caja de la misma sucursal de la venta."));
 
-        // Lo ya devuelto por línea limita la nueva devolución (ninguna supera lo vendido).
+        // What was already returned per line limits the new return (none exceeds what was sold).
         var previous = (await _db.SaleReturnLines.AsNoTracking()
                 .Where(l => _db.SaleReturns.Any(r => r.Id == l.SaleReturnId && r.SaleId == sale.Id)).ToListAsync(ct))
             .GroupBy(l => l.SaleLineId).ToDictionary(g => g.Key, g => (g.Sum(l => l.Quantity), g.Sum(l => l.Amount)));
@@ -171,7 +171,7 @@ public sealed class SaleReversalsHandler :
         var refunded = await _payments.RefundAsync(sale.Id, RefundSources.Return, saleReturn.Id, saleReturn.Total, ct);
         if (refunded.IsFailure) return Result.Failure<SaleDto>(refunded.Error);
 
-        // Nota crédito por lo devuelto: precio con impuesto y descuento proporcional, de modo que cada línea sume lo reembolsado.
+        // Credit note for what was returned: price with tax and proportional discount, so that each line adds up to what was refunded.
         var lines = saleReturn.Lines.Select(r =>
         {
             var l = sale.Lines.First(x => x.Id == r.SaleLineId);

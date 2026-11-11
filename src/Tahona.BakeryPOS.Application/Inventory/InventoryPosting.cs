@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Inventory;
 
 /// <summary>
-/// Lo que la venta mueve en existencias: descuenta de la ubicación por defecto de la sucursal con
-/// <see cref="InventoryLedger"/> (idempotente por línea de venta; productos sin control se ignoran).
+/// What the sale moves in stock: it deducts from the branch's default location with
+/// <see cref="InventoryLedger"/> (idempotent per sale line; products that do not track stock are ignored).
 /// </summary>
 public sealed class InventoryPosting : IInventoryPosting
 {
@@ -55,7 +55,7 @@ public sealed class InventoryPosting : IInventoryPosting
     public async Task<Result> ReverseSaleAsync(Guid branchId, Guid saleId, IReadOnlyList<(Guid LineId, Guid ProductId, decimal Quantity)> lines,
         CancellationToken ct)
     {
-        // Lo que la venta descontó (los productos sin control nunca se movieron).
+        // What the sale deducted (products that do not track stock never moved).
         var sold = await _db.StockMovements.AsNoTracking()
             .Where(m => m.Kind == StockMovementKind.Sale && m.SourceType == StockSources.Sale && m.SourceId == saleId)
             .ToListAsync(ct);

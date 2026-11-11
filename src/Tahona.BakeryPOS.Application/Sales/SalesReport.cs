@@ -9,9 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Sales;
 
 /// <summary>
-/// Informe de ventas (HU-10, CU-08 de la v1) por días de Colombia (UTC−5) entre <paramref name="From"/> y <paramref name="To"/>
-/// (inclusive). Vendido = ventas confirmadas (no anuladas); las anuladas y las devoluciones van aparte; neto = vendido −
-/// devuelto. Lo cobrado por medio de pago es neto de reembolsos.
+/// Sales report (US-10, the previous system's CU-08) by Colombian days (UTC−5) between <paramref name="From"/> and <paramref name="To"/>
+/// (inclusive). Sold = confirmed sales (not voided); voided ones and returns are separate; net = sold −
+/// returned. What was charged per payment method is net of refunds.
 /// </summary>
 public sealed record GetSalesReportQuery(DateOnly From, DateOnly To, Guid? BranchId) : IRequest<Result<SalesReportDto>>;
 
@@ -37,7 +37,7 @@ public sealed class GetSalesReportValidator : AbstractValidator<GetSalesReportQu
 
 public sealed class SalesReportHandler : IRequestHandler<GetSalesReportQuery, Result<SalesReportDto>>
 {
-    /// <summary>Colombia no tiene horario de verano.</summary>
+    /// <summary>Colombia has no daylight saving time.</summary>
     private static readonly TimeSpan ColombiaOffset = TimeSpan.FromHours(-5);
 
     private readonly IAppDbContext _db;
@@ -93,7 +93,7 @@ public sealed class SalesReportHandler : IRequestHandler<GetSalesReportQuery, Re
         }
 
         var confirmedIds = confirmed.Select(s => s.Id).ToList();
-        // Agrupación con tipos anónimos: el DTO se arma en memoria porque EF no traduce la proyección a un record.
+        // Grouping with anonymous types: the DTO is built in memory because EF does not translate the projection to a record.
         var topRows = await _db.SaleLines.AsNoTracking().Where(l => confirmedIds.Contains(l.SaleId))
             .GroupBy(l => new { l.ProductId, l.Description })
             .Select(g => new { g.Key.ProductId, g.Key.Description, Quantity = g.Sum(l => l.Quantity), Total = g.Sum(l => l.LineTotal) })

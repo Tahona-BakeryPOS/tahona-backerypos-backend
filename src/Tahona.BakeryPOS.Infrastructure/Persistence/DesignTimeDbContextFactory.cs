@@ -3,14 +3,14 @@ using Microsoft.EntityFrameworkCore.Design;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 
 /// <summary>
-/// Para <c>dotnet ef migrations add</c>: genera el modelo sin arrancar la API ni conectarse a la base.
-/// Para <c>database update</c> usa la variable <c>ConnectionStrings__DefaultConnection</c>.
+/// For <c>dotnet ef migrations add</c>: it generates the model without starting the API or connecting to the database.
+/// For <c>database update</c> it uses the variable <c>ConnectionStrings__DefaultConnection</c>.
 /// </summary>
 public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public AppDbContext CreateDbContext(string[] args)
     {
-        // Sin contraseña: solo sirve para generar migraciones (no se conecta).
+        // No password: it is only for generating migrations (it does not connect).
         var connection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
             ?? "Host=localhost;Database=bakerypos_design;Username=postgres";
         return new AppDbContext(AppDatabase.Options(connection));

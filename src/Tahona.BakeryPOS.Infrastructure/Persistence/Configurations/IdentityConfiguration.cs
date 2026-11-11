@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Módulo Identity — esquema <c>sec</c>. Las relaciones dentro de una empresa usan FK compuestas
-/// (company_id, x_id): la base misma impide, por ejemplo, asignar un rol de otra empresa.
+/// Identity module — schema <c>sec</c>. Relationships within a company use composite FKs
+/// (company_id, x_id): the database itself prevents, for example, assigning a role of another company.
 /// </summary>
 internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
@@ -68,7 +68,7 @@ internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<Rol
     }
 }
 
-/// <summary>Catálogo global sembrado por migración desde <see cref="Permissions.All"/>.</summary>
+/// <summary>Global catalog seeded by migration from <see cref="Permissions.All"/>.</summary>
 internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permission>
 {
     public void Configure(EntityTypeBuilder<Permission> builder)
@@ -83,7 +83,7 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
         builder.HasData(Permissions.All.Select(p => new Permission { Id = StableId(p.Code), Code = p.Code, Name = p.Name, Module = p.Module }));
     }
 
-    /// <summary>Id fijo derivado del código: la semilla no cambia entre migraciones.</summary>
+    /// <summary>Fixed id derived from the code: the seed does not change between migrations.</summary>
     internal static Guid StableId(string code) => new(SHA256.HashData(Encoding.UTF8.GetBytes("permission:" + code)).AsSpan(0, 16));
 }
 
@@ -145,7 +145,7 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
     }
 }
 
-/// <summary>Módulo Cash — esquema <c>cash</c>. En la fase 2 solo el registro de cajas.</summary>
+/// <summary>Cash module — schema <c>cash</c>. In phase 2 only the register records.</summary>
 internal sealed class CashRegisterConfiguration : IEntityTypeConfiguration<CashRegister>
 {
     public void Configure(EntityTypeBuilder<CashRegister> builder)

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.IntegrationTests;
 
-/// <summary>Idempotency-Key: reintentar no duplica; misma clave con otro contenido es un conflicto.</summary>
+/// <summary>Idempotency-Key: retrying does not duplicate; the same key with different content is a conflict.</summary>
 [Collection(ApiCollection.Name)]
 public sealed class IdempotencyTests
 {

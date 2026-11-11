@@ -32,7 +32,7 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
-        // Contratos entre módulos (Common/Contracts), cada uno implementado por el módulo dueño.
+        // Contracts between modules (Common/Contracts), each implemented by the owning module.
         services.AddScoped<CompanyDirectory>();
         services.AddScoped<ICompanyDirectory>(sp => sp.GetRequiredService<CompanyDirectory>());
         services.AddScoped<IBranchDirectory>(sp => sp.GetRequiredService<CompanyDirectory>());

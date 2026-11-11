@@ -81,7 +81,7 @@ public class PaymentTests
         Assert.Throws<DomainException>(() => PaymentMethod.Create(Company, "X", "X", PaymentMethodKind.Gateway, "CARD", false, 0));
         var cash = PaymentMethod.Create(Company, PaymentMethod.CashCode, "Efectivo", PaymentMethodKind.Cash, null, false, 0);
         Assert.Throws<DomainException>(() => cash.Update("Efectivo", false, 0, isActive: false));
-        var transfer = PaymentMethod.Create(Company, "TRANSFERENCIA", "Transferencia", PaymentMethodKind.TransferManual, null, false, 1);
+        var transfer = PaymentMethod.Create(Company, "TRANSFER", "Transferencia", PaymentMethodKind.TransferManual, null, false, 1);
         Assert.True(transfer.RequiresReference);
     }
 }

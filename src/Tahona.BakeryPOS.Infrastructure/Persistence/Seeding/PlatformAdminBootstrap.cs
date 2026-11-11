@@ -6,15 +6,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Seeding;
 
 /// <summary>
-/// Crea el primer administrador de plataforma de un ambiente nuevo (staging o producción) con
-/// <c>dotnet Tahona.BakeryPOS.Api.dll bootstrap-admin</c> (docs/runbooks.md). Solo si aún no existe ninguno: después, los
-/// administradores se gestionan desde la aplicación. Nunca registra la contraseña.
+/// Creates the first platform administrator of a new environment (staging or production) with
+/// <c>dotnet Tahona.BakeryPOS.Api.dll bootstrap-admin</c> (docs/runbooks.md). Only if none exists yet: afterwards,
+/// administrators are managed from the application. It never logs the password.
 /// </summary>
 public static class PlatformAdminBootstrap
 {
     public const string Command = "bootstrap-admin";
 
-    /// <returns>Mensaje para la consola y si se creó.</returns>
+    /// <returns>Message for the console and whether it was created.</returns>
     public static async Task<(bool Created, string Message)> CreateAsync(IServiceProvider services, string? name, string? email, string? password,
         CancellationToken ct = default)
     {

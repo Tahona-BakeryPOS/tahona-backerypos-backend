@@ -10,29 +10,29 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Catalog.Products;
 
 /// <summary>
-/// Crea un producto (HU-3.1). Con <paramref name="BasePrice"/> abre en la misma transacción su primer
-/// precio base, vigente desde ya y con impuesto incluido (D-07).
+/// Creates a product (US-3.1). With <paramref name="BasePrice"/> it opens its first base price in the same transaction,
+/// valid from now and with tax included (D-07).
 /// </summary>
-/// <param name="NegativeStockPolicy">D-06: <c>allow</c> (por defecto) o <c>block</c>.</param>
+/// <param name="NegativeStockPolicy">D-06: <c>allow</c> (default) or <c>block</c>.</param>
 public sealed record CreateProductCommand(string Sku, string Name, Guid CategoryId, Guid UnitId, Guid TaxId, string? Barcode,
     bool TrackStock, decimal? BasePrice, string? NegativeStockPolicy = null) : IRequest<Result<ProductDto>>;
 
-/// <summary>Edita un producto (el SKU no cambia). Exige la versión leída (If-Match).</summary>
+/// <summary>Edits a product (the SKU does not change). Requires the version read (If-Match).</summary>
 public sealed record UpdateProductCommand(Guid Id, string? ExpectedVersion, string Name, Guid CategoryId, Guid UnitId, Guid TaxId,
     string? Barcode, bool TrackStock, string? NegativeStockPolicy = null) : IRequest<Result<ProductDto>>;
 
-/// <summary>Desactiva o reactiva un producto: nunca se borra, las ventas lo referencian.</summary>
+/// <summary>Deactivates or reactivates a product: it is never deleted, sales reference it.</summary>
 public sealed record SetProductActiveCommand(Guid Id, bool IsActive) : IRequest<Result<ProductDto>>;
 
 /// <summary>
-/// Abre una vigencia de precio (HU-3.2). <paramref name="BranchId"/> null = precio base (permiso
-/// <c>catalogo.gestionar</c>); con sucursal basta <c>precios.sucursal</c> y alcance sobre ella.
-/// <paramref name="ValidFrom"/> null = desde ahora; no se permiten fechas pasadas.
+/// Opens a price validity period (US-3.2). <paramref name="BranchId"/> null = base price (permission
+/// <c>catalog.manage</c>); with a branch, <c>prices.branch</c> and scope over it are enough.
+/// <paramref name="ValidFrom"/> null = from now; past dates are not allowed.
 /// </summary>
 public sealed record SetProductPriceCommand(Guid ProductId, Guid? BranchId, decimal Amount, bool IncludesTax = true, DateTime? ValidFrom = null)
     : IRequest<Result<ProductPriceDto>>;
 
-/// <summary>Marca un producto como (no) disponible en una sucursal (HU-3.3).</summary>
+/// <summary>Marks a product as (un)available at a branch (US-3.3).</summary>
 public sealed record SetProductAvailabilityCommand(Guid BranchId, Guid ProductId, bool IsAvailable) : IRequest<Result>;
 
 public sealed class CreateProductValidator : AbstractValidator<CreateProductCommand>
@@ -139,7 +139,7 @@ public sealed class ProductCommandsHandler :
             return Result.Failure<ProductDto>(check.Error);
 
         _db.ExpectVersion(product, version.Value);
-        // Sin política en el cuerpo se conserva la actual.
+        // Without a policy in the body the current one is kept.
         var policy = request.NegativeStockPolicy is null ? product.NegativeStockPolicy : ProductRules.Policy(request.NegativeStockPolicy);
         product.Update(request.Name, request.CategoryId, request.UnitId, request.TaxId, request.Barcode, request.TrackStock, policy);
         await _db.SaveChangesAsync(ct);
@@ -168,7 +168,7 @@ public sealed class ProductCommandsHandler :
 
         var now = Now;
         var validFrom = request.ValidFrom?.ToUniversalTime() ?? now;
-        // Una vigencia pasada reescribiría el precio de ventas ya hechas. Un minuto de margen por relojes.
+        // A past validity period would rewrite the price of sales already made. One minute of margin for clocks.
         if (validFrom < now.AddMinutes(-1))
             return Result.Failure<ProductPriceDto>(Error.Validation("La vigencia no puede empezar en el pasado."));
         if (validFrom < now) validFrom = now;
@@ -202,12 +202,12 @@ public sealed class ProductCommandsHandler :
 
     private DateTime Now => _clock.GetUtcNow().UtcDateTime;
 
-    /// <summary>Precio base: catalogo.gestionar. Precio de sucursal: catalogo.gestionar o precios.sucursal + alcance.</summary>
+    /// <summary>Base price: catalog.manage. Branch price: catalog.manage or prices.branch + scope.</summary>
     private async Task<Result> CheckPriceScopeAsync(Guid? branchId, CancellationToken ct)
     {
         if (branchId is null)
-            return _tenant.HasPermission(Permissions.CatalogoGestionar) ? Result.Success() : Result.Failure(Error.SinPermiso);
-        if (!_tenant.HasPermission(Permissions.CatalogoGestionar) && !_tenant.HasPermission(Permissions.PreciosSucursal))
+            return _tenant.HasPermission(Permissions.CatalogManage) ? Result.Success() : Result.Failure(Error.SinPermiso);
+        if (!_tenant.HasPermission(Permissions.CatalogManage) && !_tenant.HasPermission(Permissions.BranchPrices))
             return Result.Failure(Error.SinPermiso);
         return await CheckBranchScopeAsync(branchId.Value, ct);
     }
@@ -219,7 +219,7 @@ public sealed class ProductCommandsHandler :
         return _tenant.CanAccessBranch(branchId) ? Result.Success() : Result.Failure(Error.SinAsignacionVigente);
     }
 
-    /// <summary>Categoría e impuesto deben existir en la empresa y estar activos; la unidad, existir.</summary>
+    /// <summary>Category and tax must exist in the company and be active; the unit must exist.</summary>
     private async Task<Result> CheckReferencesAsync(Guid categoryId, Guid unitId, Guid taxId, string? barcode, Product? current, CancellationToken ct)
     {
         var category = await _db.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == categoryId, ct);

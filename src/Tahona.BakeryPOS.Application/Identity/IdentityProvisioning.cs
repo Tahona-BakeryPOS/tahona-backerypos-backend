@@ -7,26 +7,26 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Identity;
 
 /// <summary>
-/// Roles que se crean con cada empresa. Matriz supuesta (decisión I-10): el propietario recibe todo; el
-/// cajero, lo de la v1; el administrador de sucursal, la operación de su sucursal. Confirmar con el dueño.
+/// Roles created with each company. Assumed matrix (decision I-10): the owner gets everything; the
+/// cashier, what the previous system gave it; the branch manager, the operation of their branch. Confirm with the owner.
 /// </summary>
 public static class DefaultRoles
 {
     public static readonly IReadOnlyList<(string Code, string Name, IReadOnlyList<string> Permissions)> All =
     [
         (SystemRoles.Owner, "Propietario",
-            Permissions.All.Select(p => p.Code).Where(c => c != Permissions.PlataformaAdmin).ToList()),
+            Permissions.All.Select(p => p.Code).Where(c => c != Permissions.PlatformAdmin).ToList()),
         (SystemRoles.BranchManager, "Administrador de sucursal",
         [
-            Permissions.ProductosVer, Permissions.PreciosSucursal, Permissions.InventarioVer, Permissions.InventarioAjustar,
-            Permissions.TurnosAbrir, Permissions.TurnosCerrar, Permissions.CajaMovimientos, Permissions.CajaRetiro,
-            Permissions.VentasCrear, Permissions.VentasVer, Permissions.VentasAnular, Permissions.VentasDescuento,
-            Permissions.DevolucionesCrear, Permissions.DevolucionesAprobar, Permissions.ReportesVer, Permissions.PagosResolver,
+            Permissions.ProductsView, Permissions.BranchPrices, Permissions.InventoryView, Permissions.InventoryAdjust,
+            Permissions.ShiftsOpen, Permissions.ShiftsClose, Permissions.CashMovements, Permissions.CashWithdrawal,
+            Permissions.SalesCreate, Permissions.SalesView, Permissions.SalesVoid, Permissions.SalesDiscount,
+            Permissions.ReturnsCreate, Permissions.ReturnsApprove, Permissions.ReportsView, Permissions.PaymentsResolve,
         ]),
         (SystemRoles.Cashier, "Cajero",
         [
-            Permissions.ProductosVer, Permissions.VentasCrear, Permissions.VentasVer,
-            Permissions.TurnosAbrir, Permissions.TurnosCerrar, Permissions.CajaMovimientos,
+            Permissions.ProductsView, Permissions.SalesCreate, Permissions.SalesView,
+            Permissions.ShiftsOpen, Permissions.ShiftsClose, Permissions.CashMovements,
         ]),
     ];
 }

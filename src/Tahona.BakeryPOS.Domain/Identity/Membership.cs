@@ -4,8 +4,8 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Identity;
 
 /// <summary>
-/// Pertenencia de un usuario a una empresa (D-08). El PIN de caja es por empresa y se guarda como
-/// hash; su bloqueo por intentos también es por empresa.
+/// A user's membership of a company (D-08). The register PIN is per company and is stored as a
+/// hash; its attempt lockout is also per company.
 /// </summary>
 public sealed class Membership : AuditableEntity, ITenantEntity
 {
@@ -38,7 +38,7 @@ public sealed class Membership : AuditableEntity, ITenantEntity
 
     public bool IsPinLocked(DateTime now) => PinLockedUntil > now;
 
-    /// <summary>Cuenta un PIN errado; al quinto bloquea 5 minutos. Devuelve true si acaba de bloquear.</summary>
+    /// <summary>Counts a wrong PIN; on the fifth it locks for 5 minutes. Returns true if it just locked.</summary>
     public bool RegisterFailedPin(DateTime now)
     {
         FailedPinAttempts++;

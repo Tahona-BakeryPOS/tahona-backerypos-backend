@@ -10,12 +10,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Tahona.BakeryPOS.Api.Controllers;
 
-/// <summary>Cajas de la empresa y códigos para vincular equipos a ellas.</summary>
+/// <summary>The company's cash registers and the codes to pair devices to them.</summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/cajas")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.OrganizacionGestionar)]
+[RequirePermission(Permissions.OrganizationManage)]
 public sealed class CashRegistersController : ControllerBase
 {
     private readonly ISender _mediator;
@@ -38,7 +38,7 @@ public sealed class CashRegistersController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateCashRegisterCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    /// <summary>Código de un solo uso (15 min) para vincular un equipo a esta caja.</summary>
+    /// <summary>One-time code (15 min) to pair a device to this cash register.</summary>
     [HttpPost("{id:guid}/codigos-vinculacion")]
     [ProducesResponseType<PairingCodeDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

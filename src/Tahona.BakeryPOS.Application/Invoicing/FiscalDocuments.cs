@@ -19,15 +19,15 @@ public sealed record GetFiscalDocumentsQuery(DateTime? From, DateTime? To, strin
 
 public sealed record GetFiscalDocumentAttemptsQuery(Guid Id) : IRequest<Result<IReadOnlyList<FiscalAttemptDto>>>;
 
-/// <summary>Representación gráfica (PDF) de Siigo; solo de documentos ya creados allí.</summary>
+/// <summary>Graphic representation (PDF) from Siigo; only for documents already created there.</summary>
 public sealed record GetFiscalDocumentPdfQuery(Guid Id) : IRequest<Result<byte[]>>;
 
-/// <summary>Vuelve a encolar un documento rechazado, con error o desconocido (tras corregir la causa).</summary>
+/// <summary>Re-enqueues a rejected, errored or unknown document (after fixing the cause).</summary>
 public sealed record RetryFiscalDocumentCommand(Guid Id) : IRequest<Result<FiscalDocumentDto>>;
 
 /// <summary>
-/// Factura de prueba (sin venta, fase 7): 1 línea a consumidor final. Es una factura real ante la DIAN en el
-/// ambiente de la empresa en Siigo, por eso exige confirmar que ese ambiente es de habilitación (pruebas).
+/// Test invoice (without a sale, phase 7): 1 line to a final consumer. It is a real invoice to the DIAN in the
+/// company's Siigo environment, so it requires confirming that this environment is the test (enablement) one.
 /// </summary>
 public sealed record IssueTestInvoiceCommand(Guid ProductId, decimal Quantity, Guid PaymentMethodId, bool ConfirmTestEnvironment)
     : IRequest<Result<FiscalDocumentDto>>;
@@ -129,7 +129,7 @@ public sealed class FiscalDocumentsHandler :
         if (product.Price is not { } price || price <= 0)
             return Result.Failure<FiscalDocumentDto>(Error.Validation($"{product.Name} no tiene precio base vigente."));
 
-        // D-07: Siigo recibe el precio con impuesto incluido.
+        // D-07: Siigo receives the price with tax included.
         var unit = product.PriceIncludesTax ? price : decimal.Round(price * (1 + product.TaxRate / 100m), 2);
         var total = decimal.Round(unit * request.Quantity, 2);
         var saleId = Guid.CreateVersion7();

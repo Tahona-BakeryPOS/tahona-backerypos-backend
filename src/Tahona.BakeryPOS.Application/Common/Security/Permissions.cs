@@ -1,70 +1,71 @@
 namespace Tahona.BakeryPOS.Application.Common.Security;
 
 /// <summary>
-/// Catálogo global de permisos (claim "permission"). Se siembra por migración desde <see cref="All"/>:
-/// un permiso nuevo se agrega aquí y requiere una migración, si no nadie podrá tenerlo.
-/// No existe <c>ventas.sincronizar</c>: el sistema no tiene modo sin conexión.
+/// Global permission catalog (claim "permission"). Seeded by migration from <see cref="All"/>:
+/// a new permission is added here and requires a migration, otherwise nobody can hold it.
+/// Codes are English and stable; the display name and module are Spanish because users see them.
+/// There is no <c>sales.sync</c> permission: the system has no offline mode.
 /// </summary>
 public static class Permissions
 {
-    // Plataforma (nunca se asigna a un rol de empresa)
-    public const string PlataformaAdmin = "plataforma.admin";
+    // Platform (never assigned to a company role)
+    public const string PlatformAdmin = "platform.admin";
 
-    // Empresa
-    public const string OrganizacionGestionar = "organizacion.gestionar";
-    public const string ReportesVer = "reportes.ver";
+    // Company
+    public const string OrganizationManage = "organization.manage";
+    public const string ReportsView = "reports.view";
 
-    // Catálogo
-    public const string ProductosVer = "productos.ver";
-    public const string CatalogoGestionar = "catalogo.gestionar";
-    public const string PreciosSucursal = "precios.sucursal";
+    // Catalog
+    public const string ProductsView = "products.view";
+    public const string CatalogManage = "catalog.manage";
+    public const string BranchPrices = "prices.branch";
 
-    // Inventario
-    public const string InventarioVer = "inventario.ver";
-    public const string InventarioAjustar = "inventario.ajustar";
+    // Inventory
+    public const string InventoryView = "inventory.view";
+    public const string InventoryAdjust = "inventory.adjust";
 
-    // Caja
-    public const string TurnosAbrir = "turnos.abrir";
-    public const string TurnosCerrar = "turnos.cerrar";
-    public const string CajaMovimientos = "caja.movimientos";
-    public const string CajaRetiro = "caja.retiro";
+    // Cash
+    public const string ShiftsOpen = "shifts.open";
+    public const string ShiftsClose = "shifts.close";
+    public const string CashMovements = "cash.movements";
+    public const string CashWithdrawal = "cash.withdrawal";
 
-    // Ventas y devoluciones
-    public const string VentasCrear = "ventas.crear";
-    public const string VentasVer = "ventas.ver";
-    public const string VentasAnular = "ventas.anular";
-    public const string VentasDescuento = "ventas.descuento";
-    public const string DevolucionesCrear = "devoluciones.crear";
-    public const string DevolucionesAprobar = "devoluciones.aprobar";
+    // Sales and returns
+    public const string SalesCreate = "sales.create";
+    public const string SalesView = "sales.view";
+    public const string SalesVoid = "sales.void";
+    public const string SalesDiscount = "sales.discount";
+    public const string ReturnsCreate = "returns.create";
+    public const string ReturnsApprove = "returns.approve";
 
-    // Pagos
-    public const string PagosResolver = "pagos.resolver";
+    // Payments
+    public const string PaymentsResolve = "payments.resolve";
 
-    // Facturación electrónica
-    public const string FiscalGestionar = "fiscal.gestionar";
+    // Electronic invoicing
+    public const string FiscalManage = "fiscal.manage";
 
     public static readonly IReadOnlyList<PermissionDefinition> All =
     [
-        new(PlataformaAdmin, "Administrar la plataforma", "Plataforma"),
-        new(OrganizacionGestionar, "Gestionar empresa, sucursales, cajas y usuarios", "Empresa"),
-        new(ReportesVer, "Ver reportes", "Empresa"),
-        new(ProductosVer, "Ver productos", "Catálogo"),
-        new(CatalogoGestionar, "Gestionar catálogo y precios base", "Catálogo"),
-        new(PreciosSucursal, "Gestionar precios y disponibilidad de la sucursal", "Catálogo"),
-        new(InventarioVer, "Ver existencias y movimientos", "Inventario"),
-        new(InventarioAjustar, "Registrar ajustes de inventario", "Inventario"),
-        new(TurnosAbrir, "Abrir caja", "Caja"),
-        new(TurnosCerrar, "Cerrar caja", "Caja"),
-        new(CajaMovimientos, "Registrar ingresos de efectivo", "Caja"),
-        new(CajaRetiro, "Registrar retiros de efectivo", "Caja"),
-        new(VentasCrear, "Registrar ventas", "Ventas"),
-        new(VentasVer, "Ver ventas", "Ventas"),
-        new(VentasAnular, "Anular ventas", "Ventas"),
-        new(VentasDescuento, "Aplicar descuentos en la venta", "Ventas"),
-        new(DevolucionesCrear, "Registrar devoluciones", "Ventas"),
-        new(DevolucionesAprobar, "Aprobar devoluciones y reembolsos", "Ventas"),
-        new(PagosResolver, "Resolver a mano pagos sin respuesta de la pasarela", "Pagos"),
-        new(FiscalGestionar, "Gestionar facturación electrónica", "Facturación"),
+        new(PlatformAdmin, "Administrar la plataforma", "Plataforma"),
+        new(OrganizationManage, "Gestionar empresa, sucursales, cajas y usuarios", "Empresa"),
+        new(ReportsView, "Ver reportes", "Empresa"),
+        new(ProductsView, "Ver productos", "Catálogo"),
+        new(CatalogManage, "Gestionar catálogo y precios base", "Catálogo"),
+        new(BranchPrices, "Gestionar precios y disponibilidad de la sucursal", "Catálogo"),
+        new(InventoryView, "Ver existencias y movimientos", "Inventario"),
+        new(InventoryAdjust, "Registrar ajustes de inventario", "Inventario"),
+        new(ShiftsOpen, "Abrir caja", "Caja"),
+        new(ShiftsClose, "Cerrar caja", "Caja"),
+        new(CashMovements, "Registrar ingresos de efectivo", "Caja"),
+        new(CashWithdrawal, "Registrar retiros de efectivo", "Caja"),
+        new(SalesCreate, "Registrar ventas", "Ventas"),
+        new(SalesView, "Ver ventas", "Ventas"),
+        new(SalesVoid, "Anular ventas", "Ventas"),
+        new(SalesDiscount, "Aplicar descuentos en la venta", "Ventas"),
+        new(ReturnsCreate, "Registrar devoluciones", "Ventas"),
+        new(ReturnsApprove, "Aprobar devoluciones y reembolsos", "Ventas"),
+        new(PaymentsResolve, "Resolver a mano pagos sin respuesta de la pasarela", "Pagos"),
+        new(FiscalManage, "Gestionar facturación electrónica", "Facturación"),
     ];
 }
 

@@ -3,18 +3,18 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 
 namespace Tahona.BakeryPOS.Domain.Catalog;
 
-/// <summary>Qué pasa si una venta o un ajuste dejaría el saldo por debajo de cero (D-06).</summary>
+/// <summary>What happens if a sale or an adjustment would leave the balance below zero (D-06).</summary>
 public enum NegativeStockPolicy
 {
-    /// <summary>Se permite el saldo negativo (pan del día que se vende antes de registrar su entrada).</summary>
+    /// <summary>A negative balance is allowed (the day's bread that is sold before its entry is recorded).</summary>
     Allow,
-    /// <summary>Se bloquea, salvo autorización con PIN de un superior (queda auditada).</summary>
+    /// <summary>It is blocked, unless a supervisor authorizes with a PIN (it is audited).</summary>
     Block,
 }
 
 /// <summary>
-/// Producto vendible (HU-3.1). SKU único por empresa e inmutable; código de barras único por empresa
-/// si existe. Nunca se borra: se desactiva (las ventas lo referencian).
+/// Sellable product (US-3.1). SKU unique per company and immutable; barcode unique per company
+/// if present. It is never deleted: it is deactivated (sales reference it).
 /// </summary>
 public sealed class Product : AuditableEntity, ITenantEntity
 {
@@ -25,9 +25,9 @@ public sealed class Product : AuditableEntity, ITenantEntity
     public Guid UnitId { get; private set; }
     public Guid TaxId { get; private set; }
     public string? Barcode { get; private set; }
-    /// <summary>Si la venta descuenta existencias (fase 4). Falso para productos de elaboración al momento.</summary>
+    /// <summary>Whether the sale deducts stock (phase 4). False for products made to order.</summary>
     public bool TrackStock { get; private set; }
-    /// <summary>Solo aplica con <see cref="TrackStock"/>.</summary>
+    /// <summary>Only applies with <see cref="TrackStock"/>.</summary>
     public NegativeStockPolicy NegativeStockPolicy { get; private set; } = NegativeStockPolicy.Allow;
     public bool IsActive { get; private set; } = true;
 
@@ -71,9 +71,9 @@ public sealed class Product : AuditableEntity, ITenantEntity
 }
 
 /// <summary>
-/// Precio con vigencia (HU-3.2). <see cref="BranchId"/> null = precio base de la empresa. Un cambio abre
-/// una vigencia nueva y cierra la anterior; ninguna se borra ni se solapa. Con D-07 el precio de lista
-/// incluye el impuesto (<see cref="IncludesTax"/>).
+/// Price with validity (US-3.2). <see cref="BranchId"/> null = the company's base price. A change opens
+/// a new validity period and closes the previous one; none is deleted or overlaps. With D-07 the list price
+/// includes the tax (<see cref="IncludesTax"/>).
 /// </summary>
 public sealed class ProductPrice : AuditableEntity, ITenantEntity
 {
@@ -83,7 +83,7 @@ public sealed class ProductPrice : AuditableEntity, ITenantEntity
     public decimal Amount { get; private set; }
     public bool IncludesTax { get; private set; }
     public DateTime ValidFrom { get; private set; }
-    /// <summary>Fin exclusivo; null = vigente sin fin.</summary>
+    /// <summary>Exclusive end; null = in force with no end.</summary>
     public DateTime? ValidTo { get; private set; }
 
     private ProductPrice() { }
@@ -91,8 +91,8 @@ public sealed class ProductPrice : AuditableEntity, ITenantEntity
     public bool IsValidAt(DateTime at) => ValidFrom <= at && (ValidTo is null || ValidTo > at);
 
     /// <summary>
-    /// Abre una vigencia nueva sobre el historial de precios del mismo producto y sucursal. Debe empezar
-    /// después de la última vigencia existente; la que siga abierta se cierra donde empieza la nueva.
+    /// Opens a new validity period over the price history of the same product and branch. It must start
+    /// after the last existing validity; the one still open is closed where the new one starts.
     /// </summary>
     public static ProductPrice Open(Guid companyId, Guid productId, Guid? branchId, decimal amount, bool includesTax,
         DateTime validFrom, IReadOnlyCollection<ProductPrice> history)
@@ -118,7 +118,7 @@ public sealed class ProductPrice : AuditableEntity, ITenantEntity
         };
     }
 
-    /// <summary>Precio que rige en una sucursal: el de la sucursal si hay uno vigente; si no, el base.</summary>
+    /// <summary>The price in force at a branch: the branch's if there is a current one; otherwise the base one.</summary>
     public static ProductPrice? EffectiveAt(IEnumerable<ProductPrice> prices, Guid? branchId, DateTime at)
     {
         var valid = prices.Where(p => p.IsValidAt(at)).ToList();
@@ -127,7 +127,7 @@ public sealed class ProductPrice : AuditableEntity, ITenantEntity
     }
 }
 
-/// <summary>Disponibilidad de un producto en una sucursal (HU-3.3). Sin fila = disponible.</summary>
+/// <summary>Availability of a product at a branch (US-3.3). No row = available.</summary>
 public sealed class BranchProduct : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }

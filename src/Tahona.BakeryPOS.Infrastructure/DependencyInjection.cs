@@ -26,8 +26,8 @@ public static class DependencyInjection
         var connection = configuration.GetConnectionString(AppDatabase.ConnectionStringName)
             ?? throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection (PostgreSQL).");
 
-        // Una fábrica por petición (scoped) para que cada contexto reciba el ITenantContext de la petición;
-        // el contexto de la petición se comparte entre IAppDbContext e IOutbox (misma transacción).
+        // One factory per request (scoped) so that each context receives the request's ITenantContext;
+        // the request's context is shared between IAppDbContext and IOutbox (same transaction).
         services.AddDbContextFactory<AppDbContext>(options => options.UseAppDatabase(connection, retryOnFailure: true),
             ServiceLifetime.Scoped);
         services.AddScoped(sp => sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
@@ -42,9 +42,9 @@ public static class DependencyInjection
         services.AddScoped<IdempotencyStore>();
         services.AddScoped<IAuditLogReader, AuditLogReader>();
 
-        // Pagos y facturación: credenciales cifradas con Data Protection. Fuera de desarrollo sus llaves viven en
-        // DataProtection:KeysPath (volumen persistente con copia de seguridad, runbook): si se pierden, hay que volver a
-        // escribir las llaves de Bold y Siigo. Cliente de Bold sin reintentos automáticos (un cobro repetido llega dos veces).
+        // Payments and invoicing: credentials encrypted with Data Protection. Outside development its keys live in
+        // DataProtection:KeysPath (a persistent volume with backup, runbook): if they are lost, the Bold and Siigo
+        // keys must be typed again. Bold client without automatic retries (a repeated charge arrives twice).
         var dataProtection = services.AddDataProtection().SetApplicationName("BakeryPOS");
         if (configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
             dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
@@ -56,7 +56,7 @@ public static class DependencyInjection
             http.Timeout = TimeSpan.FromSeconds(bold.TimeoutSeconds);
         });
 
-        // Facturación electrónica: cliente de Siigo (token por empresa en memoria, sin reintentos propios).
+        // Electronic invoicing: Siigo client (token per company in memory, no retries of its own).
         var siigo = configuration.GetSection(SiigoOptions.Section).Get<SiigoOptions>() ?? new SiigoOptions();
         services.AddSingleton(siigo);
         services.AddHttpClient<ISiigoClient, SiigoClient>(http =>

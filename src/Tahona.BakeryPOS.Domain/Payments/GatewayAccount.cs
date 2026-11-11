@@ -10,19 +10,19 @@ public enum GatewayEnvironment
 }
 
 /// <summary>
-/// Credenciales de la pasarela por empresa y ambiente. Las llaves se guardan cifradas (las cifra la
-/// infraestructura); el dominio nunca ve el valor en claro. Solo un ambiente activo por empresa.
+/// Gateway credentials per company and environment. The keys are stored encrypted (infrastructure
+/// encrypts them); the domain never sees the clear value. Only one active environment per company.
 /// </summary>
 public sealed class GatewayAccount : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }
     public string Provider { get; private set; } = PaymentAttempt.Bold;
     public GatewayEnvironment Environment { get; private set; }
-    /// <summary>Llave de identidad (<c>Authorization: x-api-key</c>), cifrada.</summary>
+    /// <summary>Identity key (<c>Authorization: x-api-key</c>), encrypted.</summary>
     public string EncryptedIdentityKey { get; private set; } = string.Empty;
-    /// <summary>Llave secreta (firma del webhook), cifrada; null = vacía (en pruebas Bold firma con llave vacía).</summary>
+    /// <summary>Secret key (webhook signature), encrypted; null = empty (in tests Bold signs with an empty key).</summary>
     public string? EncryptedSecretKey { get; private set; }
-    /// <summary>Correo del vendedor en Bold (<c>user_email</c> del cobro).</summary>
+    /// <summary>The seller's email at Bold (the charge's <c>user_email</c>).</summary>
     public string SellerEmail { get; private set; } = string.Empty;
     public bool IsActive { get; private set; }
 
@@ -49,7 +49,7 @@ public sealed class GatewayAccount : AuditableEntity, ITenantEntity
     public void Deactivate() => IsActive = false;
 }
 
-/// <summary>Datáfono Bold asignado a una caja: a él se envían los cobros de esa caja.</summary>
+/// <summary>Bold card terminal assigned to a register: that register's charges are sent to it.</summary>
 public sealed class RegisterTerminal : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }

@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 
 /// <summary>
-/// Consulta <c>aud.audit_logs</c>. La tabla no tiene filtro global por empresa (también guarda cambios
-/// de plataforma), así que la empresa se filtra aquí, siempre.
+/// Queries <c>aud.audit_logs</c>. The table has no global company filter (it also stores platform
+/// changes), so the company is filtered here, always.
 /// </summary>
 internal sealed class AuditLogReader : IAuditLogReader
 {
@@ -26,7 +26,7 @@ internal sealed class AuditLogReader : IAuditLogReader
         if (f.To is { } to) query = query.Where(a => a.OccurredAt <= to);
 
         var total = await query.CountAsync(ct);
-        // Usuarios globales (sin filtro por empresa): solo se lee el nombre de quien hizo el cambio.
+        // Global users (no company filter): only the name of whoever made the change is read.
         var items = await query
             .OrderByDescending(a => a.OccurredAt).ThenByDescending(a => a.Id)
             .Skip((f.Page - 1) * f.PageSize).Take(f.PageSize)

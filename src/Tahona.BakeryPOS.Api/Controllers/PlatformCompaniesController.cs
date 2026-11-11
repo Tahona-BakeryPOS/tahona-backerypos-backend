@@ -10,15 +10,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>
-/// Administración de plataforma (D-09): alta y lista de empresas, sin datos de su operación.
-/// El alta no usa Idempotency-Key porque la respuesta trae la contraseña de un solo uso del
-/// propietario y no debe quedar guardada; un reintento choca con NIT_DUPLICADO.
+/// Platform administration (D-09): company onboarding and listing, with no data about their operation.
+/// Onboarding does not use Idempotency-Key because the response carries the owner's one-time password
+/// and it must not be stored; a retry collides with NIT_DUPLICADO.
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/plataforma/empresas")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.PlataformaAdmin)]
+[RequirePermission(Permissions.PlatformAdmin)]
 public sealed class PlatformCompaniesController : ControllerBase
 {
     private readonly ISender _mediator;

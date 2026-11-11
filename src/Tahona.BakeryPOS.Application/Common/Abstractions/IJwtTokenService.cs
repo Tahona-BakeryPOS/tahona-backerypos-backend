@@ -1,16 +1,16 @@
 namespace Tahona.BakeryPOS.Application.Common.Abstractions;
 
-/// <summary>Emite tokens de acceso. El login decide qué empresa, permisos y alcance van en el token.</summary>
+/// <summary>Issues access tokens. The login decides which company, permissions and scope go in the token.</summary>
 public interface IJwtTokenService
 {
     IssuedToken CreateAccessToken(AccessTokenRequest request);
 }
 
-/// <param name="CompanyId">Empresa activa; null antes de elegir empresa o para el administrador de plataforma.</param>
-/// <param name="BranchIds">Sucursales a las que alcanza; null = todas las de la empresa.</param>
-/// <param name="DeviceId">Equipo desde el que se entró con PIN (sesión de caja).</param>
-/// <param name="CashRegisterId">Caja del equipo (sesión de caja).</param>
-/// <param name="MustChangePassword">Sesión restringida: solo puede cambiar la contraseña.</param>
+/// <param name="CompanyId">Active company; null before choosing a company or for the platform administrator.</param>
+/// <param name="BranchIds">Branches it reaches; null = all of the company's.</param>
+/// <param name="DeviceId">Device from which the PIN sign-in happened (cash-register session).</param>
+/// <param name="CashRegisterId">The device's cash register (cash-register session).</param>
+/// <param name="MustChangePassword">Restricted session: it can only change the password.</param>
 public sealed record AccessTokenRequest(
     Guid UserId,
     string FullName,
@@ -24,13 +24,13 @@ public sealed record AccessTokenRequest(
 
 public sealed record IssuedToken(string Token, DateTime ExpiresAt);
 
-/// <summary>Hash de contraseñas y PIN (BCrypt). Nunca se guarda ni se registra el valor plano.</summary>
+/// <summary>Hash of passwords and PINs (BCrypt). The plain value is never stored or logged.</summary>
 public interface IPasswordHasher
 {
     string Hash(string secret);
 
     bool Verify(string secret, string hash);
 
-    /// <summary>Gasta el mismo tiempo que una verificación real: evita delatar por tiempo que el usuario no existe.</summary>
+    /// <summary>Spends the same time as a real verification: avoids revealing by timing that the user does not exist.</summary>
     void VerifyDummy(string secret);
 }

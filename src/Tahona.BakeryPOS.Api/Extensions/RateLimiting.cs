@@ -5,8 +5,8 @@ using Tahona.BakeryPOS.Api.Middleware;
 namespace Tahona.BakeryPOS.Api.Extensions;
 
 /// <summary>
-/// Límite por IP para los endpoints anónimos que reciben secretos (login, refresh, vinculación, PIN):
-/// frena la fuerza bruta antes de que llegue al bloqueo por usuario. Responde 429 LIMITE_EXCEDIDO.
+/// Per-IP limit for the anonymous endpoints that receive secrets (login, refresh, pairing, PIN):
+/// it slows brute force before it reaches the per-user lockout. Answers 429 LIMITE_EXCEDIDO.
 /// </summary>
 public static class RateLimiting
 {

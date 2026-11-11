@@ -10,17 +10,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Identity.Devices;
 
-/// <summary>Vincula este equipo a la caja del código. El token devuelto solo se muestra una vez.</summary>
+/// <summary>Pairs this device to the code's cash register. The token returned is only shown once.</summary>
 public sealed record PairDeviceCommand(string Code, string DeviceName) : IRequest<Result<PairedDeviceDto>>;
 
 public sealed record PairedDeviceDto(Guid DeviceId, string DeviceToken, Guid CompanyId, Guid BranchId, Guid CashRegisterId, string CashRegisterName);
 
-/// <summary>Usuarios que pueden entrar a la caja de este equipo (para tocar el nombre, HU-2.4).</summary>
+/// <summary>Users who can sign in to this device's cash register (to tap the name, US-2.4).</summary>
 public sealed record GetDeviceUsersQuery(string DeviceToken) : IRequest<Result<IReadOnlyList<DeviceUserDto>>>;
 
 public sealed record DeviceUserDto(Guid UserId, string FullName);
 
-/// <summary>Entrada a caja con PIN desde un equipo vinculado. 5 intentos fallidos bloquean 5 minutos.</summary>
+/// <summary>Cash-register sign-in with a PIN from a paired device. 5 failed attempts lock for 5 minutes.</summary>
 public sealed record LoginByPinCommand(string DeviceToken, Guid UserId, string Pin) : IRequest<Result<AuthSessionDto>>;
 
 public sealed class PairDeviceValidator : AbstractValidator<PairDeviceCommand>
@@ -42,8 +42,8 @@ public sealed class LoginByPinValidator : AbstractValidator<LoginByPinCommand>
 }
 
 /// <summary>
-/// Flujos autenticados por secreto de equipo, sin empresa en sesión: buscan por hash sin el filtro de
-/// empresa y luego trabajan solo con la empresa del equipo.
+/// Flows authenticated by a device secret, with no company in session: they look up by hash without the company
+/// filter and then work only with the device's company.
 /// </summary>
 public sealed class DeviceAuthHandler :
     IRequestHandler<PairDeviceCommand, Result<PairedDeviceDto>>,
@@ -140,7 +140,7 @@ public sealed class DeviceAuthHandler :
 
         if (!_hasher.Verify(request.Pin, membership.PinHash))
         {
-            // El cambio de la pertenencia queda en la auditoría: así el bloqueo queda registrado (HU-2.4).
+            // The membership change is left in the audit trail: this is how the lockout gets recorded (US-2.4).
             var locked = membership.RegisterFailedPin(now);
             await _db.SaveChangesAsync(ct);
             return Result.Failure<AuthSessionDto>(locked ? Error.UsuarioBloqueado(membership.PinLockedUntil!.Value) : Error.NoAutenticado);

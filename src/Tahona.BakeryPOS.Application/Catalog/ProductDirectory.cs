@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Catalog;
 
-/// <summary>Lo que otros módulos pueden consultar de los productos. Respeta el filtro por empresa.</summary>
+/// <summary>What other modules can query from products. Respects the company filter.</summary>
 public sealed class ProductDirectory : IProductDirectory
 {
     private readonly IAppDbContext _db;

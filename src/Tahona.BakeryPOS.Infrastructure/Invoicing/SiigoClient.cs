@@ -8,23 +8,23 @@ using Microsoft.Extensions.Logging;
 
 namespace Tahona.BakeryPOS.Infrastructure.Invoicing;
 
-/// <summary>Configuración de Siigo (sección "Siigo").</summary>
+/// <summary>Siigo configuration (the "Siigo" section).</summary>
 public sealed class SiigoOptions
 {
     public const string Section = "Siigo";
 
     public string BaseUrl { get; set; } = "https://api.siigo.com";
 
-    /// <summary>Nombre de la aplicación en el encabezado Partner-Id (el mismo para todas las empresas).</summary>
+    /// <summary>Application name in the Partner-Id header (the same for all companies).</summary>
     public string PartnerId { get; set; } = "BakeryPOS";
 
     public int TimeoutSeconds { get; set; } = 30;
 }
 
 /// <summary>
-/// Cliente de la API de Siigo (docs/electronic-invoicing.md §9): token por empresa (24 h, se renueva antes),
-/// encabezados <c>Authorization: Bearer</c> y <c>Partner-Id</c>. Las credenciales y el token nunca se registran.
-/// No reintenta las creaciones: el reintento lo hace el outbox con la misma Idempotency-Key.
+/// Siigo API client (docs/electronic-invoicing.md §9): a token per company (24 h, renewed early),
+/// <c>Authorization: Bearer</c> and <c>Partner-Id</c> headers. Credentials and the token are never logged.
+/// It does not retry creations: the retry is done by the outbox with the same Idempotency-Key.
 /// </summary>
 internal sealed class SiigoClient : ISiigoClient
 {
@@ -65,7 +65,7 @@ internal sealed class SiigoClient : ISiigoClient
         if (response.IsSuccessStatusCode)
             return (true, null);
         var errors = await ErrorsAsync(response, ct);
-        // Ya existía con ese código: sirve igual (por verificar el código exacto de error de Siigo).
+        // It already existed with that code: it works just the same (the exact Siigo error code is to be verified).
         if (response.StatusCode == HttpStatusCode.BadRequest
             && (errors.Contains("already", StringComparison.OrdinalIgnoreCase) || errors.Contains("existe", StringComparison.OrdinalIgnoreCase)))
             return (true, null);
@@ -115,8 +115,8 @@ internal sealed class SiigoClient : ISiigoClient
 
     public async Task<SiigoInvoiceResult> CreateCreditNoteAsync(SiigoCredentials c, SiigoCreditNote note, string idempotencyKey, CancellationToken ct)
     {
-        // Campos según developers.siigo.com (credit-note/1-create-credit-note). taxed_price aparece en el ejemplo del
-        // spec y no en la guía de Colombia: por verificar en habilitación, igual que el descuento.
+        // Fields per developers.siigo.com (credit-note/1-create-credit-note). taxed_price appears in the spec's
+        // example and not in the Colombia guide: to verify in the test environment, like the discount.
         var body = new
         {
             document = new { id = note.DocumentTypeId },
@@ -152,7 +152,7 @@ internal sealed class SiigoClient : ISiigoClient
             return null;
         if (response.Content.Headers.ContentType?.MediaType == "application/pdf")
             return await response.Content.ReadAsByteArrayAsync(ct);
-        // Formato por verificar: si viene como JSON, se toma el campo base64.
+        // Format to verify: if it comes as JSON, the base64 field is taken.
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         return Str(doc.RootElement, "base64") is { } b64 ? Convert.FromBase64String(b64) : null;
     }
@@ -202,7 +202,7 @@ internal sealed class SiigoClient : ISiigoClient
         if (!response.IsSuccessStatusCode)
             throw new GatewayUnavailableException($"Siigo respondió {(int)response.StatusCode}: {await ErrorsAsync(response, ct)}");
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
-        // Algunos catálogos vienen paginados ({ results: [...] }) y otros como arreglo.
+        // Some catalogs come paginated ({ results: [...] }) and others as an array.
         var list = doc.RootElement.ValueKind == JsonValueKind.Array ? doc.RootElement
             : doc.RootElement.TryGetProperty("results", out var r) ? r : default;
         return list.ValueKind == JsonValueKind.Array ? list.EnumerateArray().Select(map).ToList() : [];
@@ -222,7 +222,7 @@ internal sealed class SiigoClient : ISiigoClient
         return response;
     }
 
-    /// <summary><c>POST /auth</c> con usuario y llave de acceso; el token dura 24 h y se renueva una hora antes.</summary>
+    /// <summary><c>POST /auth</c> with user and access key; the token lasts 24 h and is renewed an hour early.</summary>
     private async Task<string> TokenAsync(SiigoCredentials c, CancellationToken ct)
     {
         if (Tokens.TryGetValue(Key(c), out var cached) && cached.ExpiresAt > DateTime.UtcNow)

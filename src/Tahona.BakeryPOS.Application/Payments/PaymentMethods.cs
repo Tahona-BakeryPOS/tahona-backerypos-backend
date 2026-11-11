@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Payments;
 
 /// <param name="Kind"><c>cash</c>, <c>gateway</c>, <c>external_card</c> o <c>transfer_manual</c>.</param>
-/// <param name="GatewayMethod">Con <c>gateway</c>: <c>POS</c>, <c>NEQUI</c> o <c>PAY_BY_QR_BOLD</c>.</param>
+/// <param name="GatewayMethod">With <c>gateway</c>: <c>POS</c>, <c>NEQUI</c> or <c>PAY_BY_QR_BOLD</c>.</param>
 public sealed record PaymentMethodDto(Guid Id, string Code, string Name, string Kind, string? GatewayMethod, bool RequiresReference,
     int DisplayOrder, bool IsActive, string Version)
 {
@@ -19,11 +19,11 @@ public sealed record PaymentMethodDto(Guid Id, string Code, string Name, string 
 
 public sealed record GetPaymentMethodsQuery : IRequest<Result<IReadOnlyList<PaymentMethodDto>>>;
 
-/// <summary>Crea un medio. El efectivo ya existe; la pasarela solo admite los métodos de Bold.</summary>
+/// <summary>Creates a method. Cash already exists; the gateway only accepts Bold's methods.</summary>
 public sealed record CreatePaymentMethodCommand(string Code, string Name, string Kind, string? GatewayMethod, bool RequiresReference, int DisplayOrder)
     : IRequest<Result<PaymentMethodDto>>;
 
-/// <summary>Nombre, referencia, orden y estado. Exige la versión leída (If-Match).</summary>
+/// <summary>Name, reference, order and status. Requires the version read (If-Match).</summary>
 public sealed record UpdatePaymentMethodCommand(Guid Id, string? ExpectedVersion, string Name, bool RequiresReference, int DisplayOrder, bool IsActive)
     : IRequest<Result<PaymentMethodDto>>;
 
@@ -118,7 +118,7 @@ public sealed class PaymentMethodsHandler :
     }
 }
 
-/// <summary>Medios de pago con que nace cada empresa (I-23).</summary>
+/// <summary>Payment methods each company is born with (I-23).</summary>
 public sealed class PaymentsProvisioning : IPaymentsProvisioning
 {
     private readonly IAppDbContext _db;

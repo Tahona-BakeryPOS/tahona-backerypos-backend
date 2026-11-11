@@ -8,21 +8,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Tahona.BakeryPOS.Infrastructure.Payments;
 
-/// <summary>Configuración de Bold (sección "Bold"). La URL base es la misma en pruebas y producción.</summary>
+/// <summary>Bold configuration (the "Bold" section). The base URL is the same in test and production.</summary>
 public sealed class BoldOptions
 {
     public const string Section = "Bold";
 
     public string BaseUrl { get; set; } = "https://integrations.api.bold.co";
 
-    /// <summary>Tiempo máximo para crear el cobro; si se agota, el intento queda "unknown".</summary>
+    /// <summary>Maximum time to create the charge; if it runs out, the attempt is left "unknown".</summary>
     public int TimeoutSeconds { get; set; } = 20;
 }
 
 /// <summary>
-/// Cliente de la API de datáfono de Bold (docs/payment-integration.md §11). Las llaves nunca se registran.
-/// Los nombres del monto siguen el ejemplo de la documentación (<c>total_amount</c>, <c>tip_amount</c>); la
-/// tabla de la misma página dice <c>total</c>/<c>tip</c>: si el sandbox responde AP005/AP006, se cambia aquí.
+/// Client of Bold's card-terminal API (docs/payment-integration.md §11). Keys are never logged.
+/// The amount names follow the documentation's example (<c>total_amount</c>, <c>tip_amount</c>); the
+/// table on the same page says <c>total</c>/<c>tip</c>: if the sandbox answers AP005/AP006, it is changed here.
 /// </summary>
 internal sealed class BoldGateway : IBoldGateway
 {
@@ -68,7 +68,7 @@ internal sealed class BoldGateway : IBoldGateway
 
             var (code, text) = envelope?.FirstError() ?? ($"HTTP{(int)response.StatusCode}", response.ReasonPhrase ?? "Error");
             _logger.LogWarning("Bold rechazó el cobro {Reference}: {Status} {Code} {Message}", request.Reference, (int)response.StatusCode, code, text);
-            // 5xx (AP001 incluido) no garantiza que el cobro no se creó: se trata como desconocido.
+            // A 5xx (AP001 included) does not guarantee the charge was not created: it is treated as unknown.
             return (int)response.StatusCode >= 500
                 ? new BoldCheckoutResult(BoldCheckoutOutcome.Unknown, null, code, text)
                 : new BoldCheckoutResult(BoldCheckoutOutcome.Rejected, null, code, text);
@@ -159,7 +159,7 @@ internal static class JsonElementExtensions
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var v) && v.ValueKind != JsonValueKind.Null ? v.ToString() : null;
 }
 
-/// <summary>Cifra las llaves de la pasarela con ASP.NET Core Data Protection (propósito propio).</summary>
+/// <summary>Encrypts the gateway keys with ASP.NET Core Data Protection (its own purpose).</summary>
 internal sealed class DataProtectionSecretProtector(IDataProtectionProvider provider) : ISecretProtector
 {
     private readonly IDataProtector _protector = provider.CreateProtector("BakeryPOS.Payments.GatewayKeys.v1");

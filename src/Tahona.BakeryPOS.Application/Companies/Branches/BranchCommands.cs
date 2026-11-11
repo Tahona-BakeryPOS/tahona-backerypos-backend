@@ -8,11 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Companies.Branches;
 
-/// <summary>Edita una sucursal (el código no cambia). Exige la versión leída (If-Match).</summary>
+/// <summary>Edits a branch (the code does not change). Requires the version read (If-Match).</summary>
 public sealed record UpdateBranchCommand(Guid Id, string? ExpectedVersion, string Name, string? Address, string? CityCode, string? Phone)
     : IRequest<Result<BranchDto>>;
 
-/// <summary>Desactiva una sucursal: no se borra porque puede tener ventas (HU-1.3).</summary>
+/// <summary>Deactivates a branch: it is not deleted because it may have sales (US-1.3).</summary>
 public sealed record DeactivateBranchCommand(Guid Id) : IRequest<Result<BranchDto>>;
 
 public sealed class UpdateBranchValidator : AbstractValidator<UpdateBranchCommand>
@@ -44,7 +44,7 @@ public sealed class CreateBranchHandler : IRequestHandler<CreateBranchCommand, R
     {
         var code = request.Code.Trim().ToUpperInvariant();
 
-        // El filtro por empresa limita la búsqueda a las sucursales propias.
+        // The company filter limits the search to the company's own branches.
         if (await _db.Branches.IgnoreQueryFilters([QueryFilters.SoftDelete]).AnyAsync(b => b.Code == code, ct))
             return Result.Failure<BranchDto>(Error.CodigoDuplicado);
 

@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Payments;
 
 /// <summary>
-/// Pagos de una venta. Efectivo, transferencia y datáfono externo quedan aprobados al registrarse; los de
-/// Bold se cobran en el datáfono y quedan pendientes hasta el webhook o la resolución manual (I-23).
+/// A sale's payments. Cash, transfer and external card terminal are approved when recorded; Bold ones
+/// are charged on the card terminal and stay pending until the webhook or the manual resolution (I-23).
 /// </summary>
 public sealed class SalePayments : ISalePayments
 {

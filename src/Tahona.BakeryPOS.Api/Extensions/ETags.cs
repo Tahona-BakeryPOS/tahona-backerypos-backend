@@ -4,12 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Tahona.BakeryPOS.Api.Extensions;
 
 /// <summary>
-/// ETag/If-Match de datos maestros (docs/api-contracts.md): el GET y el PUT devuelven <c>ETag</c> con la
-/// versión de la fila; el PUT exige <c>If-Match</c> (428 si falta, 412 si cambió).
+/// ETag/If-Match for master data (docs/api-contracts.md): GET and PUT return <c>ETag</c> with the
+/// row version; PUT requires <c>If-Match</c> (428 if missing, 412 if it changed).
 /// </summary>
 public static class ETags
 {
-    /// <summary>Versión enviada en If-Match, sin comillas ni prefijo débil.</summary>
+    /// <summary>Version sent in If-Match, without quotes or weak prefix.</summary>
     public static string? IfMatch(this HttpRequest request)
     {
         var value = request.Headers.IfMatch.ToString().Trim();

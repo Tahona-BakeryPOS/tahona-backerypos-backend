@@ -4,8 +4,8 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Companies;
 
 /// <summary>
-/// Sucursal (sede) de una empresa. Código único dentro de la empresa e inmutable; una sucursal no se
-/// borra, se desactiva (HU-1.3).
+/// Branch (site) of a company. Code unique within the company and immutable; a branch is not
+/// deleted, it is deactivated (US-1.3).
 /// </summary>
 public sealed class Branch : AuditableEntity, ITenantEntity
 {

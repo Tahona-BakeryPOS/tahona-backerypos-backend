@@ -4,12 +4,12 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Inventory;
 
 /// <summary>
-/// Lugar donde hay existencias dentro de una sucursal ("Mostrador", "Vitrina", "Bodega"). Cada sucursal
-/// tiene una por defecto, que es donde descuentan las ventas. Sin transferencias en el MVP.
+/// A place where there is stock within a branch ("Mostrador", "Vitrina", "Bodega"). Each branch
+/// has a default one, which is where sales deduct. No transfers in the MVP.
 /// </summary>
 public sealed class StockLocation : AuditableEntity, ITenantEntity
 {
-    public const string DefaultCode = "MOSTRADOR";
+    public const string DefaultCode = "COUNTER";
     public const string DefaultName = "Mostrador";
 
     public Guid CompanyId { get; private set; }
@@ -41,15 +41,15 @@ public enum AdjustmentDirection
 {
     In,
     Out,
-    /// <summary>Entrada o salida según el signo (correcciones, conteo físico).</summary>
+    /// <summary>Entry or exit according to the sign (corrections, physical count).</summary>
     Both,
 }
 
-/// <summary>Motivo de un ajuste de inventario (merma, daño, producción, conteo…). Obligatorio en todo ajuste.</summary>
+/// <summary>Reason for an inventory adjustment (waste, damage, production, count…). Mandatory on every adjustment.</summary>
 public sealed class AdjustmentReason : AuditableEntity, ITenantEntity
 {
-    /// <summary>Motivo que usa el conteo físico para sus ajustes.</summary>
-    public const string PhysicalCountCode = "CONTEO";
+    /// <summary>Reason the physical count uses for its adjustments.</summary>
+    public const string PhysicalCountCode = "PHYSICAL_COUNT";
 
     public Guid CompanyId { get; private set; }
     public string Code { get; private set; } = string.Empty;
@@ -76,17 +76,17 @@ public sealed class AdjustmentReason : AuditableEntity, ITenantEntity
     };
 }
 
-/// <summary>Motivos con que nace cada empresa. Supuesto razonable por confirmar con el dueño (I-21).</summary>
+/// <summary>Reasons each company is born with. A reasonable assumption to confirm with the owner (I-21).</summary>
 public static class DefaultAdjustmentReasons
 {
     public static readonly IReadOnlyList<(string Code, string Name, AdjustmentDirection Direction)> All =
     [
-        ("PRODUCCION", "Producción del día", AdjustmentDirection.In),
-        ("COMPRA", "Compra o recepción", AdjustmentDirection.In),
-        ("MERMA", "Merma (no vendido)", AdjustmentDirection.Out),
-        ("DANO", "Daño o vencimiento", AdjustmentDirection.Out),
-        ("CONSUMO", "Consumo interno", AdjustmentDirection.Out),
+        ("PRODUCTION", "Producción del día", AdjustmentDirection.In),
+        ("PURCHASE", "Compra o recepción", AdjustmentDirection.In),
+        ("WASTE", "Merma (no vendido)", AdjustmentDirection.Out),
+        ("DAMAGE", "Daño o vencimiento", AdjustmentDirection.Out),
+        ("INTERNAL_USE", "Consumo interno", AdjustmentDirection.Out),
         (AdjustmentReason.PhysicalCountCode, "Conteo físico", AdjustmentDirection.Both),
-        ("CORRECCION", "Corrección", AdjustmentDirection.Both),
+        ("CORRECTION", "Corrección", AdjustmentDirection.Both),
     ];
 }

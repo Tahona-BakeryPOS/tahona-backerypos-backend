@@ -6,16 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Identity.Auth;
 
-/// <summary>Duraciones de sesión (sección "Jwt" de la configuración).</summary>
+/// <summary>Session durations (the "Jwt" section of the configuration).</summary>
 public sealed class SessionOptions
 {
     public int RefreshTokenDays { get; set; } = 14;
     public int CashierTokenMinutes { get; set; } = 720;
 }
 
-/// <summary>Respuesta de login, selección de empresa, refresh y cambio de contraseña.</summary>
-/// <param name="RefreshToken">Solo backoffice; la sesión de caja se renueva con el PIN.</param>
-/// <param name="CompanyId">Empresa del token; null si aún debe elegir una (ver <paramref name="Companies"/>).</param>
+/// <summary>Response of login, company selection, refresh and password change.</summary>
+/// <param name="RefreshToken">Backoffice only; the cash-register session is renewed with the PIN.</param>
+/// <param name="CompanyId">The token's company; null if one still has to be chosen (see <paramref name="Companies"/>).</param>
 public sealed record AuthSessionDto(
     string AccessToken,
     DateTime ExpiresAt,
@@ -28,13 +28,13 @@ public sealed record AuthSessionDto(
     bool IsPlatformAdmin,
     IReadOnlyList<CompanySummary> Companies);
 
-/// <summary>Permisos y alcance de una pertenencia según sus asignaciones vigentes.</summary>
-/// <param name="BranchIds">null = todas las sucursales.</param>
+/// <summary>Permissions and scope of a membership according to its current assignments.</summary>
+/// <param name="BranchIds">null = all branches.</param>
 public sealed record Grant(IReadOnlyList<string> Permissions, IReadOnlyList<Guid>? BranchIds, bool HasAnyAssignment);
 
 /// <summary>
-/// Arma sesiones: calcula permisos desde los roles vigentes y emite access + refresh token. No guarda:
-/// el handler que lo usa llama a SaveChanges (los cambios de la sesión van en la misma transacción).
+/// Builds sessions: computes permissions from the current roles and issues access + refresh token. It does not save:
+/// the handler that uses it calls SaveChanges (the session's changes go in the same transaction).
 /// </summary>
 public sealed class SessionIssuer
 {
@@ -55,7 +55,7 @@ public sealed class SessionIssuer
 
     private DateTime Now => _clock.GetUtcNow().UtcDateTime;
 
-    /// <summary>Empresas activas donde el usuario tiene una pertenencia activa.</summary>
+    /// <summary>Active companies where the user has an active membership.</summary>
     public async Task<IReadOnlyList<CompanySummary>> CompaniesOfAsync(Guid userId, CancellationToken ct)
     {
         var ids = await _db.Memberships.IgnoreQueryFilters([QueryFilters.Tenant])
@@ -65,7 +65,7 @@ public sealed class SessionIssuer
         return await _companies.GetActiveAsync(ids, ct);
     }
 
-    /// <summary>Pertenencia activa del usuario en una empresa activa, o null.</summary>
+    /// <summary>The user's active membership in an active company, or null.</summary>
     public async Task<Membership?> ActiveMembershipAsync(Guid userId, Guid companyId, CancellationToken ct)
     {
         var companies = await _companies.GetActiveAsync([companyId], ct);
@@ -74,7 +74,7 @@ public sealed class SessionIssuer
             .FirstOrDefaultAsync(m => m.UserId == userId && m.CompanyId == companyId && m.IsActive, ct);
     }
 
-    /// <summary>Permisos de las asignaciones vigentes; con <paramref name="branchId"/>, solo las que cubren esa sucursal.</summary>
+    /// <summary>Permissions of the current assignments; with <paramref name="branchId"/>, only those that cover that branch.</summary>
     public async Task<Grant> GrantOfAsync(Guid membershipId, Guid? branchId, CancellationToken ct)
     {
         var now = Now;
@@ -91,7 +91,7 @@ public sealed class SessionIssuer
             .Where(r => roleIds.Contains(r.Id))
             .SelectMany(r => r.Permissions)
             .Join(_db.Permissions, rp => rp.PermissionId, p => p.Id, (rp, p) => p.Code)
-            .Where(code => code != Permissions.PlataformaAdmin)
+            .Where(code => code != Permissions.PlatformAdmin)
             .Distinct()
             .ToListAsync(ct);
 
@@ -102,8 +102,8 @@ public sealed class SessionIssuer
     }
 
     /// <summary>
-    /// Sesión de backoffice. Sin empresa: sesión para elegir empresa (o de plataforma si es administrador).
-    /// Si <paramref name="replacing"/> viene, ese refresh token queda rotado.
+    /// Backoffice session. Without a company: a session to choose a company (or a platform one if they are an administrator).
+    /// If <paramref name="replacing"/> is given, that refresh token is left rotated.
     /// </summary>
     public async Task<AuthSessionDto> IssueBackofficeAsync(User user, Membership? membership, CancellationToken ct, RefreshToken? replacing = null)
     {
@@ -114,7 +114,7 @@ public sealed class SessionIssuer
         IReadOnlyList<Guid>? branches = null;
         if (user.MustChangePassword)
         {
-            membership = null; // sesión restringida: solo puede cambiar la contraseña
+            membership = null; // restricted session: it can only change the password
         }
         else if (membership is not null)
         {
@@ -124,7 +124,7 @@ public sealed class SessionIssuer
         }
         else if (user.IsPlatformAdmin)
         {
-            permissions = [Permissions.PlataformaAdmin];
+            permissions = [Permissions.PlatformAdmin];
         }
 
         var access = _jwt.CreateAccessToken(new AccessTokenRequest(
@@ -146,7 +146,7 @@ public sealed class SessionIssuer
             permissions, user.MustChangePassword, user.IsPlatformAdmin, companies);
     }
 
-    /// <summary>Sesión de caja: permisos de la sucursal de la caja, ligada al equipo; sin refresh token.</summary>
+    /// <summary>Cash-register session: permissions of the register's branch, tied to the device; no refresh token.</summary>
     public AuthSessionDto IssueCashier(User user, Membership membership, Grant grant, Guid branchId, Guid deviceId, Guid cashRegisterId)
     {
         var access = _jwt.CreateAccessToken(new AccessTokenRequest(
@@ -156,7 +156,7 @@ public sealed class SessionIssuer
             grant.Permissions, false, false, []);
     }
 
-    /// <summary>Cierra todas las sesiones de backoffice del usuario (o solo las de una empresa).</summary>
+    /// <summary>Closes all of the user's backoffice sessions (or only those of one company).</summary>
     public async Task RevokeAllAsync(Guid userId, Guid? companyId, CancellationToken ct)
     {
         var now = Now;

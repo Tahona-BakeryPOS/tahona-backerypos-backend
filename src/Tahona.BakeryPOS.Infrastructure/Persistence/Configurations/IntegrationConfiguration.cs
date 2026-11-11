@@ -47,7 +47,7 @@ internal sealed class InboundEventConfiguration : IEntityTypeConfiguration<Inbou
         builder.Property(e => e.ExternalEventId).HasMaxLength(200).IsUnicode(false).IsRequired();
         builder.Property(e => e.Status).HasMaxLength(20).IsUnicode(false).IsRequired();
         builder.Property(e => e.LastError).HasMaxLength(2000);
-        // Deduplicación de webhooks: el mismo evento del mismo proveedor solo se registra una vez.
+        // Webhook deduplication: the same event from the same provider is only recorded once.
         builder.HasIndex(e => new { e.Provider, e.ExternalEventId }).IsUnique();
     }
 }

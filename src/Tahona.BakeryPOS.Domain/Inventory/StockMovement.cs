@@ -13,10 +13,10 @@ public enum StockMovementKind
     AdjustmentOut,
 }
 
-/// <summary>Orígenes de un movimiento: junto con su id forman la clave idempotente.</summary>
+/// <summary>Origins of a movement: together with its id they form the idempotent key.</summary>
 public static class StockSources
 {
-    /// <summary>Existencia inicial: el origen es la ubicación, la línea es el producto (una sola vez por par).</summary>
+    /// <summary>Initial stock: the origin is the location, the line is the product (only once per pair).</summary>
     public const string Initial = "initial";
     public const string Adjustment = "adjustment";
     public const string PhysicalCount = "count";
@@ -25,9 +25,9 @@ public static class StockSources
 }
 
 /// <summary>
-/// Movimiento de inventario: libro mayor de solo inserción, cantidad con signo. Nunca se edita ni se
-/// borra; los errores se corrigen con otro movimiento. La clave (empresa, tipo, origen, id, línea) es
-/// única: registrar dos veces el mismo hecho no mueve dos veces el saldo.
+/// Inventory movement: an insert-only ledger, signed quantity. It is never edited or
+/// deleted; mistakes are corrected with another movement. The key (company, kind, source, id, line) is
+/// unique: recording the same fact twice does not move the balance twice.
 /// </summary>
 public sealed class StockMovement : AuditableEntity, ITenantEntity
 {
@@ -38,12 +38,12 @@ public sealed class StockMovement : AuditableEntity, ITenantEntity
     public StockMovementKind Kind { get; private set; }
     public string SourceType { get; private set; } = string.Empty;
     public Guid SourceId { get; private set; }
-    /// <summary>Línea del origen; <see cref="Guid.Empty"/> si el origen no tiene líneas.</summary>
+    /// <summary>Line of the source; <see cref="Guid.Empty"/> if the source has no lines.</summary>
     public Guid SourceLineId { get; private set; }
     public Guid? ReasonId { get; private set; }
-    /// <summary>Quién registró el movimiento.</summary>
+    /// <summary>Who recorded the movement.</summary>
     public Guid? UserId { get; private set; }
-    /// <summary>Quién autorizó (ajustes, o vender sin existencias con política "bloquear").</summary>
+    /// <summary>Who authorized (adjustments, or selling without stock with a "block" policy).</summary>
     public Guid? AuthorizedBy { get; private set; }
     public string? Note { get; private set; }
     public DateTime OccurredAt { get; private set; }
@@ -78,9 +78,9 @@ public sealed class StockMovement : AuditableEntity, ITenantEntity
 }
 
 /// <summary>
-/// Saldo por (ubicación, producto): proyección de los movimientos, actualizada en la misma transacción
-/// que cada uno. Nunca se edita directamente. Su versión de fila evita que dos cajas vendan a la vez la
-/// última unidad sin verlo (la segunda falla por concurrencia y reintenta).
+/// Balance per (location, product): a projection of the movements, updated in the same transaction
+/// as each one. It is never edited directly. Its row version prevents two registers from selling the
+/// last unit at the same time without seeing it (the second fails on concurrency and retries).
 /// </summary>
 public sealed class StockBalance : AuditableEntity, ITenantEntity
 {
@@ -96,8 +96,8 @@ public sealed class StockBalance : AuditableEntity, ITenantEntity
         new() { CompanyId = companyId, LocationId = locationId, ProductId = productId };
 
     /// <summary>
-    /// Aplica el movimiento. Si el saldo quedaría negativo y el producto no lo permite (D-06), exige una
-    /// autorización; sin ella falla con EXISTENCIAS_INSUFICIENTES.
+    /// Applies the movement. If the balance would go negative and the product does not allow it (D-06), it requires an
+    /// authorization; without it, it fails with EXISTENCIAS_INSUFICIENTES.
     /// </summary>
     public void Apply(StockMovement movement, bool allowNegative)
     {

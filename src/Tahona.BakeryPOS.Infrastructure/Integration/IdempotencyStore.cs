@@ -6,24 +6,24 @@ namespace Tahona.BakeryPOS.Infrastructure.Integration;
 
 public abstract record IdempotencyDecision
 {
-    /// <summary>Primera vez: ejecutar la operación y luego llamar a Complete o Release.</summary>
+    /// <summary>First time: run the operation and then call Complete or Release.</summary>
     public sealed record Proceed : IdempotencyDecision;
-    /// <summary>Ya se completó con el mismo contenido: devolver la respuesta guardada.</summary>
+    /// <summary>Already completed with the same content: return the stored response.</summary>
     public sealed record Replay(int StatusCode, string? Body) : IdempotencyDecision;
-    /// <summary>Misma clave, contenido distinto.</summary>
+    /// <summary>Same key, different content.</summary>
     public sealed record Mismatch : IdempotencyDecision;
-    /// <summary>Otra petición con la misma clave sigue en curso.</summary>
+    /// <summary>Another request with the same key is still in progress.</summary>
     public sealed record InProgress : IdempotencyDecision;
 }
 
 /// <summary>
-/// Almacén de respuestas idempotentes. Trabaja con su propio contexto y SQL directo para no mezclarse
-/// con los cambios (posiblemente fallidos) de la operación que protege. La reserva de la clave es un
-/// INSERT: si dos peticiones llegan a la vez, la base deja pasar solo una.
+/// Store of idempotent responses. It works with its own context and direct SQL so as not to mix
+/// with the (possibly failed) changes of the operation it protects. Reserving the key is an
+/// INSERT: if two requests arrive at the same time, the database lets only one through.
 /// </summary>
 public sealed class IdempotencyStore
 {
-    /// <summary>Una reserva sin completar más vieja que esto se considera abandonada (proceso caído).</summary>
+    /// <summary>An uncompleted reservation older than this is considered abandoned (process down).</summary>
     public static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(2);
 
     private readonly IDbContextFactory<AppDbContext> _factory;
@@ -61,7 +61,7 @@ public sealed class IdempotencyStore
         if (now - existing.CreatedAt < StaleAfter)
             return new IdempotencyDecision.InProgress();
 
-        // Reserva abandonada: se toma de nuevo solo si nadie la tomó entre tanto (condición en el UPDATE).
+        // Abandoned reservation: it is taken again only if nobody took it in the meantime (condition in the UPDATE).
         var taken = await db.IdempotencyRecords
             .Where(r => r.CompanyId == companyId && r.Key == key && r.Endpoint == endpoint
                 && r.Status == "in_progress" && r.CreatedAt == existing.CreatedAt)
@@ -82,7 +82,7 @@ public sealed class IdempotencyStore
                 .SetProperty(r => r.CompletedAt, now), ct);
     }
 
-    /// <summary>La operación falló de forma inesperada: se libera la clave para que el cliente reintente.</summary>
+    /// <summary>The operation failed unexpectedly: the key is released so the client can retry.</summary>
     public async Task ReleaseAsync(Guid companyId, string key, string endpoint, CancellationToken ct)
     {
         await using var db = await _factory.CreateDbContextAsync(ct);

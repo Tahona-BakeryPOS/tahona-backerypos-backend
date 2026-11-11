@@ -9,12 +9,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Tahona.BakeryPOS.Application.Invoicing;
 
-/// <summary>Mensaje de outbox que dispara el envío de un documento fiscal.</summary>
+/// <summary>Outbox message that triggers the submission of a fiscal document.</summary>
 public sealed record FiscalSubmitMessage(Guid FiscalDocumentId);
 
 /// <summary>
-/// Crea la factura electrónica de una venta en la transacción del llamador y encola su envío (D-05:
-/// factura en cada venta, con el cliente o como consumidor final).
+/// Creates a sale's electronic invoice in the caller's transaction and enqueues its submission (D-17:
+/// optional per company; when on, an invoice for each sale, with the customer or as a final consumer).
 /// </summary>
 public sealed class FiscalDocumentIssuer : IFiscalDocumentIssuer
 {
@@ -63,8 +63,8 @@ public sealed class FiscalDocumentIssuer : IFiscalDocumentIssuer
             .FirstOrDefaultAsync(d => d.Kind == FiscalDocumentKind.CreditNote && d.SourceId == sourceId, ct);
         if (existing is not null)
             return existing.Id;
-        // Una factura rechazada nunca tuvo validez ante la DIAN: no se corrige con nota. Si la venta se anula, la
-        // factura se cancela para que nadie la reintente; en una devolución parcial queda como está (se corrige y reenvía).
+        // A rejected invoice was never valid before the DIAN: it is not corrected with a note. If the sale is voided, the
+        // invoice is cancelled so nobody retries it; on a partial return it stays as is (it is corrected and resent).
         if (invoice.Status == FiscalDocumentStatus.Rejected)
         {
             if (isVoid) invoice.Cancel("Venta anulada antes de que la factura fuera aceptada.");
@@ -74,7 +74,7 @@ public sealed class FiscalDocumentIssuer : IFiscalDocumentIssuer
         var invoiceSale = JsonSerializer.Deserialize<SaleFiscalSnapshot>(invoice.Payload)!;
         var snapshot = new SaleFiscalSnapshot(saleId, DateTime.UtcNow, invoiceSale.CustomerIdentification,
             lines ?? invoiceSale.Lines, payments ?? invoiceSale.Payments, isVoid ? invoice.Total : total);
-        // Si la factura sigue en trámite, la nota espera en el outbox hasta que sea aceptada (FiscalSubmitHandler).
+        // If the invoice is still in progress, the note waits in the outbox until it is accepted (FiscalSubmitHandler).
         var note = FiscalDocument.CreateCreditNote(invoice, sourceId, isVoid ? 2 : 1, JsonSerializer.Serialize(snapshot), snapshot.Total);
         _db.FiscalDocuments.Add(note);
         _outbox.Enqueue(SubmitMessage, new FiscalSubmitMessage(note.Id));
@@ -93,11 +93,11 @@ public sealed class FiscalDocumentIssuer : IFiscalDocumentIssuer
 }
 
 /// <summary>
-/// Envía un documento fiscal a Siigo desde el outbox (fuera de cualquier transacción de negocio). Reglas
-/// (electronic-invoicing.md §4 y §9): solo se acepta con CUFE; un resultado desconocido se reenvía con la
-/// misma Idempotency-Key, que en Siigo devuelve la factura ya creada (sirve de consulta); un rechazo no se
-/// reintenta solo. Cada paso queda en <c>fiscal_submission_attempts</c>. Lanzar una excepción deja el
-/// mensaje para reintento con espera (OutboxProcessor).
+/// Sends a fiscal document to Siigo from the outbox (outside any business transaction). Rules
+/// (electronic-invoicing.md §4 and §9): it is only accepted with a CUFE; an unknown result is resent with the
+/// same Idempotency-Key, which in Siigo returns the invoice already created (it works as a query); a rejection is not
+/// retried automatically. Each step is left in <c>fiscal_submission_attempts</c>. Throwing an exception leaves the
+/// message to be retried with a delay (OutboxProcessor).
 /// </summary>
 public sealed class FiscalSubmitHandler : IOutboxHandler
 {
@@ -122,15 +122,15 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
 
     public async Task HandleAsync(OutboxEnvelope message, CancellationToken ct)
     {
-        // El outbox guarda el mensaje con JsonSerializerOptions.Web (camelCase).
+        // The outbox stores the message with JsonSerializerOptions.Web (camelCase).
         var id = JsonSerializer.Deserialize<FiscalSubmitMessage>(message.Payload, JsonSerializerOptions.Web)!.FiscalDocumentId;
-        // El outbox corre sin sesión de empresa: se filtra a mano por la empresa del mensaje.
+        // The outbox runs with no company session: it is filtered by hand by the message's company.
         var doc = await _db.FiscalDocuments.IgnoreQueryFilters([QueryFilters.Tenant])
             .FirstOrDefaultAsync(d => d.Id == id && d.CompanyId == message.CompanyId, ct);
         if (doc is null || doc.IsFinal || doc.Status == FiscalDocumentStatus.Rejected)
             return;
 
-        // Nota crédito: necesita la factura aceptada (con su id en Siigo). Mientras siga en trámite, se espera.
+        // Credit note: it needs the accepted invoice (with its id in Siigo). While it is still in progress, it waits.
         FiscalDocument? creditedInvoice = null;
         if (doc.Kind == FiscalDocumentKind.CreditNote)
         {
@@ -147,9 +147,9 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
             creditedInvoice = credited;
         }
 
-        // La facturación es opcional por empresa (D-17): apagarla solo impide crear documentos nuevos. Los que ya existen
-        // (facturas en trámite y notas crédito de ventas ya facturadas) se terminan de enviar con la configuración guardada,
-        // aunque el interruptor esté apagado; solo hace falta que la configuración siga completa.
+        // Invoicing is optional per company (D-17): turning it off only prevents creating new documents. Those that already exist
+        // (invoices in progress and credit notes of already-invoiced sales) are finished with the stored configuration,
+        // even if the switch is off; the configuration only has to remain complete.
         var settings = await _db.FiscalSettings.IgnoreQueryFilters([QueryFilters.Tenant]).AsNoTracking()
             .FirstOrDefaultAsync(s => s.CompanyId == doc.CompanyId, ct);
         doc.StartSubmission();
@@ -166,7 +166,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
             return;
         }
 
-        // Ya creado antes (desconocido o pendiente de DIAN): consultar, y enviar a la DIAN si quedó en borrador.
+        // Already created before (unknown or pending at the DIAN): query, and send to the DIAN if it was left as a draft.
         if (doc.ExternalId is not null)
         {
             var current = await _siigo.GetInvoiceAsync(credentials, doc.ExternalId, ct);
@@ -191,9 +191,9 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
     }
 
     /// <summary>
-    /// Nota crédito (<c>POST /v1/credit-notes</c>, electronic-invoicing.md §9): sobre la factura en Siigo, con el motivo DIAN,
-    /// lo devuelto y los medios reembolsados. Siigo no documenta reenvío a la DIAN de notas: si queda en borrador se consulta
-    /// de nuevo con <c>GET /v1/credit-notes/{id}</c>.
+    /// Credit note (<c>POST /v1/credit-notes</c>, electronic-invoicing.md §9): against the invoice in Siigo, with the DIAN reason,
+    /// what was returned and the refunded methods. Siigo does not document resending notes to the DIAN: if it is left as a draft it is queried
+    /// again with <c>GET /v1/credit-notes/{id}</c>.
     /// </summary>
     private async Task SubmitCreditNoteAsync(FiscalDocument doc, FiscalDocument invoice, FiscalSettings settings, SiigoCredentials credentials,
         CancellationToken ct)
@@ -236,7 +236,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
         await ApplyAsync(doc, settings, credentials, result, ct);
     }
 
-    /// <summary>Arma la factura con los emparejamientos; crea en Siigo los productos que aún no existen allí.</summary>
+    /// <summary>Builds the invoice with the pairings; creates in Siigo the products that do not exist there yet.</summary>
     private async Task<SiigoInvoice?> BuildAsync(FiscalDocument doc, FiscalSettings settings, SiigoCredentials credentials, SaleFiscalSnapshot sale, CancellationToken ct)
     {
         var mappings = await _db.FiscalMappings.IgnoreQueryFilters([QueryFilters.Tenant])
@@ -250,7 +250,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
             .ToList();
         if (missing.Count > 0)
         {
-            // Configuración incompleta: no es un rechazo de la DIAN; se corrige y se reintenta a mano.
+            // Incomplete configuration: it is not a DIAN rejection; it is corrected and retried by hand.
             doc.Reject($"Falta emparejar con Siigo: {string.Join(", ", missing)}.");
             _db.FiscalSubmissionAttempts.Add(FiscalSubmissionAttempt.Record(doc, "create", "rejected", null, doc.Errors, Now));
             await _db.SaveChangesAsync(ct);
@@ -302,7 +302,7 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
                     _logger.LogWarning("Factura {DocumentId} rechazada por la DIAN", doc.Id);
                     return;
                 }
-                // Borrador o sin CUFE todavía: queda desconocido y se vuelve a consultar.
+                // Draft or no CUFE yet: it is left unknown and queried again.
                 doc.MarkUnknown($"Siigo respondió sin resultado DIAN (estado {result.StampStatus ?? "vacío"}).");
                 await _db.SaveChangesAsync(ct);
                 throw new InvalidOperationException("Factura sin resultado DIAN; se consulta de nuevo.");
@@ -334,6 +334,6 @@ public sealed class FiscalSubmitHandler : IOutboxHandler
 
     private static bool IsDraft(string? status) => status is null || string.Equals(status, "Draft", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Siigo no acepta fechas anteriores a hoy: se usa la fecha de Colombia (UTC−5, sin horario de verano).</summary>
+    /// <summary>Siigo does not accept dates earlier than today: the Colombian date is used (UTC−5, no daylight saving time).</summary>
     private DateTime ColombiaToday() => Now.AddHours(-5).Date;
 }

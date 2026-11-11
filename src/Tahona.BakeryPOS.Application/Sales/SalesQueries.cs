@@ -14,10 +14,10 @@ public sealed record SaleLineDto(Guid Id, int LineNo, Guid ProductId, string Sku
     decimal TaxAmount, decimal LineTotal);
 
 /// <param name="Status"><c>draft</c>, <c>pending_payment</c>, <c>confirmed</c>, <c>cancelled</c>, <c>voided</c>.</param>
-/// <param name="Remaining">Lo que falta por pagar con pagos aprobados.</param>
-/// <param name="Fiscal">Factura electrónica (estado ante la DIAN vía Siigo); null si no se emitió.</param>
-/// <param name="RefundedTotal">Devuelto al cliente por anulación o devoluciones (fase 9).</param>
-/// <param name="ReturnedQuantities">Cantidad ya devuelta por línea de venta (para limitar nuevas devoluciones).</param>
+/// <param name="Remaining">What is still left to pay with approved payments.</param>
+/// <param name="Fiscal">Electronic invoice (status at the DIAN via Siigo); null if none was issued.</param>
+/// <param name="RefundedTotal">Returned to the customer by void or returns (phase 9).</param>
+/// <param name="ReturnedQuantities">Quantity already returned per sale line (to limit new returns).</param>
 public sealed record SaleDto(Guid Id, long? Number, Guid BranchId, Guid CashRegisterId, Guid CashSessionId, Guid CashierId, string? CashierName,
     string? CustomerIdentification, string Status, string PaymentStatus, string InventoryStatus, string FiscalStatus, decimal Subtotal,
     decimal DiscountTotal, decimal TaxTotal, decimal Total, decimal Remaining, decimal Change, bool StockAuthorized, DateTime CreatedAt,
@@ -34,7 +34,7 @@ public sealed record SaleListItemDto(Guid Id, long? Number, Guid BranchId, strin
 
 public sealed record GetSaleQuery(Guid Id) : IRequest<Result<SaleDto>>;
 
-/// <summary>Ventas por fecha de creación, sucursal, sesión de caja y estado; de la más reciente a la más antigua.</summary>
+/// <summary>Sales by creation date, branch, cash session and status; newest to oldest.</summary>
 public sealed record GetSalesQuery(DateTime? From, DateTime? To, Guid? BranchId, Guid? CashSessionId, string? Status, int Page = 1, int PageSize = 50,
     long? Number = null)
     : IRequest<Result<PagedResult<SaleListItemDto>>>;
@@ -78,7 +78,7 @@ public sealed class SalesQueriesHandler :
         var creditNotes = await _fiscal.CreditNotesForSalesAsync([sale.Id], ct);
         var returns = await _db.SaleReturns.AsNoTracking().Include(r => r.Lines).Where(r => r.SaleId == sale.Id).OrderBy(r => r.OccurredAt).ToListAsync(ct);
         var users = await _users.NamesAsync([sale.CashierId, .. returns.Select(r => r.ApprovedBy), .. sale.VoidedBy is { } v ? [v] : Array.Empty<Guid>()], ct);
-        // Lo cobrado incluye lo que después se reembolsó: no vuelve a quedar "por pagar".
+        // What was charged includes what was later refunded: it does not go back to "to pay".
         var collected = payments.Where(p => p.Status is "approved" or "refunded" or "partially_refunded").ToList();
         var lineNames = sale.Lines.ToDictionary(l => l.Id, l => l.Description);
         return Result.Success(new SaleDto(sale.Id, sale.Number, sale.BranchId, sale.CashRegisterId, sale.CashSessionId, sale.CashierId,
@@ -121,7 +121,7 @@ public sealed class SalesQueriesHandler :
         return Result.Success(new PagedResult<SaleListItemDto>(items, request.Page, request.PageSize, total));
     }
 
-    /// <summary>El estado fiscal vivo lo da el documento; la venta solo sabe si se pidió.</summary>
+    /// <summary>The live fiscal status comes from the document; the sale only knows whether one was requested.</summary>
     private static string FiscalName(Sale sale, FiscalDocumentSummary? doc) => doc?.Status switch
     {
         null => Name(sale.FiscalStatus),

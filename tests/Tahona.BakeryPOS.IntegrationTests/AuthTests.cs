@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.IntegrationTests;
 
-/// <summary>Login del backoffice, varias empresas (D-08), refresh rotatorio y entrada a caja con PIN.</summary>
+/// <summary>Backoffice login, several companies (D-08), rotating refresh and cash-register PIN sign-in.</summary>
 [Collection(ApiCollection.Name)]
 public sealed class AuthTests
 {
@@ -30,8 +30,8 @@ public sealed class AuthTests
         var session = await LoginAsync(A.OwnerEmail, ApiFactory.OwnerPassword);
 
         Assert.Equal(A.CompanyId, session.CompanyId);
-        Assert.Contains("organizacion.gestionar", session.Permissions);
-        Assert.DoesNotContain("plataforma.admin", session.Permissions);
+        Assert.Contains("organization.manage", session.Permissions);
+        Assert.DoesNotContain("platform.admin", session.Permissions);
         Assert.False(string.IsNullOrEmpty(session.RefreshToken));
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(session.AccessToken);
         Assert.Equal(A.CompanyId.ToString(), jwt.Claims.Single(c => c.Type == "company_id").Value);
@@ -70,7 +70,7 @@ public sealed class AuthTests
     public async Task User_in_two_companies_chooses_one_and_the_token_carries_only_that_one()
     {
         var (email, temporary) = await CreateBackofficeUserAsync(A, "contador");
-        // El propietario de B agrega a la misma persona por su correo: no recibe contraseña nueva.
+        // B's owner adds the same person by their email: they do not receive a new password.
         var addedInB = await ApiFactory.ReadAsync<CreatedUserDto>(await _api.ClientWithToken(B.OwnerToken).PostAsJsonAsync("/api/v1/usuarios",
             new { fullName = "Otro nombre", email, assignments = new[] { new { roleId = B.CashierRoleId } } }));
         Assert.Null(addedInB.TemporaryPassword);
@@ -84,9 +84,9 @@ public sealed class AuthTests
         var inB = await ApiFactory.ReadAsync<AuthSessionDto>(await _api.ClientWithToken(changed.AccessToken)
             .PostAsJsonAsync("/api/v1/auth/select-company", new { companyId = B.CompanyId, refreshToken = changed.RefreshToken }));
         Assert.Equal(B.CompanyId, inB.CompanyId);
-        Assert.Contains("ventas.crear", inB.Permissions);
+        Assert.Contains("sales.create", inB.Permissions);
 
-        // El refresh token de la sesión anterior quedó revocado al cambiar de empresa.
+        // The previous session's refresh token was revoked on switching company.
         var oldRefresh = await _api.CreateClient().PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = changed.RefreshToken });
         Assert.Equal(HttpStatusCode.Unauthorized, oldRefresh.StatusCode);
     }
@@ -111,7 +111,7 @@ public sealed class AuthTests
         Assert.NotEqual(session.RefreshToken, rotated.RefreshToken);
         Assert.Equal(A.CompanyId, rotated.CompanyId);
 
-        // Alguien reusa el token ya rotado: se revocan todas las sesiones del usuario.
+        // Someone reuses the already-rotated token: all of the user's sessions are revoked.
         Assert.Equal(HttpStatusCode.Unauthorized, (await Refresh(session.RefreshToken!)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Refresh(rotated.RefreshToken!)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Refresh(other.RefreshToken!)).StatusCode);
@@ -119,7 +119,7 @@ public sealed class AuthTests
         await using var db = _api.NewContext();
         var tokens = await db.RefreshTokens.Where(t => t.UserId == A.OwnerUserId).ToListAsync();
         Assert.All(tokens, t => Assert.NotNull(t.RevokedAt));
-        Assert.DoesNotContain(tokens, t => t.TokenHash == session.RefreshToken); // solo se guarda el hash
+        Assert.DoesNotContain(tokens, t => t.TokenHash == session.RefreshToken); // only the hash is stored
     }
 
     [Fact]
@@ -139,15 +139,15 @@ public sealed class AuthTests
         var device = _api.DeviceClient(A.DeviceToken);
         var users = await device.GetFromJsonAsync<List<DeviceUserDto>>("/api/v1/dispositivo/usuarios");
         Assert.Contains(users!, u => u.UserId == A.CashierUserId);
-        Assert.DoesNotContain(users!, u => u.UserId == A.OwnerUserId); // sin PIN
+        Assert.DoesNotContain(users!, u => u.UserId == A.OwnerUserId); // no PIN
 
         var session = await ApiFactory.ReadAsync<AuthSessionDto>(await device.PostAsJsonAsync("/api/v1/auth/login-pin",
             new { userId = A.CashierUserId, pin = ApiFactory.CashierPin }));
 
         Assert.Equal(A.CompanyId, session.CompanyId);
         Assert.Null(session.RefreshToken);
-        Assert.Contains("ventas.crear", session.Permissions);
-        Assert.DoesNotContain("organizacion.gestionar", session.Permissions);
+        Assert.Contains("sales.create", session.Permissions);
+        Assert.DoesNotContain("organization.manage", session.Permissions);
         var claims = new JwtSecurityTokenHandler().ReadJwtToken(session.AccessToken).Claims.ToList();
         Assert.Equal(A.BranchId.ToString(), claims.Single(c => c.Type == "branch").Value);
         Assert.Equal(A.DeviceId.ToString(), claims.Single(c => c.Type == "device_id").Value);

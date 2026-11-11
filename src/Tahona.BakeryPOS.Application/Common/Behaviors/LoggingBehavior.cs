@@ -20,7 +20,7 @@ public sealed class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
     {
         var requestName = typeof(TRequest).Name;
 
-        // No se registra el contenido de la solicitud: puede traer secretos (p. ej. el PIN en LoginByPinCommand).
+        // The request content is not logged: it may carry secrets (e.g. the PIN in LoginByPinCommand).
         _logger.LogInformation("Handling {RequestName}", requestName);
 
         var response = await next();

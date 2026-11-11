@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
-/// <summary>Módulo Inventory — esquema <c>inv</c>.</summary>
+/// <summary>Inventory module — schema <c>inv</c>.</summary>
 internal sealed class StockLocationConfiguration : IEntityTypeConfiguration<StockLocation>
 {
     public void Configure(EntityTypeBuilder<StockLocation> builder)
@@ -18,7 +18,7 @@ internal sealed class StockLocationConfiguration : IEntityTypeConfiguration<Stoc
         builder.HasOne<Branch>().WithMany().HasForeignKey(e => new { e.CompanyId, e.BranchId })
             .HasPrincipalKey(b => new { b.CompanyId, b.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(e => new { e.BranchId, e.Code }).IsUnique().HasFilter("\"deleted_at\" IS NULL");
-        // Una sola ubicación por defecto por sucursal.
+        // A single default location per branch.
         builder.HasIndex(e => e.BranchId).IsUnique().HasFilter("\"is_default\" AND \"deleted_at\" IS NULL")
             .HasDatabaseName("ux_stock_locations_default_per_branch");
         builder.HasAlternateKey(e => new { e.CompanyId, e.Id });
@@ -64,7 +64,7 @@ internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<Stoc
         builder.HasOne<Product>().WithMany().HasForeignKey(e => new { e.CompanyId, e.ProductId })
             .HasPrincipalKey(p => new { p.CompanyId, p.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<AdjustmentReason>().WithMany().HasForeignKey(e => e.ReasonId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
-        // Idempotencia (docs/inventory.md §3): el mismo hecho no mueve dos veces el saldo.
+        // Idempotency (docs/inventory.md §3): the same fact does not move the balance twice.
         builder.HasIndex(e => new { e.CompanyId, e.Kind, e.SourceType, e.SourceId, e.SourceLineId }).IsUnique()
             .HasDatabaseName("ux_stock_movements_source");
         builder.HasIndex(e => new { e.CompanyId, e.LocationId, e.ProductId, e.OccurredAt });

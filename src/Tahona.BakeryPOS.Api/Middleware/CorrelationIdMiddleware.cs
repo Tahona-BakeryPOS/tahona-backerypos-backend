@@ -3,8 +3,8 @@ using Serilog.Context;
 namespace Tahona.BakeryPOS.Api.Middleware;
 
 /// <summary>
-/// Id de correlación por petición: se toma de <c>X-Correlation-Id</c> si el cliente lo envía
-/// (válido y corto) o se genera; viaja en la respuesta, en los logs y en los errores.
+/// Per-request correlation id: taken from <c>X-Correlation-Id</c> if the client sends it
+/// (valid and short) or generated; it travels in the response, in the logs and in the errors.
 /// </summary>
 public sealed class CorrelationIdMiddleware
 {

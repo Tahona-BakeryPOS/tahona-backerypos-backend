@@ -3,7 +3,7 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 
 namespace Tahona.BakeryPOS.Domain.Catalog;
 
-/// <summary>Categoría de productos: las pestañas de la pantalla de venta, en el orden indicado.</summary>
+/// <summary>Product category: the tabs of the sale screen, in the indicated order.</summary>
 public sealed class Category : AuditableEntity, ITenantEntity
 {
     public Guid CompanyId { get; private set; }

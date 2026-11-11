@@ -8,15 +8,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Identity.Devices;
 
-/// <summary>Genera un código de un solo uso (15 min) para vincular un equipo a la caja.</summary>
+/// <summary>Generates a one-time code (15 min) to pair a device to the cash register.</summary>
 public sealed record CreatePairingCodeCommand(Guid CashRegisterId) : IRequest<Result<PairingCodeDto>>;
 
-/// <param name="Code">Solo se muestra en esta respuesta; la base guarda su hash.</param>
+/// <param name="Code">Only shown in this response; the database stores its hash.</param>
 public sealed record PairingCodeDto(string Code, DateTime ExpiresAt, Guid CashRegisterId);
 
 public sealed record GetDevicesQuery : IRequest<Result<IReadOnlyList<DeviceDto>>>;
 
-/// <summary>Desactivar un equipo revoca su token: no puede volver a entrar sin vincularse de nuevo.</summary>
+/// <summary>Deactivating a device revokes its token: it cannot sign in again without being paired again.</summary>
 public sealed record DeactivateDeviceCommand(Guid Id) : IRequest<Result<DeviceDto>>;
 
 public sealed record DeviceDto(Guid Id, Guid CashRegisterId, string Name, bool IsActive, DateTime? LastSeenAt, DateTime CreatedAt);

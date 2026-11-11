@@ -4,9 +4,9 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Sales;
 
 /// <summary>
-/// Devolución total o parcial de una venta confirmada (HU-9.2). La autoriza en el momento quien tiene
-/// <c>devoluciones.aprobar</c> con su PIN y se completa en la misma transacción: reembolso en efectivo de la
-/// caja abierta, reingreso al inventario de las líneas marcadas y nota crédito si la venta tiene factura.
+/// Full or partial return of a confirmed sale (US-9.2). It is authorized on the spot by whoever holds
+/// <c>returns.approve</c> with their PIN and completed in the same transaction: cash refund from the
+/// open register, restocking of the marked lines and a credit note if the sale has an invoice.
 /// </summary>
 public sealed class SaleReturn : AuditableEntity, ITenantEntity
 {
@@ -15,7 +15,7 @@ public sealed class SaleReturn : AuditableEntity, ITenantEntity
     public Guid CompanyId { get; private set; }
     public Guid SaleId { get; private set; }
     public Guid BranchId { get; private set; }
-    /// <summary>Sesión de caja de donde sale el efectivo devuelto.</summary>
+    /// <summary>Cash session the returned cash comes out of.</summary>
     public Guid CashSessionId { get; private set; }
     public string Reason { get; private set; } = string.Empty;
     public Guid ApprovedBy { get; private set; }
@@ -38,8 +38,8 @@ public sealed class SaleReturn : AuditableEntity, ITenantEntity
         };
     }
 
-    /// <param name="alreadyReturned">Cantidad y valor ya devueltos de esa línea en devoluciones anteriores.</param>
-    /// <param name="restock">El producto vuelve a la venta (genera movimiento de inventario).</param>
+    /// <param name="alreadyReturned">Quantity and value already returned from that line in earlier returns.</param>
+    /// <param name="restock">The product goes back on sale (it generates an inventory movement).</param>
     public SaleReturnLine AddLine(SaleLine line, decimal quantity, (decimal Quantity, decimal Amount) alreadyReturned, bool restock)
     {
         if (quantity <= 0 || decimal.Round(quantity, 2) != quantity)
@@ -49,7 +49,7 @@ public sealed class SaleReturn : AuditableEntity, ITenantEntity
         var available = line.Quantity - alreadyReturned.Quantity;
         if (quantity > available)
             throw new DomainException("VALIDACION", $"{line.Description}: se devuelven máximo {available:0.##}.");
-        // Valor proporcional al total de la línea; lo último que queda devuelve el resto exacto (sin descuadres de redondeo).
+        // Value proportional to the line total; the last one returns the exact remainder (no rounding mismatches).
         var amount = quantity == available
             ? line.LineTotal - alreadyReturned.Amount
             : decimal.Round(line.LineTotal * quantity / line.Quantity, 2);
@@ -73,7 +73,7 @@ public sealed class SaleReturnLine : AuditableEntity, ITenantEntity
     public Guid SaleLineId { get; internal set; }
     public Guid ProductId { get; internal set; }
     public decimal Quantity { get; internal set; }
-    /// <summary>Dinero devuelto por la línea (con impuesto).</summary>
+    /// <summary>Money returned for the line (with tax).</summary>
     public decimal Amount { get; internal set; }
     public bool Restock { get; internal set; }
 

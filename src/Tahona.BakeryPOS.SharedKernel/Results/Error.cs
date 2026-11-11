@@ -1,14 +1,14 @@
 namespace Tahona.BakeryPOS.SharedKernel.Results;
 
 /// <summary>
-/// Error de negocio con código estable (contrato de la API, docs/api-contracts.md).
-/// Cada código nuevo se agrega aquí y en ResultExtensions (su status HTTP).
+/// Business error with a stable code (API contract, docs/api-contracts.md).
+/// Each new code is added here and in ResultExtensions (its HTTP status).
 /// </summary>
 public sealed record Error(string Code, string Message)
 {
     public static readonly Error None = new(string.Empty, string.Empty);
 
-    // Autenticación y permisos
+    // Authentication and permissions
     public static readonly Error NoAutenticado = new("NO_AUTENTICADO", "Credenciales inválidas o sesión expirada.");
     public static readonly Error SinPermiso = new("SIN_PERMISO", "No tiene permisos para realizar esta acción.");
     public static readonly Error EmpresaRequerida = new("EMPRESA_REQUERIDA", "La operación requiere una sesión dentro de una empresa.");
@@ -49,11 +49,11 @@ public sealed record Error(string Code, string Message)
     public static readonly Error PasarelaNoConfigurada = new("PASARELA_NO_CONFIGURADA", "La empresa no tiene la pasarela de pagos configurada y activa.");
     public static readonly Error DatafonoNoConfigurado = new("DATAFONO_NO_CONFIGURADO", "Esta caja no tiene un datáfono Bold asignado.");
     public static readonly Error PagoEnCurso = new("PAGO_EN_CURSO", "Este pago ya tiene un cobro en curso en el datáfono.");
-    /// <summary>D-11: la anulación solo procede mientras el turno de la venta siga abierto y sin devoluciones.</summary>
+    /// <summary>D-11: a void only proceeds while the sale's shift is still open and with no returns.</summary>
     public static readonly Error AnulacionNoPermitida = new("ANULACION_NO_PERMITIDA", "La venta ya no se puede anular: registra una devolución.");
     public static readonly Error ProveedorNoDisponible = new("PROVEEDOR_NO_DISPONIBLE", "La pasarela no respondió. El cobro quedó pendiente: revisa el datáfono antes de reintentar.");
 
-    // Facturación electrónica
+    // Electronic invoicing
     public static readonly Error FacturacionNoConfigurada = new("FACTURACION_NO_CONFIGURADA", "La facturación electrónica de la empresa no está configurada y activa.");
 
     // Idempotencia
@@ -61,7 +61,7 @@ public sealed record Error(string Code, string Message)
     public static readonly Error IdempotenciaConflicto = new("IDEMPOTENCIA_CONFLICTO", "La clave de idempotencia ya se usó con un contenido distinto.");
     public static readonly Error IdempotenciaEnCurso = new("IDEMPOTENCIA_EN_CURSO", "Una petición con la misma clave de idempotencia aún se está procesando.");
 
-    // Validación y límites
+    // Validation and limits
     public static readonly Error Validacion = new("VALIDACION", "Los datos proporcionados no son válidos.");
     public static readonly Error LimiteExcedido = new("LIMITE_EXCEDIDO", "Se ha excedido el límite permitido.");
 

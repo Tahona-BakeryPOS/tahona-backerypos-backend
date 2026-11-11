@@ -11,12 +11,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Tahona.BakeryPOS.Api.Controllers;
 
-/// <summary>Datos de apoyo del catálogo: categorías, impuestos y unidades de medida.</summary>
+/// <summary>Supporting catalog data: categories, taxes and units of measure.</summary>
 [ApiController]
 [Route("api/v{version:apiVersion}")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.CatalogoGestionar)]
+[RequirePermission(Permissions.CatalogManage)]
 public sealed class CatalogController : ControllerBase
 {
     private readonly ISender _mediator;
@@ -38,7 +38,7 @@ public sealed class CatalogController : ControllerBase
     public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    /// <summary>Nombre, orden y estado. Requiere If-Match con la versión leída.</summary>
+    /// <summary>Name, order and status. Requires If-Match with the version read.</summary>
     [HttpPut("categorias/{id:guid}")]
     [ProducesResponseType<CategoryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
@@ -59,7 +59,7 @@ public sealed class CatalogController : ControllerBase
     public async Task<IActionResult> CreateTax([FromBody] CreateTaxCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToCreatedResult(HttpContext);
 
-    /// <summary>Nombre y estado (la tarifa no cambia). Requiere If-Match con la versión leída.</summary>
+    /// <summary>Name and status (the rate does not change). Requires If-Match with the version read.</summary>
     [HttpPut("impuestos/{id:guid}")]
     [ProducesResponseType<TaxDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]

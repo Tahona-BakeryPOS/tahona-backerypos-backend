@@ -8,8 +8,8 @@ using NetArchTest.Rules;
 namespace Tahona.BakeryPOS.ArchitectureTests;
 
 /// <summary>
-/// Reglas de dependencia del monolito modular (docs/architecture.md, D-14): capas hacia adentro y
-/// módulos que no se conocen entre sí. Si una regla falla, el mensaje lista los tipos culpables.
+/// Dependency rules of the modular monolith (docs/architecture.md, D-14): layers pointing inwards and
+/// modules that do not know each other. If a rule fails, the message lists the offending types.
 /// </summary>
 public class LayeringTests
 {
@@ -18,7 +18,7 @@ public class LayeringTests
     private static readonly Assembly Infrastructure = typeof(AppDbContext).Assembly;
     private static readonly Assembly Api = typeof(BranchesController).Assembly;
 
-    /// <summary>Módulos del diseño; los que aún no existen pasan la regla sin tipos.</summary>
+    /// <summary>Modules of the design; those that do not exist yet pass the rule with no types.</summary>
     private static readonly string[] ModuleNames =
         ["Companies", "Identity", "Catalog", "Inventory", "Cash", "Sales", "Payments", "Invoicing"];
 
@@ -60,7 +60,7 @@ public class LayeringTests
     public void Application_modules_do_not_reference_each_other(string module)
     {
         AssertModuleIsolated(Application, "Tahona.BakeryPOS.Application", module);
-        // Un módulo de aplicación tampoco usa entidades de dominio de otro módulo.
+        // An application module does not use another module's domain entities either.
         AssertModuleIsolated(Application, "Tahona.BakeryPOS.Domain", module, $"Tahona.BakeryPOS.Application.{module}");
     }
 

@@ -5,8 +5,8 @@ using Tahona.BakeryPOS.Domain.Catalog;
 namespace Tahona.BakeryPOS.Application.Catalog;
 
 /// <summary>
-/// Catálogo con que nace una empresa (HU-1.1): los impuestos de <see cref="DefaultTaxes"/> y la
-/// categoría "General", para poder crear productos desde el primer día. Supuestos por confirmar (I-20).
+/// Catalog a company is born with (US-1.1): the taxes of <see cref="DefaultTaxes"/> and the
+/// "General" category, so products can be created from day one. Assumptions to confirm (I-20).
 /// </summary>
 public sealed class CatalogProvisioning : ICatalogProvisioning
 {

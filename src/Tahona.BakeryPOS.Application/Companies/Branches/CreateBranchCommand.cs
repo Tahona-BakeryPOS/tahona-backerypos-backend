@@ -3,6 +3,6 @@ using MediatR;
 
 namespace Tahona.BakeryPOS.Application.Companies.Branches;
 
-/// <summary>Crea una sucursal en la empresa del usuario. La empresa nunca viaja en el cuerpo.</summary>
+/// <summary>Creates a branch in the user's company. The company never travels in the body.</summary>
 public sealed record CreateBranchCommand(string Code, string Name, string? Address, string? CityCode = null, string? Phone = null)
     : IRequest<Result<BranchDto>>;

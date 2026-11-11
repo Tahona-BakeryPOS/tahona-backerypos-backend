@@ -6,10 +6,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Catalog.Measures;
 
 /// <param name="Kind"><c>count</c>, <c>mass</c> o <c>volume</c>.</param>
-/// <param name="AllowsDecimals">Masa y volumen: la caja pide la cantidad (peso) al vender.</param>
+/// <param name="AllowsDecimals">Mass and volume: the register asks for the quantity (weight) when selling.</param>
 public sealed record UnitDto(Guid Id, string Code, string Name, string Kind, string DianCode, bool AllowsDecimals);
 
-/// <summary>Unidades de medida: catálogo global, igual para todas las empresas.</summary>
+/// <summary>Units of measure: a global catalog, the same for all companies.</summary>
 public sealed record GetUnitsQuery : IRequest<Result<IReadOnlyList<UnitDto>>>;
 
 public sealed class GetUnitsHandler : IRequestHandler<GetUnitsQuery, Result<IReadOnlyList<UnitDto>>>

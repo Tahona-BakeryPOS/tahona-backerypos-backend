@@ -1,187 +1,189 @@
-# Requisitos — Tahona.BakeryPOS MVP v1.1
+# Requirements — Tahona.BakeryPOS MVP v1.1
 
-Estado: **borrador para revisión**. No hay código funcional nuevo hasta aprobar este documento y las
-decisiones bloqueantes de [`decisions.md`](decisions.md).
+Status: **draft for review**. There is no new functional code until this document and the blocking
+decisions in [`decisions.md`](decisions.md) are approved.
 
-## 1. Punto de partida: el sistema anterior
+## 1. Starting point: the previous system
 
-Este backend parte de un sistema anterior (una API .NET con PostgreSQL y un POS offline-first). Lo reutilizable se conserva; lo demás cambia como indica la tabla.
+This backend starts from a previous system (a .NET API with PostgreSQL and an offline-first POS). What is reusable is kept; the rest changes as the table indicates.
 
-| Área | Sistema anterior | Qué cambia en el MVP |
+| Area | Previous system | What changes in the MVP |
 |---|---|---|
-| Backend | .NET 9, Clean Architecture + CQRS (MediatR), EF Core, **PostgreSQL**, JWT, Result pattern | .NET 10 LTS, **PostgreSQL** (I-18), monolito modular con límites explícitos |
-| Empresas | Una organización demo por seed; sin alta de empresas | Alta y configuración de empresas (onboarding) |
-| Seguridad | Roles Propietario/Cajero, permisos como claims, PIN por dispositivo vinculado, login backoffice por correo | Se conserva; se añade pertenencia usuario–empresa y pruebas de aislamiento |
-| Catálogo | Productos, categorías, impuestos, lista de precios con vigencia | Precios **por sucursal** |
-| Inventario | No existe | Ubicaciones, movimientos auditables, saldos, ajustes |
-| Caja | Turnos, ingresos/retiros, cierre con diferencia | Se conserva el modelo; sesión de caja por cajero |
-| Ventas | Venta completa en un paso (`POST /sales`), anulación | Venta como **proceso persistente** con estados separados |
-| Pagos | Registro manual (efectivo, tarjeta con referencia) | Pasarela real con intentos, webhooks y conciliación |
-| Facturación | No existe | Documento equivalente POS / factura electrónica vía proveedor tecnológico |
-| Devoluciones | No existen | Devoluciones autorizadas con reembolso y reingreso a inventario |
-| Auditoría | Automática en `SaveChangesAsync` (antes/después) | Se conserva; se amplía a eventos de integración |
+| Backend | .NET 9, Clean Architecture + CQRS (MediatR), EF Core, **PostgreSQL**, JWT, Result pattern | .NET 10 LTS, **PostgreSQL** (I-18), modular monolith with explicit boundaries |
+| Companies | One demo organization by seed; no company onboarding | Company onboarding and configuration |
+| Security | Owner/Cashier roles, permissions as claims, PIN per paired device, backoffice email login | Kept; adds user–company membership and isolation tests |
+| Catalog | Products, categories, taxes, price list with validity | Prices **per branch** |
+| Inventory | Does not exist | Locations, auditable movements, balances, adjustments |
+| Cash | Shifts, income/withdrawals, closing with difference | The model is kept; a cash session per cashier |
+| Sales | Complete sale in one step (`POST /sales`), void | Sale as a **persistent process** with separate states |
+| Payments | Manual recording (cash, card with reference) | A real gateway with attempts, webhooks and reconciliation |
+| Invoicing | Does not exist | POS equivalent document / electronic invoice through a technology provider |
+| Returns | Do not exist | Authorized returns with refund and restocking |
+| Audit | Automatic in `SaveChangesAsync` (before/after) | Kept; extended to integration events |
 
-Lo reutilizable sin cambios de fondo: estructura de capas, Result/errores, permisos por claims,
-auditoría automática, vinculación de dispositivos, reglas de dinero (`sale-math`), backoffice Angular.
-Lo que se retira: cola offline, sincronización (`/sincronizacion`), consecutivo local de ticket.
+Reusable without deep changes: layer structure, Result/errors, claim-based permissions,
+automatic audit, device pairing, money rules (`sale-math`).
+What is removed: the offline queue, synchronization (`/sincronizacion`), the local ticket consecutive.
 
-## 2. Alcance
+## 2. Scope
 
-### Dentro del MVP
-1. Alta y configuración de empresas.
-2. Sucursales.
-3. Usuarios, roles y permisos.
-4. Catálogo básico de productos vendibles.
-5. Precios por sucursal.
-6. Control básico de existencias con movimientos auditables.
-7. Configuración de cajas y cajeros.
-8. Apertura, movimientos y cierre de caja.
-9. POS con carrito y cálculo de totales.
-10. Pagos en efectivo y medios electrónicos admitidos.
-11. Integración con una pasarela de pagos real.
-12. Integración con un proveedor tecnológico de facturación electrónica.
-13. Consulta de ventas, pagos, documentos y movimientos.
-14. Anulaciones y devoluciones autorizadas.
-15. Auditoría y aislamiento estricto entre empresas.
+### Inside the MVP
+1. Company onboarding and configuration.
+2. Branches.
+3. Users, roles and permissions.
+4. Basic catalog of sellable products.
+5. Prices per branch.
+6. Basic stock control with auditable movements.
+7. Configuration of cash registers and cashiers.
+8. Opening, movements and closing of the cash session.
+9. POS with a cart and totals calculation.
+10. Payments in cash and the supported electronic methods.
+11. Integration with a real payment gateway.
+12. Integration with an electronic-invoicing technology provider.
+13. Querying sales, payments, documents and movements.
+14. Authorized voids and returns.
+15. Audit and strict isolation between companies.
 
-### Fuera del MVP
-Recetas y producción · compras y proveedores · costeo · lotes y vencimientos · transferencias entre
-bodegas · modo offline · contabilidad formal · microservicios/Kubernetes.
+### Outside the MVP
+Recipes and production · purchasing and suppliers · costing · batches and expiry · transfers between
+warehouses · offline mode · formal accounting · microservices/Kubernetes.
 
-## 3. Actores
+## 3. Actors
 
-| Actor | Descripción |
+| Actor | Description |
 |---|---|
-| Administrador de plataforma | Opera el SaaS: da de alta empresas, ve su estado. No ve datos de ventas de las empresas. |
-| Propietario | Dueño de la empresa: configura sucursales, catálogo, precios, impuestos, fiscal, pagos y usuarios. Autoriza anulaciones, devoluciones y ajustes. |
-| Administrador de sucursal | Gestiona su sucursal: precios locales, existencias, cajas, consultas. |
-| Cajero | Abre y cierra caja, vende, cobra, registra ingresos/retiros. |
-| Pasarela de pagos | Sistema externo: confirma pagos y envía eventos. |
-| Proveedor tecnológico | Sistema externo: valida y transmite documentos fiscales a la DIAN. |
+| Platform administrator | Operates the SaaS: onboards companies, sees their status. Does not see companies' sales data. |
+| Owner | The company owner: configures branches, catalog, prices, taxes, invoicing, payments and users. Authorizes voids, returns and adjustments. |
+| Branch administrator | Manages their branch: local prices, stock, registers, queries. |
+| Cashier | Opens and closes the cash session, sells, charges, records income/withdrawals. |
+| Payment gateway | External system: confirms payments and sends events. |
+| Technology provider | External system: validates and transmits fiscal documents to the DIAN. |
 
-## 4. Historias de usuario y criterios de aceptación
+## 4. User stories and acceptance criteria
 
-Formato: *Como … quiero … para …* · **CA** = criterios de aceptación verificables.
+Format: *As … I want … so that …* · **AC** = verifiable acceptance criteria.
 
-### M1. Empresas y sucursales
-- **HU-1.1** Como administrador de plataforma quiero dar de alta una empresa con su propietario para que pueda empezar a operar.
-  **CA:** razón social, NIT con dígito de verificación válido, régimen y responsabilidades fiscales obligatorios; NIT único en la plataforma; se crean roles, medios de pago e impuestos por defecto; el propietario recibe acceso con contraseña de un solo uso que debe cambiar.
-- **HU-1.2** Como propietario quiero editar los datos de mi empresa (contacto, logo, zona horaria).
-  **CA:** cambios auditados con antes/después; la zona horaria define el "día" de reportes y cierres.
-- **HU-1.3** Como propietario quiero crear, editar y desactivar sucursales.
-  **CA:** código único por empresa; una sucursal con ventas no se borra, se desactiva; al crearla se crea su ubicación de inventario por defecto.
+### M1. Companies and branches
+- **US-1.1** As a platform administrator I want to onboard a company with its owner so that it can start operating.
+  **AC:** legal name, NIT with a valid check digit, regime and tax responsibilities are mandatory; NIT unique on the platform; default roles, payment methods and taxes are created; the owner receives access with a one-time password that must be changed.
+- **US-1.2** As an owner I want to edit my company's data (contact, logo, time zone).
+  **AC:** changes audited with before/after; the time zone defines the "day" of reports and closings.
+- **US-1.3** As an owner I want to create, edit and deactivate branches.
+  **AC:** code unique per company; a branch with sales is not deleted, it is deactivated; creating it creates its default inventory location.
 
-### M2. Seguridad
-- **HU-2.1** Como propietario quiero crear usuarios y asignarles un rol por sucursal.
-  **CA:** el usuario solo opera en sucursales con asignación vigente; el PIN de caja se guarda como hash; correo único entre usuarios con acceso al backoffice.
-- **HU-2.2** Como usuario quiero pertenecer a más de una empresa con el mismo correo (contador, asesor).
-  **CA:** al iniciar sesión elige la empresa; el token lleva una sola empresa; cambiar de empresa emite un token nuevo. *(Decisión D-08.)*
-- **HU-2.3** Como sistema quiero rechazar cualquier acceso a recursos de otra empresa aunque el identificador sea válido.
-  **CA:** toda consulta por id devuelve 404 si el recurso es de otra empresa; prueba automática por cada endpoint con id.
-- **HU-2.4** Como cajero quiero entrar en una caja vinculada tocando mi nombre y digitando mi PIN.
-  **CA:** 5 intentos fallidos bloquean al usuario 5 minutos; el bloqueo queda auditado.
+### M2. Security
+- **US-2.1** As an owner I want to create users and assign them a role per branch.
+  **AC:** the user only operates in branches with a current assignment; the register PIN is stored as a hash; email unique among users with backoffice access.
+- **US-2.2** As a user I want to belong to more than one company with the same email (accountant, advisor).
+  **AC:** on signing in they choose the company; the token carries a single company; switching company issues a new token. *(Decision D-08.)*
+- **US-2.3** As the system I want to reject any access to another company's resources even if the identifier is valid.
+  **AC:** every query by id returns 404 if the resource belongs to another company; an automated test per endpoint with an id.
+- **US-2.4** As a cashier I want to sign in on a paired register by tapping my name and entering my PIN.
+  **AC:** 5 failed attempts lock the user for 5 minutes; the lock is audited.
 
-### M3. Catálogo y precios
-- **HU-3.1** Como propietario quiero crear productos vendibles con código, nombre, categoría, unidad, impuesto y código de barras.
-  **CA:** código único por empresa; producto con ventas solo se desactiva; unidades de masa admiten cantidades decimales.
-- **HU-3.2** Como propietario quiero definir el precio base de un producto y precios distintos por sucursal.
-  **CA:** el precio vigente en una sucursal es el de la sucursal si existe, si no el base; un cambio abre una nueva vigencia sin borrar la anterior; no hay solapamiento de vigencias.
-- **HU-3.3** Como administrador de sucursal quiero marcar productos como no disponibles en mi sucursal.
-  **CA:** un producto no disponible no aparece en el POS de esa sucursal.
+### M3. Catalog and prices
+- **US-3.1** As an owner I want to create sellable products with code, name, category, unit, tax and barcode.
+  **AC:** code unique per company; a product with sales is only deactivated; mass units accept decimal quantities.
+- **US-3.2** As an owner I want to define a product's base price and different prices per branch.
+  **AC:** the current price at a branch is the branch's if it exists, otherwise the base one; a change opens a new validity period without deleting the previous one; validity periods do not overlap.
+- **US-3.3** As a branch administrator I want to mark products as unavailable at my branch.
+  **AC:** an unavailable product does not appear in that branch's POS.
 
-### M4. Inventario
-- **HU-4.1** Como administrador de sucursal quiero registrar la existencia inicial de cada producto.
-  **CA:** se registra como movimiento `inicial`; el saldo no se edita directamente.
-- **HU-4.2** Como administrador quiero consultar existencias por sucursal y ubicación.
-- **HU-4.3** Como sistema quiero descontar existencias cuando una venta queda confirmada (pago aprobado), una sola vez.
-  **CA:** reintentar la confirmación no duplica el movimiento (clave idempotente).
-- **HU-4.4** Como propietario quiero autorizar ajustes de inventario con motivo.
-  **CA:** ajuste con motivo obligatorio y usuario autorizador; auditado.
-- **HU-4.5** Como sistema quiero aplicar la política de existencias insuficientes definida en D-06.
-- **HU-4.6** Como propietario quiero ver si los saldos cuadran con la suma de movimientos (reconciliación).
+### M4. Inventory
+- **US-4.1** As a branch administrator I want to record each product's initial stock.
+  **AC:** it is recorded as an `initial` movement; the balance is not edited directly.
+- **US-4.2** As an administrator I want to query stock by branch and location.
+- **US-4.3** As the system I want to deduct stock when a sale is confirmed (payment approved), exactly once.
+  **AC:** retrying the confirmation does not duplicate the movement (idempotent key).
+- **US-4.4** As an owner I want to authorize inventory adjustments with a reason.
+  **AC:** adjustment with a mandatory reason and authorizing user; audited.
+- **US-4.5** As the system I want to apply the insufficient-stock policy defined in D-06.
+- **US-4.6** As an owner I want to see whether balances match the sum of movements (reconciliation).
 
-### M5. Cajas y turnos
-- **HU-5.1** Como propietario quiero crear cajas por sucursal y vincular dispositivos a cada caja (código de un solo uso).
-- **HU-5.2** Como cajero quiero abrir mi sesión de caja declarando el efectivo inicial.
-  **CA:** una sesión abierta por caja; efectivo inicial ≥ 0.
-- **HU-5.3** Como cajero quiero registrar ingresos y retiros de efectivo con motivo; el retiro requiere autorización.
-- **HU-5.4** Como cajero quiero cerrar caja contando el efectivo.
-  **CA:** esperado = inicial + efectivo neto de ventas (recibido − cambio) − efectivo devuelto + ingresos − retiros; diferencia visible; no se cierra con ventas en estado de pago pendiente sin resolver (ver D-12).
+### M5. Cash registers and shifts
+- **US-5.1** As an owner I want to create registers per branch and pair devices to each register (one-time code).
+- **US-5.2** As a cashier I want to open my cash session declaring the opening cash.
+  **AC:** one open session per register; opening cash ≥ 0.
+- **US-5.3** As a cashier I want to record cash income and withdrawals with a reason; a withdrawal requires authorization.
+- **US-5.4** As a cashier I want to close the cash session by counting the cash.
+  **AC:** expected = opening + net cash from sales (received − change) − cash returned + income − withdrawals; difference visible; it cannot be closed with sales in an unresolved pending-payment state (see D-12).
 
-### M6. POS y ventas
-- **HU-6.1** Como cajero quiero agregar productos por botón, búsqueda o código de barras y ver subtotal, impuestos y total.
-- **HU-6.2** Como cajero quiero aplicar descuentos con motivo (requiere permiso `ventas.descuento` o autorización).
-- **HU-6.3** Como cajero quiero identificar al cliente (consumidor final por defecto, o NIT/cédula si pide factura).
-- **HU-6.4** Como cajero quiero cobrar en efectivo (con cambio), con medios electrónicos de la pasarela, o con pago mixto.
-  **CA:** la venta solo se confirma cuando todos sus pagos están aprobados por el backend; ningún cliente marca un pago como aprobado.
-- **HU-6.5** Como cajero quiero ver en pantalla el estado de un pago electrónico (esperando, aprobado, rechazado) y reintentar con otro medio si falla.
-- **HU-6.6** Como cajero quiero imprimir/mostrar el comprobante con el estado del documento fiscal.
+### M6. POS and sales
+- **US-6.1** As a cashier I want to add products by button, search or barcode and see subtotal, taxes and total.
+- **US-6.2** As a cashier I want to apply discounts with a reason (requires the `sales.discount` permission or authorization).
+- **US-6.3** As a cashier I want to identify the customer (final consumer by default, or NIT/ID if they ask for an invoice).
+- **US-6.4** As a cashier I want to charge in cash (with change), with the gateway's electronic methods, or with a mixed payment.
+  **AC:** the sale is only confirmed when all its payments are approved by the backend; no client marks a payment as approved.
+- **US-6.5** As a cashier I want to see an electronic payment's status on screen (waiting, approved, declined) and retry with another method if it fails.
+- **US-6.6** As a cashier I want to print/show the receipt with the fiscal document's status.
 
-### M7. Pagos
-- **HU-7.1** Como sistema quiero crear el pago en la pasarela con una referencia única e idempotente.
-- **HU-7.2** Como sistema quiero recibir y validar eventos firmados de la pasarela, ignorando duplicados.
-- **HU-7.3** Como sistema quiero resolver pagos con resultado desconocido consultando a la pasarela antes de reintentar.
-- **HU-7.4** Como propietario quiero conciliar pagos electrónicos aprobados contra ventas y cajas.
+### M7. Payments
+- **US-7.1** As the system I want to create the payment at the gateway with a unique, idempotent reference.
+- **US-7.2** As the system I want to receive and validate signed events from the gateway, ignoring duplicates.
+- **US-7.3** As the system I want to resolve payments with an unknown result by querying the gateway before retrying.
+- **US-7.4** As an owner I want to reconcile approved electronic payments against sales and registers.
 
-### M8. Facturación electrónica
-- **HU-8.1** Como propietario quiero configurar los datos fiscales de la empresa, la numeración autorizada y las credenciales del proveedor (pruebas y producción separadas).
-- **HU-8.2** Como sistema quiero emitir el documento fiscal de cada venta confirmada **cuando la empresa tiene la facturación encendida** y seguir su estado hasta tener respuesta verificable; con la facturación apagada la venta queda "sin factura" (D-17).
-- **HU-8.6** Como propietario quiero encender o apagar la facturación electrónica según mi necesidad, sin afectar los cobros ni lo ya facturado.
-- **HU-8.3** Como sistema quiero consultar el estado antes de reintentar un envío con resultado desconocido.
-- **HU-8.4** Como propietario quiero ver documentos rechazados, su motivo y corregir/reemitir según el procedimiento definido.
-- **HU-8.5** Como sistema quiero emitir la nota (crédito/ajuste) correspondiente a una devolución o anulación de venta ya documentada.
+### M8. Electronic invoicing
+- **US-8.1** As an owner I want to configure the company's tax data, the authorized numbering and the provider's credentials (test and production separate).
+- **US-8.2** As the system I want to issue the fiscal document of each confirmed sale **when the company has invoicing turned on** and follow its status until there is a verifiable response; with invoicing off the sale stays "not invoiced" (D-17).
+- **US-8.6** As an owner I want to turn electronic invoicing on or off as I need, without affecting payments or what was already invoiced.
+- **US-8.3** As the system I want to query the status before retrying a submission with an unknown result.
+- **US-8.4** As an owner I want to see rejected documents, their reason, and correct/reissue them according to the defined procedure.
+- **US-8.5** As the system I want to issue the note (credit/adjustment) corresponding to a return or void of an already documented sale.
 
-### M9. Anulaciones y devoluciones
-- **HU-9.1** Como propietario quiero anular una venta del día antes de que el documento fiscal sea aceptado *(regla exacta en D-11)*.
-- **HU-9.2** Como cajero autorizado quiero registrar una devolución total o parcial de una venta.
-  **CA:** requiere autorización y motivo; genera reembolso (efectivo o por pasarela), movimiento de inventario compensatorio y nota fiscal; ninguna devolución supera lo vendido.
+### M9. Voids and returns
+- **US-9.1** As an owner I want to void a same-day sale before the fiscal document is accepted *(exact rule in D-11)*.
+- **US-9.2** As an authorized cashier I want to record a full or partial return of a sale.
+  **AC:** requires authorization and a reason; generates a refund (cash or through the gateway), a compensating inventory movement and a fiscal note; no return exceeds what was sold.
 
-### M10. Consultas y auditoría
-- **HU-10.1** Como propietario quiero consultar ventas, pagos, documentos fiscales, movimientos de caja e inventario con filtros.
-- **HU-10.2** Como propietario quiero ver el historial de cambios y de eventos de integración.
+### M10. Queries and audit
+- **US-10.1** As an owner I want to query sales, payments, fiscal documents, cash and inventory movements with filters.
+- **US-10.2** As an owner I want to see the change history and integration events.
 
-## 5. Pantallas y flujos
+## 5. Screens and flows
 
-### 5.1 POS (caja)
-| Pantalla | Propósito | Notas |
+The screens belong to the clients; they are listed here because they define what the API must support. Screen text is Spanish.
+
+### 5.1 POS (register)
+| Screen | Purpose | Notes |
 |---|---|---|
-| Vincular dispositivo | Asociar la tablet/PC a una caja con un código | Reutiliza v1 |
-| Login de cajero | Elegir usuario y digitar PIN | Reutiliza v1; añade bloqueo por intentos |
-| Abrir caja | Efectivo inicial; retomar sesión abierta | Reutiliza v1 |
-| Venta | Catálogo por categoría, búsqueda/escáner, ticket, cliente | Precios de la sucursal; muestra existencias bajas |
-| Cobro | Efectivo, pasarela (Nequi/QR/link), mixto | **Nuevo**: estado del pago en vivo, cancelar/reintentar |
-| Comprobante | Ticket + estado fiscal (pendiente/aceptado/rechazado) | **Nuevo** estado fiscal |
-| Ventas del turno | Lista, detalle, solicitar anulación/devolución | Devolución **nueva** |
-| Caja | Ingresos/retiros, esperado | Reutiliza v1 |
-| Cerrar caja | Conteo, diferencia, pendientes por resolver | Bloqueo por pagos pendientes |
+| Pair device | Associate the tablet/PC to a register with a code | Reuses the previous system |
+| Cashier login | Choose a user and enter a PIN | Reuses the previous system; adds attempt lockout |
+| Open cash session | Opening cash; resume an open session | Reuses the previous system |
+| Sale | Catalog by category, search/scanner, ticket, customer | Branch prices; shows low stock |
+| Payment | Cash, gateway (Nequi/QR/link), mixed | **New**: live payment status, cancel/retry |
+| Receipt | Ticket + fiscal status (pending/accepted/rejected) | **New** fiscal status |
+| Shift sales | List, detail, request void/return | Return is **new** |
+| Cash | Income/withdrawals, expected amount | Reuses the previous system |
+| Close cash session | Count, difference, pending items to resolve | Blocked by pending payments |
 
-**Flujo principal de venta:** Venta → (cliente) → Cobrar → elegir medio → [efectivo: confirmar] /
-[electrónico: esperar confirmación del backend] → venta confirmada → inventario descontado →
-documento fiscal en curso → comprobante.
+**Main sale flow:** Sale → (customer) → Charge → choose method → [cash: confirm] /
+[electronic: wait for the backend's confirmation] → sale confirmed → inventory deducted →
+fiscal document in progress → receipt.
 
 ### 5.2 Backoffice
-Reutiliza la navegación de 8 módulos de la v1. Pantallas nuevas o ampliadas:
+It reuses the previous system's 8-module navigation. New or extended screens:
 
-| Módulo | Pantalla | Estado |
+| Module | Screen | Status |
 |---|---|---|
-| Plataforma | Empresas (alta, estado) — solo administrador de plataforma | Nueva |
-| Mi negocio | Empresa (datos fiscales), Sucursales, Puntos de venta | Ampliada |
-| Productos e inventario | Catálogo, Categorías, Unidades, **Precios por sucursal**, **Existencias**, **Movimientos**, **Ajustes** | Nuevas: precios, existencias, movimientos, ajustes |
-| Ventas y caja | Ventas, Turnos, Cierres, **Pagos**, **Devoluciones**, Métodos de pago | Nuevas: pagos, devoluciones |
-| Facturación | **Configuración fiscal**, **Numeraciones**, **Documentos** (estado, reintento, descargas) | Nuevo módulo |
-| Integraciones | **Pasarela de pagos** (credenciales, webhooks), **Proveedor fiscal** | Nuevo |
-| Informes | Ventas, **Conciliación de pagos**, **Reconciliación de inventario**, Auditoría | Nuevas: conciliaciones |
-| Configuración | Usuarios, Roles, Impuestos, Historial | Reutiliza |
+| Platform | Companies (onboarding, status) — platform administrator only | New |
+| My business | Company (tax data), Branches, Points of sale | Extended |
+| Products and inventory | Catalog, Categories, Units, **Prices per branch**, **Stock**, **Movements**, **Adjustments** | New: prices, stock, movements, adjustments |
+| Sales and cash | Sales, Shifts, Closings, **Payments**, **Returns**, Payment methods | New: payments, returns |
+| Invoicing | **Tax configuration**, **Numberings**, **Documents** (status, retry, downloads) | New module |
+| Integrations | **Payment gateway** (credentials, webhooks), **Tax provider** | New |
+| Reports | Sales, **Payment reconciliation**, **Inventory reconciliation**, Audit | New: reconciliations |
+| Configuration | Users, Roles, Taxes, History | Reused |
 
-## 6. Requisitos no funcionales
+## 6. Non-functional requirements
 
-| Tema | Requisito |
+| Topic | Requirement |
 |---|---|
-| Aislamiento | Ningún dato de una empresa es visible o modificable desde otra; prueba automática obligatoria por endpoint. |
-| Consistencia | Venta, pagos, inventario y documento fiscal con estados separados y transiciones explícitas; ninguna operación externa dentro de una transacción SQL. |
-| Idempotencia | Toda operación que pueda reintentarse (crear venta, pagar, descontar inventario, emitir documento, procesar webhook) es idempotente. |
-| Auditoría | Ventas, pagos, devoluciones, inventario y documentos fiscales auditados con usuario, fecha y antes/después. |
-| Seguridad | Credenciales de terceros cifradas en reposo; secretos fuera del repositorio; HTTPS obligatorio; sin datos de tarjeta en nuestra base. |
-| Disponibilidad | El POS requiere conexión (sin modo offline). Si la pasarela o el proveedor fiscal fallan, la venta en efectivo continúa y el documento fiscal queda pendiente de envío. |
-| Rendimiento | Pantalla de venta con 500 productos usable en una tablet de gama media; confirmación de venta en efectivo < 1 s en servidor. |
-| Moneda y tiempo | COP con 2 decimales; fechas en UTC; día operativo según la zona horaria de la empresa. |
+| Isolation | No data of one company is visible or modifiable from another; a mandatory automated test per endpoint. |
+| Consistency | Sale, payments, inventory and fiscal document with separate states and explicit transitions; no external operation inside a SQL transaction. |
+| Idempotency | Every operation that can be retried (create sale, pay, deduct inventory, issue document, process webhook) is idempotent. |
+| Audit | Sales, payments, returns, inventory and fiscal documents audited with user, date and before/after. |
+| Security | Third-party credentials encrypted at rest; secrets outside the repository; HTTPS mandatory; no card data in our database. |
+| Availability | The POS requires a connection (no offline mode). If the gateway or the tax provider fail, the cash sale continues and the fiscal document stays pending submission. |
+| Performance | Sale screen with 500 products usable on a mid-range tablet; cash-sale confirmation < 1 s on the server. |
+| Currency and time | COP with 2 decimals; dates in UTC; operating day according to the company's time zone. |

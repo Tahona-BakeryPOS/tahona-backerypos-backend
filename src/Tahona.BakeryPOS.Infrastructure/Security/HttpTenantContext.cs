@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Http;
 namespace Tahona.BakeryPOS.Infrastructure.Security;
 
 /// <summary>
-/// Contexto de la petición HTTP: empresa, usuario, permisos y alcance tomados solo de los claims del token.
-/// En procesos internos sin petición (outbox) la empresa se fija con <see cref="IBackgroundTenant.Enter"/>.
+/// HTTP request context: company, user, permissions and scope taken only from the token's claims.
+/// In internal processes with no request (outbox) the company is set with <see cref="IBackgroundTenant.Enter"/>.
 /// </summary>
 public sealed class HttpTenantContext : ITenantContext, IBackgroundTenant
 {

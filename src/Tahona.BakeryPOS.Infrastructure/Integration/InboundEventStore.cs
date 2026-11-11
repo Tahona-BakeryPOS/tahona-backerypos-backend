@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Infrastructure.Integration;
 
 /// <summary>
-/// Guarda cada evento entrante antes de procesarlo. La deduplicación la garantiza el índice único
-/// (proveedor, id externo) en la base, no una consulta previa: dos entregas simultáneas del mismo
-/// evento no pueden pasar ambas.
+/// Stores each inbound event before processing it. Deduplication is guaranteed by the unique index
+/// (provider, external id) in the database, not by a prior query: two simultaneous deliveries of the same
+/// event cannot both get through.
 /// </summary>
 public sealed class InboundEventStore : IInboundEventStore
 {

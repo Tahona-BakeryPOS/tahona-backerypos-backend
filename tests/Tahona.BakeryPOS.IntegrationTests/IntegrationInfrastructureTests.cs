@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Tahona.BakeryPOS.IntegrationTests;
 
-/// <summary>Bandeja de salida, eventos entrantes, auditoría y salud contra PostgreSQL real.</summary>
+/// <summary>Outbox, inbound events, audit and health against real PostgreSQL.</summary>
 [Collection(ApiCollection.Name)]
 public sealed class IntegrationInfrastructureTests
 {
@@ -58,7 +58,7 @@ public sealed class IntegrationInfrastructureTests
             await db.SaveChangesAsync();
         }
 
-        // Si el cambio falla (código repetido), el mensaje tampoco se guarda.
+        // If the change fails (repeated code), the message is not stored either.
         await using (var db = Db(tenant))
         {
             db.Branches.Add(Branch.Create(_api.Data.CompanyA, "OUT-1", "Repetida", null));
@@ -146,13 +146,13 @@ public sealed class IntegrationInfrastructureTests
         Assert.Equal(correlation, response.Headers.GetValues("X-Correlation-Id").Single());
 
         await using var check = Db();
-        // Una petición puede auditar varias entidades (la sucursal y lo que se aprovisiona con ella):
-        // todas comparten el correlation id, así que se busca la fila de la sucursal.
+        // A request can audit several entities (the branch and what is provisioned with it):
+        // they all share the correlation id, so the branch's row is looked up.
         var logs = await check.AuditLogs.Where(a => a.CorrelationId == correlation).ToListAsync();
         Assert.All(logs, l => Assert.Equal(_api.Data.CompanyA, l.CompanyId));
         var log = Assert.Single(logs, l => l.Entity == "org.branches");
         Assert.Equal("org.branches", log.Entity);
-        Assert.Equal("creacion", log.Action);
+        Assert.Equal("create", log.Action);
         Assert.Equal(_api.Data.CompanyA, log.CompanyId);
         Assert.NotNull(log.UserId);
         Assert.Contains("AUD-1", log.NewValues);

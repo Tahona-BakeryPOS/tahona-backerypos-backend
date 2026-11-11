@@ -65,8 +65,8 @@ public class StockLedgerTests
     [Fact]
     public void Reason_direction_limits_the_sign()
     {
-        var merma = AdjustmentReason.Create(Company, "MERMA", "Merma", AdjustmentDirection.Out);
-        var conteo = AdjustmentReason.Create(Company, "CONTEO", "Conteo", AdjustmentDirection.Both);
+        var merma = AdjustmentReason.Create(Company, "WASTE", "Merma", AdjustmentDirection.Out);
+        var conteo = AdjustmentReason.Create(Company, "PHYSICAL_COUNT", "Conteo", AdjustmentDirection.Both);
 
         Assert.True(merma.Allows(-1m));
         Assert.False(merma.Allows(1m));

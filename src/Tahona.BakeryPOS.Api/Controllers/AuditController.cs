@@ -10,12 +10,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Tahona.BakeryPOS.Api.Controllers;
 
-/// <summary>Historial de cambios de la empresa (solo lectura): quién cambió qué, con antes y después.</summary>
+/// <summary>The company's change history (read-only): who changed what, with before and after.</summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/auditoria")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.OrganizacionGestionar)]
+[RequirePermission(Permissions.OrganizationManage)]
 public sealed class AuditController : ControllerBase
 {
     private readonly ISender _mediator;
@@ -31,7 +31,7 @@ public sealed class AuditController : ControllerBase
         [FromQuery] DateTime? hasta, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
         (await _mediator.Send(new GetAuditLogQuery(entidad, entidadId, desde, hasta, page, pageSize), ct)).ToActionResult(HttpContext);
 
-    /// <summary>Tablas con cambios registrados, para filtrar.</summary>
+    /// <summary>Tables with recorded changes, for filtering.</summary>
     [HttpGet("entidades")]
     [ProducesResponseType<IReadOnlyList<string>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Entities(CancellationToken ct) =>

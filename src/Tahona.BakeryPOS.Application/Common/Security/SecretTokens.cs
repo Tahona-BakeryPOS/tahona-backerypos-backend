@@ -4,22 +4,22 @@ using System.Text;
 namespace Tahona.BakeryPOS.Application.Common.Security;
 
 /// <summary>
-/// Secretos aleatorios (refresh tokens, tokens de dispositivo, códigos de vinculación, contraseñas de
-/// un solo uso). Los que la base guarda se guardan como SHA-256: son aleatorios y largos, así que no
-/// necesitan un hash lento como las contraseñas.
+/// Random secrets (refresh tokens, device tokens, pairing codes, one-time
+/// passwords). The ones the database stores are stored as SHA-256: they are random and long, so they
+/// do not need a slow hash like passwords.
 /// </summary>
 public static class SecretTokens
 {
-    // Sin 0/O, 1/I/L: se leen y dictan sin confusión.
+    // Without 0/O, 1/I/L: they can be read and dictated without confusion.
     private const string ReadableAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     private const string PasswordAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
-    /// <summary>Token opaco de 256 bits en base64url.</summary>
+    /// <summary>256-bit opaque token in base64url.</summary>
     public static string NewToken() => Base64Url(RandomNumberGenerator.GetBytes(32));
 
     public static string NewPairingCode() => RandomNumberGenerator.GetString(ReadableAlphabet, 8);
 
-    /// <summary>Contraseña de un solo uso: 14 caracteres con letras y números.</summary>
+    /// <summary>One-time password: 14 characters with letters and numbers.</summary>
     public static string NewTemporaryPassword() => RandomNumberGenerator.GetString(PasswordAlphabet, 14);
 
     public static string Hash(string token) =>

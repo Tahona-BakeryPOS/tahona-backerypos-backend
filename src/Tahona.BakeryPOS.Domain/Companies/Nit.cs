@@ -3,9 +3,9 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Companies;
 
 /// <summary>
-/// NIT colombiano con su dígito de verificación (DV), calculado con el algoritmo módulo 11 de la DIAN:
-/// cada dígito, de derecha a izquierda, se multiplica por 3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47,
-/// 53, 59, 67, 71; DV = residuo (suma mod 11) si es 0 o 1, si no 11 − residuo.
+/// Colombian NIT with its check digit (DV), computed with the DIAN's modulus-11 algorithm:
+/// each digit, from right to left, is multiplied by 3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47,
+/// 53, 59, 67, 71; DV = remainder (sum mod 11) if it is 0 or 1, otherwise 11 − remainder.
 /// </summary>
 public sealed record Nit
 {
@@ -21,7 +21,7 @@ public sealed record Nit
         CheckDigit = checkDigit;
     }
 
-    /// <summary>Valida número y DV; el número llega sin puntos ni guion.</summary>
+    /// <summary>Validates number and DV; the number arrives without dots or hyphen.</summary>
     public static Nit Create(string number, int checkDigit)
     {
         var digits = new string((number ?? string.Empty).Where(char.IsDigit).ToArray());

@@ -93,7 +93,7 @@ public class IdentityDomainTests
     public void Owner_role_has_every_company_permission_but_not_platform_admin()
     {
         var owner = DefaultRoles.All.Single(r => r.Code == SystemRoles.Owner).Permissions;
-        Assert.DoesNotContain(Permissions.PlataformaAdmin, owner);
+        Assert.DoesNotContain(Permissions.PlatformAdmin, owner);
         Assert.Equal(Permissions.All.Count - 1, owner.Count);
         Assert.All(DefaultRoles.All.SelectMany(r => r.Permissions), p => Assert.Contains(Permissions.All, d => d.Code == p));
     }

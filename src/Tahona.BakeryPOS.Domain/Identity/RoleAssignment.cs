@@ -4,8 +4,8 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Identity;
 
 /// <summary>
-/// Rol de una pertenencia en una sucursal (o en todas si <see cref="BranchId"/> es null), con vigencia.
-/// Quitar una asignación no la borra: cierra su vigencia.
+/// Role of a membership at a branch (or at all if <see cref="BranchId"/> is null), with validity.
+/// Removing an assignment does not delete it: it closes its validity.
 /// </summary>
 public sealed class RoleAssignment : AuditableEntity, ITenantEntity
 {
@@ -37,7 +37,7 @@ public sealed class RoleAssignment : AuditableEntity, ITenantEntity
 
     public bool Covers(Guid branchId) => BranchId is null || BranchId == branchId;
 
-    /// <summary>Termina la vigencia ahora (si no había terminado ya).</summary>
+    /// <summary>Ends the validity now (if it had not already ended).</summary>
     public void End(DateTime now)
     {
         if (ValidTo is null || ValidTo > now)

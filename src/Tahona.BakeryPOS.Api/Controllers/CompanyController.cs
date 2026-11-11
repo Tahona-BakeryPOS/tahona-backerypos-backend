@@ -9,12 +9,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Tahona.BakeryPOS.Api.Controllers;
 
-/// <summary>La empresa del token (HU-1.2).</summary>
+/// <summary>The token's company (US-1.2).</summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/empresa")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.OrganizacionGestionar)]
+[RequirePermission(Permissions.OrganizationManage)]
 public sealed class CompanyController : ControllerBase
 {
     private readonly ISender _mediator;
@@ -29,7 +29,7 @@ public sealed class CompanyController : ControllerBase
     public async Task<IActionResult> Get(CancellationToken ct) =>
         (await _mediator.Send(new GetMyCompanyQuery(), ct)).ToVersionedResult(HttpContext, c => c.Version);
 
-    /// <summary>Contacto y zona horaria. Requiere If-Match con el ETag leído.</summary>
+    /// <summary>Contact and time zone. Requires If-Match with the ETag read.</summary>
     [HttpPut]
     [ProducesResponseType<CompanyDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]

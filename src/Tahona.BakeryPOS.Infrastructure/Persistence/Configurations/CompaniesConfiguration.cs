@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
-/// <summary>Módulo Companies — esquema <c>org</c>.</summary>
+/// <summary>Companies module — schema <c>org</c>.</summary>
 internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
 {
     public void Configure(EntityTypeBuilder<Company> builder)
@@ -19,7 +19,7 @@ internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.Property(e => e.TradeName).HasMaxLength(200);
         builder.Property(e => e.NitNumber).HasMaxLength(15).IsUnicode(false).IsRequired();
         builder.Property(e => e.TaxRegime).HasMaxLength(5).IsUnicode(false).IsRequired();
-        // Lista de códigos DIAN guardada como JSON (colección primitiva de EF Core).
+        // List of DIAN codes stored as JSON (an EF Core primitive collection).
         builder.PrimitiveCollection(e => e.TaxResponsibilities).IsRequired();
         builder.Property(e => e.Email).HasMaxLength(200).IsRequired();
         builder.Property(e => e.Phone).HasMaxLength(30);
@@ -47,7 +47,7 @@ internal sealed class BranchConfiguration : IEntityTypeConfiguration<Branch>
         builder.Property(e => e.Phone).HasMaxLength(30);
         builder.HasOne<Company>().WithMany().HasForeignKey(e => e.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(e => new { e.CompanyId, e.Code }).IsUnique().HasFilter("\"deleted_at\" IS NULL");
-        // Destino de FK compuestas (company_id, id) desde otros módulos.
+        // Target of composite FKs (company_id, id) from other modules.
         builder.HasAlternateKey(e => new { e.CompanyId, e.Id });
     }
 }

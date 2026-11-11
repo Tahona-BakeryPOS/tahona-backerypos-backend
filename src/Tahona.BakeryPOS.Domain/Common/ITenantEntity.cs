@@ -1,8 +1,8 @@
 namespace Tahona.BakeryPOS.Domain.Common;
 
 /// <summary>
-/// Entidad que pertenece a una empresa. El DbContext filtra por la empresa del usuario autenticado
-/// y rechaza guardar filas de otra empresa: es la base del aislamiento multiempresa.
+/// An entity that belongs to a company. The DbContext filters by the authenticated user's company
+/// and refuses to save rows of another company: it is the basis of multi-company isolation.
 /// </summary>
 public interface ITenantEntity
 {

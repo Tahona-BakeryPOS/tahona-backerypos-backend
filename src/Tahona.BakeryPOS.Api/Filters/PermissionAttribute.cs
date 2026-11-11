@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace Tahona.BakeryPOS.Api.Filters;
 
 /// <summary>
-/// Exige un permiso (claim "permission" del token). Uso: <c>[RequirePermission(Permissions.X)]</c>.
-/// El alcance (empresa) lo garantiza el filtro del DbContext; este filtro solo valida el permiso.
+/// Requires a permission (the token's "permission" claim). Usage: <c>[RequirePermission(Permissions.X)]</c>.
+/// The scope (company) is guaranteed by the DbContext filter; this filter only validates the permission.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
 public sealed class RequirePermissionAttribute : Attribute, IAuthorizationFilter

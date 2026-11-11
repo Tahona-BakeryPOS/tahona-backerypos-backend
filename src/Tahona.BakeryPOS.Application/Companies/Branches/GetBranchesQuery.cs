@@ -3,8 +3,8 @@ using MediatR;
 
 namespace Tahona.BakeryPOS.Application.Companies.Branches;
 
-/// <summary>Sucursales de la empresa del usuario (el filtro por empresa lo aplica el DbContext).</summary>
+/// <summary>Branches of the user's company (the company filter is applied by the DbContext).</summary>
 public sealed record GetBranchesQuery : IRequest<Result<IReadOnlyList<BranchDto>>>;
 
-/// <summary>Una sucursal; si es de otra empresa responde NO_ENCONTRADO, igual que si no existiera.</summary>
+/// <summary>One branch; if it belongs to another company it answers NO_ENCONTRADO, as if it did not exist.</summary>
 public sealed record GetBranchByIdQuery(Guid Id) : IRequest<Result<BranchDto>>;

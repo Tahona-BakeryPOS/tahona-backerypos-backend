@@ -1,161 +1,174 @@
 # Tahona.BakeryPOS — Backend
 
-POS SaaS para panaderías en Colombia (MVP v1.1). Este repo es el **backend** (API .NET) y es completamente
-independiente: se compila, prueba, documenta y despliega por sí solo, sin código, build ni despliegue de ningún cliente.
-Los clientes consumen solo el contrato del API (`docs/api-contracts.md`; OpenAPI en `/openapi/v1.json`).
-Rama de trabajo: `main`.
+Bakery POS SaaS for Colombia (MVP v1.1). This repo is the **backend** (.NET API) and is fully independent: it is built,
+tested, documented and deployed on its own, with no code, build or deployment of any client.
+Clients consume only the API contract (`docs/api-contracts.md`; OpenAPI at `/openapi/v1.json`).
+Working branch: `main`.
 
 Repo: <https://github.com/Tahona-BakeryPOS/tahona-backerypos-backend>
 
-## Antes de implementar
+## Language
 
-1. Leer `docs/requirements.md`, `docs/architecture.md`, `docs/data-model.md` y `docs/decisions.md`.
-2. Confirmar que las decisiones bloqueantes de la fase estén aprobadas (`docs/decisions.md`).
-3. Seguir el orden de `docs/implementation-plan.md`.
-4. Estado de los casos de uso y próximos pasos: `docs/estado-casos-de-uso.md` (leerlo al iniciar cada sesión).
-5. Despliegue y operación: `docs/runbooks.md` (archivos en `deploy/`).
+Everything technical is in English: database (schemas, tables, columns, constraint values and stored codes), code
+identifiers, code comments, commit messages and documentation. Two things stay Spanish on purpose:
 
-El contrato HTTP está en `docs/api-contracts.md`: un cambio incompatible requiere una versión nueva del API, no romper la actual.
+- **What users see**: validation and error messages, and the display names seeded for each company (roles, units, payment
+  methods, adjustment reasons...). The product is for Colombian bakeries.
+- **The current API surface**: route paths (`/ventas`, `/plataforma/empresas`...), error codes (`FACTURACION_NO_CONFIGURADA`...)
+  and the error body keys (`codigo`, `mensaje`, `detalles`). Changing them breaks clients, so they only change with a new API version.
 
-## Reglas no negociables
+Stored codes (permissions, system roles, default reasons and payment methods, audit actions) are English, for example
+`sales.void`, `OWNER`, `WASTE`, `CASH`, `create`. A new stored code is added in English.
 
-- **Aislamiento por empresa**: toda tabla de negocio con `company_id`; filtro global + validación en
-  cada handler + prueba de acceso cruzado por endpoint.
-- **Estados separados**: venta, pago, inventario y documento fiscal tienen cada uno su estado.
-- **Nada externo dentro de una transacción SQL**: pasarela y proveedor fiscal se llaman fuera; los
-  pasos son idempotentes y los retoman workers desde el estado persistido (outbox / inbound events).
-- **Un pago solo se aprueba por el backend** (webhook con firma válida o consulta servidor-a-servidor).
-- **Un documento fiscal solo es "aceptado" con confirmación verificable del proveedor**; si el
-  resultado de un envío es desconocido, se consulta el estado antes de reenviar, con el mismo número.
-- **Inventario**: el saldo nunca se edita; todo cambio es un movimiento idempotente.
-- **Sin endpoints ni respuestas inventadas** para proveedores externos; lo no verificado se marca
-  "por verificar" en `docs/`.
-- **Secretos** fuera del repositorio; credenciales de terceros cifradas por empresa; nunca en logs.
-- Pedir aprobación antes de: cambiar decisiones de negocio, añadir dependencias importantes, cambiar
-  el modelo de datos aprobado, migraciones destructivas, configurar integraciones de producción o
-  cambiar el alcance.
+## Before implementing
 
-Convenciones: Clean Architecture + CQRS (MediatR), un Command/Query + Handler (+ Validator) por caso de uso,
-Result/`Error` con códigos en mayúsculas, FluentValidation, EF Core con proyección a DTO en consultas,
-UUID v7, permisos como claims `[RequirePermission("modulo.accion")]`, auditoría automática en `SaveChangesAsync`.
+1. Read `docs/requirements.md`, `docs/architecture.md`, `docs/data-model.md` and `docs/decisions.md`.
+2. Confirm that the blocking decisions of the phase are approved (`docs/decisions.md`).
+3. Follow the order of `docs/implementation-plan.md`.
+4. Use-case status and next steps: `docs/use-case-status.md` (read it at the start of every session).
+5. Deployment and operations: `docs/runbooks.md` (files in `deploy/`).
 
-## Estado
+The HTTP contract is in `docs/api-contracts.md`: an incompatible change requires a new API version; do not break the current one.
 
-**Fases 1 a 10 implementadas** (la 6 sin probar contra el sandbox de Bold, la 7 y la 9 sin documentos aceptados en habilitación y la 8 sin E2E). La venta (`Sales`, I-25) orquesta pagos, inventario, caja y factura vía contratos en `SaleConfirmation`; la anulación y las devoluciones (D-11, I-26) en `SaleReversals`, y el informe en `SalesReport`. Módulos: `Companies` (empresa, sucursales, alta de plataforma),
-`Identity` (usuarios, pertenencias, roles, asignaciones por sucursal, refresh tokens, dispositivos y PIN),
-`Catalog` (categorías, unidades globales, impuestos, productos, precios con vigencia base/sucursal y
-disponibilidad por sucursal), `Inventory` (ubicaciones, motivos, movimientos de solo inserción, saldos,
-inicial, ajustes, conteo y reconciliación) y `Cash` (cajas, sesiones, movimientos de efectivo, motivos y
-cierre; el esperado es `CashMovement.Expected`, la suma con signo de los movimientos) y `Payments` (medios de
-pago, pagos e intentos, cuentas de Bold cifradas, datáfono por caja; `GatewayPaymentService` cobra fuera de la
-transacción y el webhook `POST /api/v1/webhooks/pagos/bold` aprueba con firma válida; ver
-`docs/payment-integration.md` §11) e `Invoicing` (Siigo: configuración, emparejamientos, documentos fiscales;
-`IFiscalDocumentIssuer` crea la factura de la venta y el outbox la envía con `FiscalSubmitHandler`; la facturación es **opcional por empresa** (D-17: `FiscalSettings.IsActive`; apagada, la venta queda `not_required`, y lo ya creado se sigue enviando); ver
-`docs/electronic-invoicing.md` §9). Todo movimiento de
-existencias pasa por `InventoryLedger` (idempotencia por origen y política D-06). La auditoría se consulta por
-`IAuditLogReader` (`Application/Auditing`, implementado en Infrastructure). El resto llega por fases (`docs/implementation-plan.md`).
+## Non-negotiable rules
 
-- Un módulo no toca DbSet ni entidades de otro: lo que necesita lo pide por `Application/Common/Contracts`
+- **Company isolation**: every business table has `company_id`; global filter + validation in
+  every handler + a cross-access test per endpoint.
+- **Separate states**: sale, payment, inventory and fiscal document each have their own state.
+- **Nothing external inside a SQL transaction**: the payment gateway and the tax provider are called outside; steps are
+  idempotent and workers resume them from the persisted state (outbox / inbound events).
+- **A payment is only approved by the backend** (webhook with a valid signature or a server-to-server query).
+- **A fiscal document is only "accepted" with verifiable confirmation from the provider**; if the result of a
+  submission is unknown, the status is queried before resending, with the same number.
+- **Inventory**: the balance is never edited; every change is an idempotent movement.
+- **No invented endpoints or responses** for external providers; anything unverified is marked
+  "to verify" in `docs/`.
+- **Secrets** stay out of the repository; third-party credentials are encrypted per company; never in logs.
+- Ask for approval before: changing business decisions, adding major dependencies, changing
+  the approved data model, destructive migrations, configuring production integrations or
+  changing the scope.
+
+Conventions: Clean Architecture + CQRS (MediatR), one Command/Query + Handler (+ Validator) per use case,
+Result/`Error` with uppercase codes, FluentValidation, EF Core with DTO projection in queries,
+UUID v7, permissions as claims `[RequirePermission("module.action")]`, automatic auditing in `SaveChangesAsync`.
+
+## Status
+
+**Phases 1 to 10 implemented** (6 not tested against the Bold sandbox, 7 and 9 without accepted documents in the test environment, and 8 without E2E). The sale (`Sales`, I-25) orchestrates payments, inventory, cash and invoice through contracts in `SaleConfirmation`; voids and returns (D-11, I-26) are in `SaleReversals`, and the report in `SalesReport`. Modules: `Companies` (company, branches, platform onboarding),
+`Identity` (users, memberships, roles, per-branch assignments, refresh tokens, devices and PIN),
+`Catalog` (categories, global units, taxes, products, prices with base/branch validity and
+per-branch availability), `Inventory` (locations, reasons, insert-only movements, balances,
+initial stock, adjustments, count and reconciliation), `Cash` (registers, sessions, cash movements, reasons and
+closing; the expected amount is `CashMovement.Expected`, the signed sum of the movements) and `Payments` (payment
+methods, payments and attempts, encrypted Bold accounts, a card terminal per register; `GatewayPaymentService` charges outside the
+transaction and the webhook `POST /api/v1/webhooks/pagos/bold` approves with a valid signature; see
+`docs/payment-integration.md` §11) and `Invoicing` (Siigo: configuration, pairings, fiscal documents;
+`IFiscalDocumentIssuer` creates the sale's invoice and the outbox sends it with `FiscalSubmitHandler`; invoicing is **optional per company** (D-17: `FiscalSettings.IsActive`; when off, the sale stays `not_required`, and whatever was already created is still sent); see
+`docs/electronic-invoicing.md` §9). Every stock movement goes through `InventoryLedger` (idempotency by source and the D-06
+policy). The audit trail is queried through `IAuditLogReader` (`Application/Auditing`, implemented in Infrastructure).
+The rest arrives in phases (`docs/implementation-plan.md`).
+
+- A module does not touch another module's DbSet or entities: what it needs it asks for through `Application/Common/Contracts`
   (`ICompanyDirectory`, `IBranchDirectory`, `ICashRegisterDirectory`, `IIdentityProvisioning`, `ICatalogProvisioning`, `IProductDirectory`,
   `IInventoryProvisioning`, `IUserDirectory`, `ICashProvisioning`, `IPendingPaymentsProbe`, `ICashSessionDirectory`, `IPaymentsProvisioning`, `IFiscalDocumentIssuer`).
-- Llaves de terceros: siempre por `ISecretProtector` (Data Protection); nunca en logs ni en respuestas.
-- Precios (D-07): con impuesto incluido por defecto. `ProductPrice.Open` abre una vigencia y cierra la anterior;
-  `ProductPrice.EffectiveAt` da el precio de una sucursal (el propio vigente o el base).
-- Flujos sin empresa en sesión que buscan por secreto (login, refresh, vincular, PIN) apagan solo el
-  filtro `QueryFilters.Tenant` y después trabajan únicamente con la empresa que trae la fila.
-- `PUT` de datos maestros exige `If-Match` (`Request.IfMatch()` → `IAppDbContext.ExpectVersion`).
-- Permisos: catálogo en `Common/Security/Permissions.cs` (sembrado por migración); roles por defecto en
-  `Identity/IdentityProvisioning.cs` (`DefaultRoles`). Un permiso nuevo requiere migración.
+- Third-party keys: always through `ISecretProtector` (Data Protection); never in logs or responses.
+- Prices (D-07): tax included by default. `ProductPrice.Open` opens a validity period and closes the previous one;
+  `ProductPrice.EffectiveAt` gives a branch's price (its own current price or the base one).
+- Flows with no company in the session that look up by secret (login, refresh, pairing, PIN) turn off only the
+  `QueryFilters.Tenant` filter and then work only with the company carried by the row.
+- Master-data `PUT`s require `If-Match` (`Request.IfMatch()` → `IAppDbContext.ExpectVersion`).
+- Permissions: catalog in `Common/Security/Permissions.cs` (seeded by migration); default roles in
+  `Identity/IdentityProvisioning.cs` (`DefaultRoles`). A new permission requires a migration.
 
 ## Stack
 
-.NET 10 (LTS) · ASP.NET Core · EF Core 10 · **PostgreSQL 17** (Npgsql, igual que la v1) · MediatR 12 ·
-FluentValidation · OpenAPI nativo (`Microsoft.AspNetCore.OpenApi`, documento en `/openapi/v1.json`) ·
-Serilog · xUnit + Testcontainers (PostgreSQL real) + NetArchTest.
+.NET 10 (LTS) · ASP.NET Core · EF Core 10 · **PostgreSQL 17** (Npgsql) · MediatR 12 ·
+FluentValidation · native OpenAPI (`Microsoft.AspNetCore.OpenApi`, document at `/openapi/v1.json`) ·
+Serilog · xUnit + Testcontainers (real PostgreSQL) + NetArchTest.
 
-## Estructura (monolito modular por carpetas, D-14)
+## Structure (modular monolith by folders, D-14)
 
 ```
 src/
-  Tahona.BakeryPOS.Domain/<Módulo>/                 entidades y reglas (Companies/…)
-  Tahona.BakeryPOS.Application/<Módulo>/            casos de uso: Query/Command + Handler (+ Validator)
-  Tahona.BakeryPOS.Application/Common/              abstracciones: ITenantContext, IAppDbContext, IOutbox, IInboundEventStore
+  Tahona.BakeryPOS.Domain/<Module>/                 entities and rules (Companies/…)
+  Tahona.BakeryPOS.Application/<Module>/            use cases: Query/Command + Handler (+ Validator)
+  Tahona.BakeryPOS.Application/Common/              abstractions: ITenantContext, IAppDbContext, IOutbox, IInboundEventStore
   Tahona.BakeryPOS.Infrastructure/
-    Persistence/                                    AppDbContext (único), configuraciones por esquema, migraciones
+    Persistence/                                    AppDbContext (single), per-schema configurations, migrations
     Integration/                                    OutboxProcessor, InboundEventStore, IdempotencyStore
     Security/                                       HttpTenantContext, JwtTokenService
   Tahona.BakeryPOS.Api/                             controllers, [Idempotent], [RequirePermission], middlewares
 tests/
-  Tahona.BakeryPOS.UnitTests                        dominio y reglas puras
-  Tahona.BakeryPOS.ArchitectureTests                capas y módulos (un módulo no referencia a otro)
-  Tahona.BakeryPOS.IntegrationTests                 API + PostgreSQL real (Docker): aislamiento, idempotencia, outbox…
+  Tahona.BakeryPOS.UnitTests                        domain and pure rules
+  Tahona.BakeryPOS.ArchitectureTests                layers and modules (a module does not reference another)
+  Tahona.BakeryPOS.IntegrationTests                 API + real PostgreSQL (Docker): isolation, idempotency, outbox…
 ```
 
-## Piezas de la fundación (usar siempre)
+## Foundation pieces (always use them)
 
-- **Multiempresa**: toda entidad de negocio implementa `ITenantEntity`. `AppDbContext` aplica el filtro
-  con nombre `Tenant` (EF Core 10) y rechaza al guardar filas de otra empresa (`TenantIsolationException`
-  → 403). La empresa sale solo del claim `company_id` del token.
-- **Idempotencia**: `[Idempotent]` en todo POST que cree algo reintentable; exige `Idempotency-Key`.
-- **Outbox**: `IOutbox.Enqueue(tipo, payload)` antes de `SaveChangesAsync` (misma transacción); un
-  `IOutboxHandler` por tipo, idempotente. Nunca llamar a terceros dentro de una transacción.
-- **Webhooks**: `IInboundEventStore.RecordAsync` primero (deduplica por proveedor + id), luego procesar.
-- **Auditoría**: automática en `SaveChangesAsync` (`aud.audit_logs`); no escribirla a mano. Campos
-  sensibles (PIN, contraseñas, credenciales) se enmascaran por nombre en `AuditTrail`.
-- **Errores**: `Result`/`Error` con código en `SharedKernel/Results/Error.cs`; status HTTP en
-  `ResultExtensions.StatusCodeOf`. Cuerpo: `{ codigo, mensaje, detalles?, correlationId }`.
+- **Multi-company**: every business entity implements `ITenantEntity`. `AppDbContext` applies the filter
+  named `Tenant` (EF Core 10) and rejects saving rows of another company (`TenantIsolationException`
+  → 403). The company comes only from the token's `company_id` claim.
+- **Idempotency**: `[Idempotent]` on every POST that creates something retryable; it requires `Idempotency-Key`.
+- **Outbox**: `IOutbox.Enqueue(type, payload)` before `SaveChangesAsync` (same transaction); one
+  idempotent `IOutboxHandler` per type. Never call third parties inside a transaction.
+- **Webhooks**: `IInboundEventStore.RecordAsync` first (deduplicates by provider + id), then process.
+- **Audit**: automatic in `SaveChangesAsync` (`aud.audit_logs`); do not write it by hand. Sensitive fields
+  (PIN, passwords, credentials) are masked by name in `AuditTrail`.
+- **Errors**: `Result`/`Error` with a code in `SharedKernel/Results/Error.cs`; HTTP status in
+  `ResultExtensions.StatusCodeOf`. Body: `{ codigo, mensaje, detalles?, correlationId }`.
 
-## Comandos
+## Commands
 
 ```bash
 dotnet tool restore
 dotnet build
 dotnet test tests/Tahona.BakeryPOS.UnitTests
 dotnet test tests/Tahona.BakeryPOS.ArchitectureTests
-dotnet test tests/Tahona.BakeryPOS.IntegrationTests          # requiere Docker (descarga postgres:17-alpine)
-dotnet ef migrations add <Nombre> --project src/Tahona.BakeryPOS.Infrastructure --startup-project src/Tahona.BakeryPOS.Infrastructure --output-dir Persistence/Migrations
+dotnet test tests/Tahona.BakeryPOS.IntegrationTests          # requires Docker (downloads postgres:17-alpine)
+dotnet ef migrations add <Name> --project src/Tahona.BakeryPOS.Infrastructure --startup-project src/Tahona.BakeryPOS.Infrastructure --output-dir Persistence/Migrations
 ```
 
-### Base de datos (PostgreSQL, igual que la v1 — I-18)
+### Database (PostgreSQL — I-18)
 
-- Cadena en `ConnectionStrings:DefaultConnection` (`appsettings.Development.json`, o la variable
-  `ConnectionStrings__DefaultConnection`, que tiene prioridad).
-- Postgres de desarrollo en contenedor, como en la v1: compose base + override de dev, con `-p` y
-  `--env-file .env.dev` (no versionado). Publica el puerto **15432** (5432 = PostgreSQL local de Windows,
-  5433 = base de la v1). La API es opcional (`--profile api`).
+- Connection string in `ConnectionStrings:DefaultConnection` (`appsettings.Development.json`, or the variable
+  `ConnectionStrings__DefaultConnection`, which takes precedence).
+- Development Postgres in a container: base compose + dev override, with `-p` and
+  `--env-file .env.dev` (not versioned). It publishes port **15432** (5432 = local Windows PostgreSQL,
+  5433 = the previous system's database). The API is optional (`--profile api`).
 
 ```bash
 docker compose -p bakerypos-dev --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d db
 ```
 
-Detalles de la persistencia: la versión de fila (`row_version`, `bytea`) la renueva `AppDbContext` en cada
-cambio y funciona como token de concurrencia (If-Match); las fechas son `timestamptz` en UTC; los filtros
-de índice usan comillas dobles (`"deleted_at" IS NULL`); el outbox reclama lotes con `FOR UPDATE SKIP
-LOCKED`. PostgreSQL compara textos distinguiendo mayúsculas: códigos y correos se normalizan antes de guardar.
+Persistence details: the row version (`row_version`, `bytea`) is renewed by `AppDbContext` on every
+change and works as a concurrency token (If-Match); dates are `timestamptz` in UTC; index filters
+use double quotes (`"deleted_at" IS NULL`); the outbox claims batches with `FOR UPDATE SKIP
+LOCKED`. PostgreSQL compares text case-sensitively: codes and emails are normalized before saving.
 
-`dotnet ef database update` sin `ConnectionStrings__DefaultConnection` apunta a una base de diseño
-(`bakerypos_design`); para `bakerypos_dev` basta con arrancar la API en Development.
+`dotnet ef database update` without `ConnectionStrings__DefaultConnection` points at a design database
+(`bakerypos_design`); for `bakerypos_dev` it is enough to start the API in Development.
 
-Primer acceso en desarrollo: define en user-secrets `Seed:PlatformAdminEmail` y
-`Seed:PlatformAdminPassword` (y opcional `Seed:PlatformAdminName`); al arrancar se crea el administrador
-de plataforma. Con él: `POST /api/v1/auth/login` → `POST /api/v1/plataforma/empresas` (devuelve la
-contraseña de un solo uso del propietario) → el propietario entra y la cambia en `/auth/cambiar-contrasena`.
+First sign-in in development: set `Seed:PlatformAdminEmail` and
+`Seed:PlatformAdminPassword` in user-secrets (and optionally `Seed:PlatformAdminName`); on startup the
+platform administrator is created. With it: `POST /api/v1/auth/login` → `POST /api/v1/plataforma/empresas` (returns the
+owner's one-time password) → the owner signs in and changes it at `/auth/cambiar-contrasena`.
 
-Desarrollo: la API aplica migraciones al arrancar solo en Development. `Jwt:Secret` va en user-secrets
-(el proyecto tiene su propio `UserSecretsId`).
+Development: the API applies migrations on startup only in Development. `Jwt:Secret` goes in user-secrets
+(the project has its own `UserSecretsId`).
 
-En este equipo, Windows App Control bloquea el ejecutable `Tahona.BakeryPOS.Api.exe` recién compilado:
-correr con `dotnet src/Tahona.BakeryPOS.Api/bin/Debug/net10.0/Tahona.BakeryPOS.Api.dll` (o desde Visual Studio).
+On this machine, Windows App Control blocks the freshly built `Tahona.BakeryPOS.Api.exe`:
+run with `dotnet src/Tahona.BakeryPOS.Api/bin/Debug/net10.0/Tahona.BakeryPOS.Api.dll` (or from Visual Studio).
 
-## Secretos
+## Secrets
 
-Nunca en archivos versionados. Dev: user-secrets (`Jwt:Secret`; la contraseña de Postgres puede ir en
-`ConnectionStrings:DefaultConnection` de user-secrets, que pisa la de `appsettings.Development.json`) y
-`.env.dev`. Otros ambientes: variables de entorno (`ConnectionStrings__DefaultConnection`, `Jwt__Secret`)
-desde un gestor de secretos.
+Never in versioned files. Dev: user-secrets (`Jwt:Secret`; the Postgres password can go in
+`ConnectionStrings:DefaultConnection` in user-secrets, which overrides the one in `appsettings.Development.json`) and
+`.env.dev`. Other environments: environment variables (`ConnectionStrings__DefaultConnection`, `Jwt__Secret`)
+from a secrets manager.
 
-## Despliegue (fase 10, D-10)
+## Deployment (phase 10, D-10)
 
-`deploy/`: compose de staging/producción (PostgreSQL, bundle de migraciones de `Dockerfile.migrations`, API y Caddy como proxy HTTPS del API; sin frontend), `Caddyfile`, `.env.deploy.example` y scripts (`deploy.sh`, `backup.sh`, `restore.sh`, `bootstrap-admin.sh`).
-Fuera de desarrollo la API exige `DataProtection__KeysPath` y detrás de Caddy usa `ReverseProxy__Enabled=true`. Guía
-completa: `docs/runbooks.md`. Prueba de carga: `tests/load/sales-load.js` (k6).
+`deploy/`: staging/production compose (PostgreSQL, migrations bundle from `Dockerfile.migrations`, API and Caddy as the API's HTTPS proxy; no frontend), `Caddyfile`, `.env.deploy.example` and scripts (`deploy.sh`, `backup.sh`, `restore.sh`, `bootstrap-admin.sh`).
+Outside development the API requires `DataProtection__KeysPath` and behind Caddy it uses `ReverseProxy__Enabled=true`. Full
+guide: `docs/runbooks.md`. Load test: `tests/load/sales-load.js` (k6).

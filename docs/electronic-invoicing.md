@@ -1,166 +1,166 @@
-# Integración con facturación electrónica
+# Electronic invoicing integration
 
-Estado: **D-04 = Siigo, D-17 = facturación electrónica opcional por empresa (sustituye a D-05), D-15 = 5 años**. Lo verificado
-de la API de Siigo y sus consecuencias están en la sección 9. Pendiente: prueba con un documento aceptado en
-ambiente de habilitación (criterio de aceptación de la fase 7) y confirmación del contador (D-05, D-15).
+Status: **D-04 = Siigo, D-17 = electronic invoicing optional per company (replaces D-05), D-15 = 5 years**. What was verified
+about Siigo's API and its consequences are in section 9. Pending: a test with an accepted document in the
+test environment (acceptance criterion of phase 7) and confirmation from the accountant (D-05, D-15).
 
-## 1. Marco normativo (resumen, a confirmar con el contador)
+## 1. Regulatory framework (summary, to confirm with the accountant)
 
-| Tema | Lo encontrado | Fuente | Confianza |
+| Topic | What was found | Source | Confidence |
 |---|---|---|---|
-| Documento equivalente electrónico POS | El "tiquete de máquina registradora con sistema P.O.S." pasa a ser **electrónico**; el obligado lo sustituye por el documento equivalente electrónico o por factura electrónica de venta | [DIAN – Documento equivalente electrónico](https://micrositios.dian.gov.co/sistema-de-facturacion-electronica/documento-equivalente-electronico) | Alta |
-| Base legal | Resolución DIAN 000165 de 2023 (arts. 15, 19, 20); calendario modificado por Resolución 000008 de 2024 | DIAN; [Actualícese](https://actualicese.com/dian-modifica-el-calendario-de-implementacion-de-documentos-equivalentes-electronicos/) | Alta / media |
-| Compilación vigente | Resolución Única DIAN 000227 de 2025 | [Siempre al Día](https://siemprealdia.co/colombia/calendario-del-sistema-de-facturacion-electronica/) | **Media — verificar texto oficial** |
-| Fechas de obligatoriedad | Escalonadas en 2024 por tipo de contribuyente; nuevos obligados desde su habilitación | Fuentes secundarias | Media |
-| Tope de 5 UVT | Fuentes contradictorias: el texto original lo menciona; Sovos y el concepto DIAN 1563 de 2024 indican que el POS electrónico se expide sin importar el valor | [Sovos](https://sovos.com/co/iva/documento-equivalente-electronico-pos/), [Accounter](https://accounter.co/normatividad/pos-electronico-soporte-de-costos-y-deducciones-en-renta-concepto-1563-dian-de-2024) | **Baja — decisión del contador** |
-| Identificación del adquirente | El documento puede identificar al comprador (nombre, NIT); con ello da derecho a IVA descontable y deducción | DIAN | Alta |
-| Transmisión, validación previa, CUDE, anexo técnico | No especificado en la página consultada | — | **Por verificar** |
+| Electronic POS equivalent document | The "cash register receipt with a P.O.S. system" becomes **electronic**; the obligated party replaces it with the electronic equivalent document or with an electronic sales invoice | [DIAN – Electronic equivalent document](https://micrositios.dian.gov.co/sistema-de-facturacion-electronica/documento-equivalente-electronico) | High |
+| Legal basis | DIAN Resolution 000165 of 2023 (arts. 15, 19, 20); calendar modified by Resolution 000008 of 2024 | DIAN; [Actualícese](https://actualicese.com/dian-modifica-el-calendario-de-implementacion-de-documentos-equivalentes-electronicos/) | High / medium |
+| Current compilation | DIAN Single Resolution 000227 of 2025 | [Siempre al Día](https://siemprealdia.co/colombia/calendario-del-sistema-de-facturacion-electronica/) | **Medium — verify the official text** |
+| Mandatory dates | Staggered in 2024 by taxpayer type; new obligated parties from their enablement | Secondary sources | Medium |
+| 5 UVT cap | Contradictory sources: the original text mentions it; Sovos and DIAN concept 1563 of 2024 indicate the electronic POS is issued regardless of the value | [Sovos](https://sovos.com/co/iva/documento-equivalente-electronico-pos/), [Accounter](https://accounter.co/normatividad/pos-electronico-soporte-de-costos-y-deducciones-en-renta-concepto-1563-dian-de-2024) | **Low — the accountant's decision** |
+| Identifying the buyer | The document may identify the buyer (name, NIT); with it, it gives the right to deductible VAT and tax deduction | DIAN | High |
+| Transmission, prior validation, CUDE, technical annex | Not specified on the page consulted | — | **To verify** |
 
-**Implicación (si la empresa está obligada a facturar):** la panadería debe emitir, por cada venta, un documento equivalente electrónico POS o
-una factura electrónica, a través de un proveedor tecnológico o del servicio de la DIAN. Qué
-documento corresponde en cada caso (consumidor final vs. cliente con NIT, monto) lo define D-05 con el
-contador.
+**Implication (if the company is obliged to invoice):** the bakery must issue, for each sale, an electronic POS equivalent document or
+an electronic invoice, through a technology provider or the DIAN's service. Which
+document applies in each case (final consumer vs. customer with a NIT, amount) is defined by D-05 with the
+accountant.
 
-> **Opcional por empresa (D-17).** La facturación se enciende o apaga en Configuración → Facturación electrónica. Encendida,
-> cada venta genera su factura (§4). Apagada, la venta queda con `fiscal_status = not_required` y no se crea ningún
-> documento; lo demás (cobros con Bold, inventario, caja, devoluciones) no cambia. Al apagarla, los documentos que ya
-> existen (facturas en trámite y notas crédito de ventas ya facturadas) se siguen enviando con la configuración guardada;
-> una venta no facturada no genera nota crédito. Si una empresa está obligada por la DIAN, mantener la facturación apagada
-> es responsabilidad de la empresa; el sistema no lo valida.
+> **Optional per company (D-17).** Invoicing is turned on or off in Configuración → Facturación electrónica. When on,
+> each sale generates its invoice (§4). When off, the sale keeps `fiscal_status = not_required` and no
+> document is created; everything else (Bold payments, inventory, cash, returns) is unchanged. When it is turned off, the documents that already
+> exist (invoices in progress and credit notes of already-invoiced sales) keep being sent with the stored configuration;
+> a sale that was not invoiced does not generate a credit note. If a company is obliged by the DIAN, keeping invoicing off
+> is the company's responsibility; the system does not validate it.
 
-## 2. Selección del proveedor tecnológico
+## 2. Selecting the technology provider
 
-No se encontró documentación oficial de API pública verificable en esta revisión para los
-candidatos. Criterios para decidir:
+No verifiable public official API documentation was found in this review for the
+candidates. Criteria to decide:
 
-| Criterio | Peso | Cómo se verifica |
+| Criterion | Weight | How it is verified |
 |---|---|---|
-| Soporta **documento equivalente POS electrónico** y factura electrónica, más notas | Obligatorio | Documentación + demo |
-| API REST documentada con ambiente de pruebas (habilitación DIAN) | Obligatorio | Cuenta sandbox |
-| Consulta de estado por id propio o consecutivo (para resultados desconocidos) | Obligatorio | Documentación |
-| Idempotencia o rechazo de duplicados por prefijo+número | Obligatorio | Prueba en sandbox |
-| Devuelve CUFE/CUDE, XML firmado, PDF/representación gráfica, QR | Obligatorio | Documentación |
-| Webhooks de cambio de estado (deseable) | Deseable | Documentación |
-| Precio por documento y escalabilidad SaaS (multi-NIT bajo una cuenta) | Alto | Cotización |
-| Soporte y SLA | Medio | Contrato |
+| Supports the **electronic POS equivalent document** and electronic invoicing, plus notes | Mandatory | Documentation + demo |
+| Documented REST API with a test environment (DIAN enablement) | Mandatory | Sandbox account |
+| Status query by own id or consecutive (for unknown results) | Mandatory | Documentation |
+| Idempotency or duplicate rejection by prefix+number | Mandatory | Sandbox test |
+| Returns CUFE/CUDE, signed XML, PDF/graphic representation, QR | Mandatory | Documentation |
+| Status-change webhooks (desirable) | Desirable | Documentation |
+| Price per document and SaaS scalability (multi-NIT under one account) | High | Quote |
+| Support and SLA | Medium | Contract |
 
-Candidatos a contactar (sin orden de preferencia): Factus (Halltec), Alegra, Siigo, Dataico, The
-Factory HKA, Carvajal, Sovos, y la opción gratuita de la DIAN (no apta para integración vía API).
-La recomendación se presentará tras validar al menos dos en sandbox.
+Candidates to contact (in no order of preference): Factus (Halltec), Alegra, Siigo, Dataico, The
+Factory HKA, Carvajal, Sovos, and the DIAN's free option (not suitable for API integration).
+The recommendation will be presented after validating at least two in a sandbox.
 
-## 3. Diseño independiente del proveedor
+## 3. Provider-independent design
 
-Puerto `IFiscalDocumentProvider`:
+Port `IFiscalDocumentProvider`:
 ```
 SubmitAsync(FiscalDocumentPayload)      → Accepted | Rejected(reasons) | Pending(providerId) | Unknown
-GetStatusAsync(providerId | prefix+number) → mismo resultado
+GetStatusAsync(providerId | prefix+number) → same result
 GetArtifactsAsync(providerId)            → XML, PDF, QR, CUFE/CUDE
-SubmitNoteAsync(...)                     → nota crédito / de ajuste
+SubmitNoteAsync(...)                     → credit / adjustment note
 ```
-El dominio construye el documento (emisor, adquirente, líneas, impuestos, totales, numeración) y el
-adaptador lo traduce al formato del proveedor.
+The domain builds the document (issuer, buyer, lines, taxes, totals, numbering) and the
+adapter translates it to the provider's format.
 
-## 4. Ciclo de vida del documento
+## 4. Document life cycle
 
 ```
-venta confirmada → fiscal_document 'pending' (número asignado del rango vigente, en la misma TX)
+confirmed sale → fiscal_document 'pending' (number assigned from the current range, in the same TX)
 worker → 'submitting' → SubmitAsync
-   ├─ Accepted  → 'accepted' + CUFE/CUDE + archivos guardados
-   ├─ Rejected  → 'rejected' + motivos (no se reintenta solo)
-   ├─ Pending   → seguimiento con GetStatusAsync
-   ├─ error transitorio (5xx, timeout antes de enviar) → 'temporary_error', reintento con backoff
-   └─ Unknown (timeout tras enviar) → 'unknown' → GetStatusAsync obligatorio antes de reenviar
+   ├─ Accepted  → 'accepted' + CUFE/CUDE + files stored
+   ├─ Rejected  → 'rejected' + reasons (not retried automatically)
+   ├─ Pending   → follow-up with GetStatusAsync
+   ├─ transient error (5xx, timeout before sending) → 'temporary_error', retry with backoff
+   └─ Unknown (timeout after sending) → 'unknown' → GetStatusAsync mandatory before resending
 ```
-Reglas:
-- **Nunca** se marca `accepted` sin respuesta verificable del proveedor (CUFE/CUDE y estado DIAN).
-- **Nunca** se reenvía un documento `unknown` sin una consulta de estado registrada en
-  `fiscal_submission_attempts`. El reenvío usa el **mismo prefijo y número**.
-- Los números del rango se asignan con bloqueo de fila y no se reutilizan; un documento rechazado
-  conserva su número y la corrección sigue el procedimiento del proveedor (*por verificar*).
-- Rango por vencer o agotado → alerta al propietario con anticipación (umbral configurable).
+Rules:
+- A document is **never** marked `accepted` without a verifiable provider response (CUFE/CUDE and DIAN status).
+- An `unknown` document is **never** resent without a status query recorded in
+  `fiscal_submission_attempts`. The resend uses the **same prefix and number**.
+- Range numbers are assigned with a row lock and are not reused; a rejected document
+  keeps its number and the correction follows the provider's procedure (*to verify*).
+- A range about to expire or run out → early alert to the owner (configurable threshold).
 
-## 5. Configuración fiscal
+## 5. Tax configuration
 
-Por empresa (y sucursal cuando la numeración es por punto de venta): NIT y DV, régimen y
-responsabilidades, actividad económica, dirección y municipio (DANE), resoluciones y rangos de
-numeración, ambiente (pruebas/producción), credenciales del proveedor cifradas. Pruebas y producción
-en registros separados; cambiar a producción requiere confirmación explícita y queda auditado.
+Per company (and per branch when numbering is per point of sale): NIT and check digit, regime and
+responsibilities, economic activity, address and municipality (DANE), resolutions and numbering
+ranges, environment (test/production), encrypted provider credentials. Test and production
+in separate records; switching to production requires explicit confirmation and is audited.
 
-## 6. Conservación
+## 6. Retention
 
-XML firmado, PDF/representación gráfica, CUFE/CUDE, respuesta del proveedor y de la DIAN se guardan
-en almacenamiento de objetos (rutas en `xml_storage_key`, `pdf_storage_key`) y se conservan según
-el plazo legal que confirme el contador (D-15).
+Signed XML, PDF/graphic representation, CUFE/CUDE, and the provider's and DIAN's response are stored
+in object storage (paths in `xml_storage_key`, `pdf_storage_key`) and kept for
+the legal period confirmed by the accountant (D-15).
 
-## 7. Notas y correcciones
+## 7. Notes and corrections
 
-- Devolución o anulación de una venta con documento aceptado → nota crédito / nota de ajuste al
-  documento equivalente, según el tipo emitido.
-- Venta anulada antes de emitir el documento → el documento no se envía (queda `cancelled`) solo si
-  la normativa lo permite (D-11).
+- Return or void of a sale with an accepted document → credit note / adjustment note against the
+  equivalent document, depending on the type issued.
+- Sale voided before the document is issued → the document is not sent (it stays `cancelled`) only if
+  the regulation allows it (D-11).
 
-## 8. Por verificar
+## 8. To verify
 
-1. Texto oficial vigente (Resolución Única 000227 de 2025) y calendario aplicable a los clientes objetivo.
-2. Tope de UVT para el POS electrónico y cuándo se exige factura electrónica.
-3. Anexo técnico vigente del documento equivalente POS y si requiere validación previa.
-4. Proceso de habilitación y set de pruebas por cada NIT cliente (impacto en el onboarding SaaS).
-5. API, sandbox, consulta de estado e idempotencia del proveedor elegido.
+1. Current official text (Single Resolution 000227 of 2025) and the calendar applicable to the target customers.
+2. UVT cap for the electronic POS and when an electronic invoice is required.
+3. Current technical annex of the POS equivalent document and whether it requires prior validation.
+4. Enablement process and test set for each customer NIT (impact on SaaS onboarding).
+5. API, sandbox, status query and idempotency of the chosen provider.
 
-## 9. Siigo (verificado el 28/10/2026)
+## 9. Siigo (verified on 28/10/2026)
 
-Fuentes oficiales: [Introducción](https://developers.siigo.com/docs/siigoapi/), [Crear factura](https://developers.siigo.com/docs/siigoapi/invoice/1-create-invoice),
-[Tipos de comprobante](https://developers.siigo.com/docs/siigoapi/catalog/6-ge-types-of-receipt/), [Idempotencia](https://developers.siigo.com/docs/siigoapi/idempotencia/),
-[Partner Id](https://developers.siigo.com/docs/siigoapi/partner-id/), [Bloqueo de usuarios](https://developers.siigo.com/docs/siigoapi/bloqueo-de-usuarios/),
-[Facturación electrónica](https://developers.siigo.com/docs/siigoapi/facturacion-electronica/), API Blueprint oficial
-([siigoapi.docs.apiary.io](https://siigoapi.docs.apiary.io/)) y el SDK oficial [SiigoSAS/siigo_sdk_javascript](https://github.com/SiigoSAS/siigo_sdk_javascript).
+Official sources: [Introduction](https://developers.siigo.com/docs/siigoapi/), [Create invoice](https://developers.siigo.com/docs/siigoapi/invoice/1-create-invoice),
+[Document types](https://developers.siigo.com/docs/siigoapi/catalog/6-ge-types-of-receipt/), [Idempotency](https://developers.siigo.com/docs/siigoapi/idempotencia/),
+[Partner Id](https://developers.siigo.com/docs/siigoapi/partner-id/), [User blocking](https://developers.siigo.com/docs/siigoapi/bloqueo-de-usuarios/),
+[Electronic invoicing](https://developers.siigo.com/docs/siigoapi/facturacion-electronica/), the official API Blueprint
+([siigoapi.docs.apiary.io](https://siigoapi.docs.apiary.io/)) and the official SDK [SiigoSAS/siigo_sdk_javascript](https://github.com/SiigoSAS/siigo_sdk_javascript).
 
-**Por qué cambió D-05 (antes de D-17):** Siigo dice en su página del sistema POS que decidió **no desarrollar el documento
-equivalente electrónico POS** y enfocarse en la factura electrónica; ningún otro proveedor revisado (Factus, Alegra,
-Dataico, The Factory HKA) documenta públicamente una API para el POS electrónico. La DIAN permite sustituir el
-documento equivalente por factura electrónica, así que cada venta se factura electrónicamente: con los datos del
-cliente si los da y, si no, como consumidor final. **Confirmar con el contador.**
+**Why D-05 changed (before D-17):** Siigo states on its POS-system page that it decided **not to develop the electronic POS
+equivalent document** and to focus on the electronic invoice; no other provider reviewed (Factus, Alegra,
+Dataico, The Factory HKA) publicly documents an API for the electronic POS. The DIAN allows replacing the
+equivalent document with an electronic invoice, so every sale is invoiced electronically: with the customer's
+data if they give it and, if not, as a final consumer. **Confirm with the accountant.**
 
-| Tema | Verificado |
+| Topic | Verified |
 |---|---|
-| URL base | `https://api.siigo.com` (recursos en `/v1/...`) |
-| Token | `POST /auth` con `username` y `access_key` → `access_token` (Bearer) válido 24 h. Credenciales por empresa, generadas en Siigo Nube |
-| Encabezados | `Authorization: Bearer <token>` y `Partner-Id` (nombre de la aplicación, 3–100 alfanuméricos, el mismo para todas las empresas) |
-| Crear factura | `POST /v1/invoices`: `document.id` (tipo FV electrónico), `date` (no anterior a hoy), `customer.identification` (debe existir en Siigo), `seller` (usuario de Siigo), `items[]` (`code` de un producto que exista en Siigo, `quantity` ≤ 2 decimales, `price` o `taxed_price` con IVA incluido, `taxes[].id`), `payments[]` (`id` de `/payment-types`, `value`; la suma debe igualar el total), `stamp.send = true` envía a la DIAN |
-| Respuesta | `id` (GUID), `prefix`, `number`, `name`, `total`, `stamp.status` (`Draft`, `Accepted`, `Rejected`), `stamp.cufe`, `stamp.errors` |
-| Errores DIAN | `GET /v1/invoices/{id}/stamp/errors`; reenviar: `POST /v1/invoices/{id}/stamp`; una rechazada se corrige y reenvía |
-| Idempotencia | `Idempotency-Key` en POST de facturas y notas crédito (alfanumérico, máx. 30 según la página; el Blueprint dice 32): repetir la clave devuelve la factura ya creada |
-| Notas crédito | `POST /v1/credit-notes` con `invoice` (id de la factura), `reason` (motivo DIAN), `items`, `payments`, `stamp` |
-| Representación | `GET /v1/invoices/{id}/pdf`. **No hay endpoint de XML** en la referencia: el XML queda en Siigo Nube |
-| Catálogos | `/v1/document-types?type=FV`, `/v1/users`, `/v1/taxes`, `/v1/payment-types`, `/v1/customers`, `/v1/products` |
-| Bloqueo | Usuario API bloqueado si en 7 días más del 80 % de las peticiones son errores |
-| Pruebas | No hay ambiente de pruebas separado documentado; el ambiente (habilitación o producción) es el de la empresa en Siigo Nube. El Blueprint usa una cuenta de ejemplo `sandbox@siigoapi.com` |
+| Base URL | `https://api.siigo.com` (resources under `/v1/...`) |
+| Token | `POST /auth` with `username` and `access_key` → `access_token` (Bearer) valid for 24 h. Credentials per company, generated in Siigo Nube |
+| Headers | `Authorization: Bearer <token>` and `Partner-Id` (the application's name, 3–100 alphanumeric characters, the same for all companies) |
+| Create invoice | `POST /v1/invoices`: `document.id` (electronic FV type), `date` (not earlier than today), `customer.identification` (must exist in Siigo), `seller` (Siigo user), `items[]` (`code` of a product that exists in Siigo, `quantity` ≤ 2 decimals, `price` or `taxed_price` with VAT included, `taxes[].id`), `payments[]` (`id` from `/payment-types`, `value`; the sum must equal the total), `stamp.send = true` sends to the DIAN |
+| Response | `id` (GUID), `prefix`, `number`, `name`, `total`, `stamp.status` (`Draft`, `Accepted`, `Rejected`), `stamp.cufe`, `stamp.errors` |
+| DIAN errors | `GET /v1/invoices/{id}/stamp/errors`; resend: `POST /v1/invoices/{id}/stamp`; a rejected one is corrected and resent |
+| Idempotency | `Idempotency-Key` on invoice and credit-note POSTs (alphanumeric, max 30 per the page; the Blueprint says 32): repeating the key returns the invoice already created |
+| Credit notes | `POST /v1/credit-notes` with `invoice` (the invoice's id), `reason` (DIAN reason), `items`, `payments`, `stamp` |
+| Representation | `GET /v1/invoices/{id}/pdf`. **There is no XML endpoint** in the reference: the XML stays in Siigo Nube |
+| Catalogs | `/v1/document-types?type=FV`, `/v1/users`, `/v1/taxes`, `/v1/payment-types`, `/v1/customers`, `/v1/products` |
+| Blocking | API user blocked if more than 80 % of requests are errors over 7 days |
+| Tests | No separate test environment is documented; the environment (enablement or production) is the company's in Siigo Nube. The Blueprint uses a sample account `sandbox@siigoapi.com` |
 
-**Consecuencias en el diseño (I-24):**
-1. La numeración y las resoluciones las lleva Siigo (tipo de comprobante FV electrónico); el sistema guarda el prefijo y
-   número que devuelve Siigo. "Numeraciones" muestra los tipos de comprobante de Siigo, no rangos propios.
-2. Cada empresa necesita su cuenta Siigo Nube con API; sus llaves se guardan cifradas como las de Bold.
-3. Los productos deben existir en Siigo con el mismo código (SKU): se crean en Siigo la primera vez que se facturan
-   (`POST /v1/products`, con el grupo de inventario configurado). Los impuestos y medios de pago se emparejan con los de
-   Siigo en la configuración. El consumidor final debe existir en Siigo (identificación configurable, por defecto
-   `222222222222`).
-4. El envío lo hace el outbox (fuera de la transacción) con `Idempotency-Key` = id del documento en base 36; si el
-   resultado es desconocido, repetir el POST con la misma clave funciona como consulta de estado (no hay otra por
-   referencia propia).
-5. Sin XML por API: se guarda el PDF bajo demanda y el CUFE; el XML se consulta en Siigo Nube. Conservación 5 años (D-15).
+**Design consequences (I-24):**
+1. Numbering and resolutions are kept by Siigo (electronic FV document type); the system stores the prefix and
+   number that Siigo returns. "Numberings" shows Siigo's document types, not own ranges.
+2. Each company needs its own Siigo Nube account with API access; its keys are stored encrypted like Bold's.
+3. Products must exist in Siigo with the same code (SKU): they are created in Siigo the first time they are invoiced
+   (`POST /v1/products`, with the configured inventory group). Taxes and payment methods are paired with Siigo's in
+   the configuration. The final consumer must exist in Siigo (configurable identification, `222222222222` by
+   default).
+4. Sending is done by the outbox (outside the transaction) with `Idempotency-Key` = the document id in base 36; if the
+   result is unknown, repeating the POST with the same key works as a status query (there is no other one by own
+   reference).
+5. No XML by API: the PDF is stored on demand along with the CUFE; the XML is consulted in Siigo Nube. Retention 5 years (D-15).
 
-**Por verificar con una cuenta Siigo en habilitación:** formato exacto del cuerpo de producto y cliente, valores de
-`stamp.status` además de `Accepted`, si `Draft` aparece cuando la DIAN tarda, y el límite real de `Idempotency-Key` (30 o 32).
+**To verify with a Siigo account in the test environment:** exact format of the product and customer body, values of
+`stamp.status` besides `Accepted`, whether `Draft` appears when the DIAN is slow, and the real `Idempotency-Key` limit (30 or 32).
 
-## 10. Notas crédito con Siigo (fase 9, verificado en developers.siigo.com y el SDK oficial)
+## 10. Credit notes with Siigo (phase 9, verified at developers.siigo.com and the official SDK)
 
-| Tema | Detalle |
+| Topic | Detail |
 |---|---|
-| Crear | `POST /v1/credit-notes`: `document.id` (tipo de comprobante NC), `date` (no anterior a hoy), `invoice` (GUID de la factura en Siigo), `reason` (motivo DIAN: 1 devolución parcial, 2 anulación de la factura, 3 descuento, 4 ajuste de precio…), `items[]` (`code`, `quantity` ≤ 2 decimales, `price`), `payments[]` (`id`, `value`), `stamp`, `mail` |
-| Consultar / PDF | `GET /v1/credit-notes/{id}` y `GET /v1/credit-notes/{id}/pdf` (SDK oficial `SiigoSAS/siigo_sdk_javascript`) |
-| Respuesta | `id`, `number`, `name`, `total`, `stamp` (`status`, `cufe`, `cude`, `errors`) |
-| Por verificar | La guía usa `price` (sin IVA) y solo el ejemplo del spec muestra `taxed_price`: se envía `taxed_price` como en la factura. No hay endpoint documentado de errores DIAN ni de reenvío para notas: se consulta con `GET`. La documentación no es consistente en el rango de `reason` |
+| Create | `POST /v1/credit-notes`: `document.id` (NC document type), `date` (not earlier than today), `invoice` (the invoice's GUID in Siigo), `reason` (DIAN reason: 1 partial return, 2 invoice void, 3 discount, 4 price adjustment…), `items[]` (`code`, `quantity` ≤ 2 decimals, `price`), `payments[]` (`id`, `value`), `stamp`, `mail` |
+| Query / PDF | `GET /v1/credit-notes/{id}` and `GET /v1/credit-notes/{id}/pdf` (official SDK `SiigoSAS/siigo_sdk_javascript`) |
+| Response | `id`, `number`, `name`, `total`, `stamp` (`status`, `cufe`, `cude`, `errors`) |
+| To verify | The guide uses `price` (without VAT) and only the spec example shows `taxed_price`: `taxed_price` is sent as in the invoice. There is no documented DIAN-errors or resend endpoint for notes: they are queried with `GET`. The documentation is not consistent on the range of `reason` |
 
-Reglas (D-11, I-26): anulación → nota con motivo 2 por toda la factura; devolución → motivo 1 por lo devuelto, con los
-medios reembolsados. La nota espera en el outbox hasta que la factura sea aceptada; si la factura fue rechazada, la nota
-queda sin efecto (`cancelled`) y, en una anulación, la factura también.
+Rules (D-11, I-26): void → a note with reason 2 for the whole invoice; return → reason 1 for what was returned, with the
+refunded methods. The note waits in the outbox until the invoice is accepted; if the invoice was rejected, the note
+is left void (`cancelled`) and, on a void, so is the invoice.

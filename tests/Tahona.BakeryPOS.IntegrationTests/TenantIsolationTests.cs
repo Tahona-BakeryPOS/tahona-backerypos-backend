@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.IntegrationTests;
 
 /// <summary>
-/// Aislamiento multiempresa (HU-2.3): con el token de la empresa A, nada de la empresa B se puede
-/// leer ni escribir, aunque se envíe un identificador válido de B.
+/// Multi-company isolation (US-2.3): with company A's token, nothing of company B can be
+/// read or written, even if a valid identifier of B is sent.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public sealed class TenantIsolationTests
@@ -48,7 +48,7 @@ public sealed class TenantIsolationTests
     {
         var client = _api.ClientFor(_api.Data.CompanyB);
         client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
-        // El cuerpo no tiene empresa; un campo extra "companyId" se ignora.
+        // The body has no company; an extra "companyId" field is ignored.
         var response = await client.PostAsJsonAsync("/api/v1/sucursales",
             new { code = "B-NORTE", name = "Sede Norte", companyId = _api.Data.CompanyA });
 
@@ -116,7 +116,7 @@ public sealed class TenantIsolationTests
     private sealed record ErrorResponse(string Codigo, string Mensaje, string CorrelationId);
 }
 
-/// <summary>Contexto de empresa fijo para probar el DbContext sin HTTP.</summary>
+/// <summary>Fixed company context to test the DbContext without HTTP.</summary>
 internal sealed class FixedTenant(Guid companyId) : ITenantContext
 {
     public Guid? CompanyId => companyId;

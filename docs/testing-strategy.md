@@ -1,43 +1,43 @@
-# Estrategia de pruebas
+# Testing strategy
 
-Regla: una funcionalidad no está terminada si sus pruebas no corren de verdad. Lo que dependa de un
-proveedor externo se prueba contra su **sandbox real**; los fakes solo sirven para pruebas unitarias
-y nunca para declarar una integración terminada.
+Rule: a feature is not finished if its tests do not really run. Anything that depends on an external
+provider is tested against its **real sandbox**; fakes are only for unit tests
+and never for declaring an integration finished.
 
-## Niveles
+## Levels
 
-| Nivel | Herramienta | Qué cubre | Dónde corre |
+| Level | Tool | What it covers | Where it runs |
 |---|---|---|---|
-| Unitarias (dominio) | xUnit | Totales, impuestos incluidos/no incluidos, redondeo, cambio, transiciones de estado de venta/pago/documento, política de existencias, numeración | CI en cada PR |
-| Integración (persistencia) | xUnit + **PostgreSQL real** (Testcontainers, D-16) | Restricciones e índices únicos, filtros por empresa, concurrencia de saldos, idempotencia, outbox en la misma TX | CI |
-| API / contrato | `WebApplicationFactory` + PostgreSQL | Códigos de error, `Idempotency-Key`, `If-Match`, permisos por endpoint, OpenAPI sin cambios incompatibles | CI |
-| **Aislamiento multiempresa** | Generadas por endpoint | Con tokens de empresa A, leer/escribir ids de empresa B en **todos** los endpoints → 404/403, nunca datos | CI (obligatoria, bloquea merge) |
-| Arquitectura | NetArchTest (D-16) | Un módulo no referencia el dominio ni las tablas de otro | CI |
-| Integración con pasarela | Sandbox del proveedor | Crear transacción, webhook firmado real, consulta de estado, reembolso | Manual/nocturno con credenciales de sandbox |
-| Integración fiscal | Ambiente de pruebas del proveedor/DIAN | Emitir, consultar, rechazo, nota crédito | Manual/nocturno |
-| Recorrido de API en staging | Contra `/api/v1` (OpenAPI en `/openapi/v1.json`) | Flujo completo: login, vincular caja, abrir caja, venta en efectivo, anulación, devolución, cierre e informe | Staging, antes de cada paso a producción |
-| Carga | k6, `backend/tests/load/sales-load.js` | 20 cajas vendiendo en efectivo: p95 < 800 ms, < 1 % de errores | Staging, antes de producción |
+| Unit (domain) | xUnit | Totals, included/excluded taxes, rounding, change, sale/payment/document state transitions, stock policy, numbering | CI on every PR |
+| Integration (persistence) | xUnit + **real PostgreSQL** (Testcontainers, D-16) | Constraints and unique indexes, company filters, balance concurrency, idempotency, outbox in the same TX | CI |
+| API / contract | `WebApplicationFactory` + PostgreSQL | Error codes, `Idempotency-Key`, `If-Match`, permissions per endpoint, OpenAPI with no incompatible changes | CI |
+| **Multi-company isolation** | Generated per endpoint | With company A tokens, read/write company B ids on **every** endpoint → 404/403, never data | CI (mandatory, blocks merge) |
+| Architecture | NetArchTest (D-16) | A module does not reference another module's domain or tables | CI |
+| Payment gateway integration | Provider sandbox | Create a transaction, real signed webhook, status query, refund | Manual/nightly with sandbox credentials |
+| Tax integration | Provider/DIAN test environment | Issue, query, rejection, credit note | Manual/nightly |
+| API walkthrough on staging | Against `/api/v1` (OpenAPI at `/openapi/v1.json`) | Full flow: sign in, pair a register, open the cash session, cash sale, void, return, close and report | Staging, before every release to production |
+| Load | k6, `tests/load/sales-load.js` | 20 registers selling in cash: p95 < 800 ms, < 1 % errors | Staging, before production |
 
-## Escenarios críticos de fallo (automatizados)
+## Critical failure scenarios (automated)
 
-1. Reintento de `POST /ventas` con la misma `Idempotency-Key` → una sola venta.
-2. Timeout al crear transacción en la pasarela → intento `unknown`; el worker la resuelve por consulta; no se crea un segundo cobro.
-3. Webhook duplicado → un solo cambio de estado; webhook con firma inválida → rechazado y auditado.
-4. Webhook nunca llega → el worker consulta y confirma la venta.
-5. Pago aprobado pero falla la transacción de confirmación → el reintento confirma una vez; inventario descontado una vez.
-6. Pago aprobado de una venta cancelada → queda marcado para reembolso en conciliación.
-7. Timeout al emitir el documento → `unknown`; no hay reenvío sin consulta previa; mismo número.
-8. Rechazo fiscal → `rejected` con motivos; ningún estado "aceptado" ficticio.
-9. Dos cajas venden la última unidad con política `block` → una venta pasa, la otra recibe `EXISTENCIAS_INSUFICIENTES`.
-10. Devolución que excede lo vendido → 422; devoluciones parciales sucesivas suman correctamente.
-11. Cierre de caja con pago pendiente → bloqueado (D-12).
-12. Caída del proceso entre pasos → los workers retoman desde el estado persistido.
+1. Retry of `POST /ventas` with the same `Idempotency-Key` → a single sale.
+2. Timeout when creating the gateway transaction → attempt `unknown`; the worker resolves it by querying; no second charge is created.
+3. Duplicate webhook → a single state change; webhook with an invalid signature → rejected and audited.
+4. Webhook never arrives → the worker queries and confirms the sale.
+5. Payment approved but the confirmation transaction fails → the retry confirms once; inventory deducted once.
+6. Approved payment of a cancelled sale → left flagged for refund in reconciliation.
+7. Timeout when issuing the document → `unknown`; no resend without a prior query; same number.
+8. Tax rejection → `rejected` with reasons; no fake "accepted" state.
+9. Two registers sell the last unit with the `block` policy → one sale goes through, the other gets `EXISTENCIAS_INSUFICIENTES`.
+10. Return exceeding what was sold → 422; successive partial returns add up correctly.
+11. Cash close with a pending payment → blocked (D-12).
+12. Process crash between steps → workers resume from the persisted state.
 
-## Criterios de salida del MVP
+## MVP exit criteria
 
-- Todas las suites de CI en verde, incluidas aislamiento y arquitectura.
-- Flujo E2E completo demostrado contra **sandbox real** de la pasarela y ambiente de pruebas fiscal:
-  empresa → sucursal → producto con precio y existencias → caja abierta → venta → pago confirmado →
-  movimientos consistentes → documento con estado verificable → cierre de caja.
-- Escenarios 1–12 automatizados y pasando.
-- Reconciliación de inventario y conciliación de pagos sin diferencias en el set de pruebas.
+- All CI suites green, including isolation and architecture.
+- Full E2E flow demonstrated against the **real sandbox** of the gateway and the tax test environment:
+  company → branch → product with price and stock → open cash session → sale → confirmed payment →
+  consistent movements → document with verifiable status → cash close.
+- Scenarios 1–12 automated and passing.
+- Inventory reconciliation and payment reconciliation without differences in the test set.

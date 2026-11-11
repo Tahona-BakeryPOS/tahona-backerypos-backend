@@ -1,16 +1,16 @@
 namespace Tahona.BakeryPOS.Domain.Identity;
 
 /// <summary>
-/// Refresh token rotatorio del backoffice: se guarda solo su hash y cada uso emite uno nuevo
-/// (<see cref="ReplacedById"/>). Presentar uno ya rotado indica robo y revoca toda la sesión del usuario.
-/// No es auditable fila a fila: es estado de sesión, no dato de negocio.
+/// The backoffice's rotating refresh token: only its hash is stored and each use issues a new one
+/// (<see cref="ReplacedById"/>). Presenting one already rotated indicates theft and revokes the user's whole session.
+/// It is not auditable row by row: it is session state, not business data.
 /// </summary>
 public sealed class RefreshToken
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public Guid UserId { get; init; }
 
-    /// <summary>Empresa de la sesión; null si aún no eligió empresa o es el administrador de plataforma.</summary>
+    /// <summary>The session's company; null if it has not chosen a company yet or is the platform administrator.</summary>
     public Guid? CompanyId { get; init; }
 
     public string TokenHash { get; init; } = string.Empty;

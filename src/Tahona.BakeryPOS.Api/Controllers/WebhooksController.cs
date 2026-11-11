@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>
-/// Webhooks de terceros. Anónimos: la autenticidad la da la firma (<c>x-bold-signature</c>), validada sobre
-/// el cuerpo crudo. Bold espera 200 en menos de 2 s; una firma inválida responde 401 y queda registrada.
+/// Third-party webhooks. Anonymous: authenticity comes from the signature (<c>x-bold-signature</c>), validated over
+/// the raw body. Bold expects 200 in under 2 s; an invalid signature answers 401 and is recorded.
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/webhooks/pagos")]

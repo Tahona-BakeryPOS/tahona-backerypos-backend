@@ -1,43 +1,43 @@
-# Diagrama de la base de datos
+# Database diagram
 
-Modelo relacional de **PostgreSQL** generado a partir del modelo de EF Core del backend (`AppDbContext`) el 11/11/2026: **44 tablas** en **10 esquemas** y **52 llaves foráneas**. Los diagramas se ven directamente en GitHub.
+Relational model of **PostgreSQL** generated from the backend's EF Core model (`AppDbContext`) on 2026-11-11: **44 tables** in **10 schemas** and **52 foreign keys**. The diagrams render directly on GitHub.
 
-> Si cambia el modelo (una migración nueva), este archivo debe regenerarse. El detalle de cada tabla, sus reglas de integridad y sus índices está en [`data-model.md`](data-model.md); el modelo implementado es la fuente de verdad si algo difiere.
+> If the model changes (a new migration), this file must be regenerated. The detail of each table, its integrity rules and its indexes is in [`data-model.md`](data-model.md); the implemented model is the source of truth if anything differs.
 
-## Cómo leer los diagramas
+## How to read the diagrams
 
-| Símbolo | Significado |
+| Symbol | Meaning |
 |---|---|
-| `PK` / `FK` / `UK` | Clave primaria, llave foránea y columna única |
-| `"null"` | La columna admite valores nulos |
-| Línea continua `──` | Llave foránea real en la base de datos |
-| Línea punteada `┄┄` | Referencia entre módulos **sin** llave foránea: la integridad la valida la aplicación (los módulos no se enlazan por navegación) |
-| `‖──o{` | Uno a muchos: una fila del padre tiene cero o muchas del hijo |
-| `\|o──o{` | Igual, pero la referencia es opcional (la columna admite nulo) |
-| `‖──o\|` | Uno a uno |
+| `PK` / `FK` / `UK` | Primary key, foreign key and unique column |
+| `"null"` | The column allows null values |
+| Solid line `──` | A real foreign key in the database |
+| Dotted line `┄┄` | A reference between modules **without** a foreign key: integrity is validated by the application (modules are not linked by navigation) |
+| `‖──o{` | One to many: a parent row has zero or many child rows |
+| `\|o──o{` | Same, but the reference is optional (the column allows null) |
+| `‖──o\|` | One to one |
 
-Las tablas de otros esquemas que aparecen en cada diagrama se muestran solo con su `id`: son el punto de unión con ese módulo. Para no saturar los dibujos, **no se trazan las líneas de `company_id` hacia `org.companies`** (todas las tablas de negocio la tienen; ver la sección siguiente): la columna sí aparece marcada como `FK`.
+Tables of other schemas that appear in each diagram are shown only with their `id`: they are the junction with that module. To avoid cluttering the drawings, **the `company_id` lines towards `org.companies` are not drawn** (every business table has it; see the next section): the column is still marked `FK`.
 
-## Aislamiento por empresa
+## Company isolation
 
-Toda tabla de negocio lleva `company_id` y el backend aplica un filtro global por empresa. **38 de 44 tablas** lo tienen. Las que no lo tienen son: la propia empresa (`org.companies`), los catálogos globales (`cat.units`, `sec.permissions`), los usuarios (`sec.users`, que se vinculan a cada empresa por `sec.memberships`), `sec.role_permissions` (depende de su rol) e `int.inbound_events` (eventos crudos de proveedores externos).
+Every business table carries `company_id` and the backend applies a global filter per company. **38 of 44 tables** have it. The ones that do not are: the company itself (`org.companies`), the global catalogs (`cat.units`, `sec.permissions`), users (`sec.users`, linked to each company through `sec.memberships`), `sec.role_permissions` (it depends on its role) and `int.inbound_events` (raw events from external providers).
 
-## Vista general por módulos
+## Overview by module
 
-Cada flecha indica que el módulo de origen referencia tablas del módulo de destino (con o sin llave foránea). No se dibujan las flechas hacia `org`: todas las tablas de negocio llevan `company_id` hacia `org.companies`.
+Each arrow means the source module references tables of the target module (with or without a foreign key). Arrows towards `org` are not drawn: every business table carries `company_id` towards `org.companies`.
 
 ```mermaid
 flowchart LR
-    org["org · Empresas<br/>2 tablas"]
-    sec["sec · Seguridad<br/>9 tablas"]
-    cat["cat · Catálogo<br/>6 tablas"]
-    inv["inv · Inventario<br/>4 tablas"]
-    cash["cash · Caja<br/>4 tablas"]
-    sales["sales · Ventas<br/>5 tablas"]
-    pay["pay · Pagos<br/>6 tablas"]
-    fis["fis · Facturación<br/>4 tablas"]
-    int["int · Integración<br/>3 tablas"]
-    aud["aud · Auditoría<br/>1 tabla"]
+    org["org · Companies<br/>2 tables"]
+    sec["sec · Security<br/>9 tables"]
+    cat["cat · Catalog<br/>6 tables"]
+    inv["inv · Inventory<br/>4 tables"]
+    cash["cash · Cash<br/>4 tables"]
+    sales["sales · Sales<br/>5 tables"]
+    pay["pay · Payments<br/>6 tables"]
+    fis["fis · Invoicing<br/>4 tables"]
+    int["int · Integration<br/>3 tables"]
+    aud["aud · Audit<br/>1 table"]
     inv --> cat
     pay --> cash
     sales --> cash
@@ -52,9 +52,9 @@ flowchart LR
     sales --> sec
 ```
 
-## `org` — Empresas y sucursales
+## `org` — Companies and branches
 
-2 tablas: `branches`, `companies`.
+2 tables: `branches`, `companies`.
 
 ```mermaid
 erDiagram
@@ -133,9 +133,9 @@ erDiagram
     org_branches |o--o{ sec_role_assignments : "company_id, branch_id"
 ```
 
-## `sec` — Seguridad: usuarios, roles, dispositivos y sesiones
+## `sec` — Security: users, roles, devices and sessions
 
-9 tablas: `device_pairing_codes`, `devices`, `memberships`, `permissions`, `refresh_tokens`, `role_assignments`, `role_permissions`, `roles`, `users`.
+9 tables: `device_pairing_codes`, `devices`, `memberships`, `permissions`, `refresh_tokens`, `role_assignments`, `role_permissions`, `roles`, `users`.
 
 ```mermaid
 erDiagram
@@ -290,9 +290,9 @@ erDiagram
     sec_refresh_tokens |o..o{ sec_refresh_tokens : "replaced_by_id (sin FK)"
 ```
 
-## `cat` — Catálogo y precios
+## `cat` — Catalog and prices
 
-6 tablas: `branch_products`, `categories`, `product_prices`, `products`, `taxes`, `units`.
+6 tables: `branch_products`, `categories`, `product_prices`, `products`, `taxes`, `units`.
 
 ```mermaid
 erDiagram
@@ -413,9 +413,9 @@ erDiagram
     cat_products ||--o{ inv_stock_movements : "company_id, product_id"
 ```
 
-## `inv` — Inventario
+## `inv` — Inventory
 
-4 tablas: `adjustment_reasons`, `stock_balances`, `stock_locations`, `stock_movements`.
+4 tables: `adjustment_reasons`, `stock_balances`, `stock_locations`, `stock_movements`.
 
 ```mermaid
 erDiagram
@@ -507,9 +507,9 @@ erDiagram
     sec_users |o..o{ inv_stock_movements : "user_id (sin FK)"
 ```
 
-## `cash` — Caja
+## `cash` — Cash
 
-4 tablas: `cash_movements`, `cash_reasons`, `cash_registers`, `cash_sessions`.
+4 tables: `cash_movements`, `cash_reasons`, `cash_registers`, `cash_sessions`.
 
 ```mermaid
 erDiagram
@@ -625,9 +625,9 @@ erDiagram
     cash_cash_registers ||--o{ sec_devices : "company_id, cash_register_id"
 ```
 
-## `sales` — Ventas y devoluciones
+## `sales` — Sales and returns
 
-5 tablas: `return_lines`, `returns`, `sale_counters`, `sale_lines`, `sales`.
+5 tables: `return_lines`, `returns`, `sale_counters`, `sale_lines`, `sales`.
 
 ```mermaid
 erDiagram
@@ -786,9 +786,9 @@ erDiagram
     fis_fiscal_documents |o..o{ sales_sales : "fiscal_document_id (sin FK)"
 ```
 
-## `pay` — Pagos
+## `pay` — Payments
 
-6 tablas: `gateway_accounts`, `payment_attempts`, `payment_methods`, `payments`, `refunds`, `register_terminals`.
+6 tables: `gateway_accounts`, `payment_attempts`, `payment_methods`, `payments`, `refunds`, `register_terminals`.
 
 ```mermaid
 erDiagram
@@ -930,9 +930,9 @@ erDiagram
     sales_sales |o..o{ pay_refunds : "sale_id (sin FK)"
 ```
 
-## `fis` — Facturación electrónica
+## `fis` — Electronic invoicing
 
-4 tablas: `fiscal_documents`, `fiscal_mappings`, `fiscal_settings`, `fiscal_submission_attempts`.
+4 tables: `fiscal_documents`, `fiscal_mappings`, `fiscal_settings`, `fiscal_submission_attempts`.
 
 ```mermaid
 erDiagram
@@ -1032,9 +1032,9 @@ erDiagram
     fis_fiscal_documents |o..o{ sales_sales : "fiscal_document_id (sin FK)"
 ```
 
-## `int` — Integración: outbox, eventos entrantes e idempotencia
+## `int` — Integration: outbox, inbound events and idempotency
 
-3 tablas: `idempotency_requests`, `inbound_events`, `outbox_messages`.
+3 tables: `idempotency_requests`, `inbound_events`, `outbox_messages`.
 
 ```mermaid
 erDiagram
@@ -1075,9 +1075,9 @@ erDiagram
     }
 ```
 
-## `aud` — Auditoría
+## `aud` — Audit
 
-1 tabla: `audit_logs`.
+1 table: `audit_logs`.
 
 ```mermaid
 erDiagram

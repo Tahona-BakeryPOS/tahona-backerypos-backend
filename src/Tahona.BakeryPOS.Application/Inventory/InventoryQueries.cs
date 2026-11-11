@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Inventory;
 
-/// <param name="AllowNegative">Política D-06 del producto.</param>
+/// <param name="AllowNegative">The product's D-06 policy.</param>
 public sealed record StockRowDto(Guid LocationId, string LocationName, Guid ProductId, string Sku, string ProductName, string UnitCode,
     decimal OnHand, bool AllowNegative, bool HasMovements);
 
@@ -20,19 +20,19 @@ public sealed record ReconciliationRowDto(Guid LocationId, string LocationName, 
 public sealed record ReconciliationDto(DateTime CheckedAt, int BalancesChecked, IReadOnlyList<ReconciliationRowDto> Differences);
 
 /// <summary>
-/// Existencias de una sucursal (HU-4.2): cada producto que controla existencias por cada ubicación activa,
-/// con 0 si aún no tiene movimientos. Paginado por producto.
+/// Stock of a branch (US-4.2): each product that tracks stock for each active location,
+/// with 0 if it has no movements yet. Paginated by product.
 /// </summary>
 public sealed record GetStockQuery(Guid BranchId, Guid? LocationId, string? Search, int Page = 1, int PageSize = 50)
     : IRequest<Result<PagedResult<StockRowDto>>>;
 
-/// <summary>Libro de movimientos de una sucursal, del más reciente al más antiguo.</summary>
+/// <summary>Movement ledger of a branch, newest to oldest.</summary>
 public sealed record GetStockMovementsQuery(Guid BranchId, Guid? LocationId, Guid? ProductId, string? Kind, DateTime? From, DateTime? To,
     int Page = 1, int PageSize = 50) : IRequest<Result<PagedResult<StockMovementDto>>>;
 
 public sealed record GetMovementsByIdQuery(IReadOnlyList<Guid> Ids) : IRequest<Result<IReadOnlyList<StockMovementDto>>>;
 
-/// <summary>Reconciliación (HU-4.6): saldos que no cuadran con la suma de sus movimientos. Debe salir vacía.</summary>
+/// <summary>Reconciliation (US-4.6): balances that do not match the sum of their movements. It should come back empty.</summary>
 public sealed record GetReconciliationQuery(Guid? BranchId) : IRequest<Result<ReconciliationDto>>;
 
 public sealed class GetStockValidator : AbstractValidator<GetStockQuery>
@@ -56,7 +56,7 @@ public sealed class GetStockMovementsValidator : AbstractValidator<GetStockMovem
     }
 }
 
-/// <summary>Nombres de los tipos de movimiento en la API (snake_case, como en la base).</summary>
+/// <summary>Names of the movement types in the API (snake_case, as in the database).</summary>
 public static class Kinds
 {
     public static string Name(StockMovementKind kind) =>

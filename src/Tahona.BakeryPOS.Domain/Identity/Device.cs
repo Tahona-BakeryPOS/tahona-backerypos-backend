@@ -4,8 +4,8 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Identity;
 
 /// <summary>
-/// Equipo vinculado a una caja. Se autentica con un token opaco que solo conoce el equipo; aquí se
-/// guarda su hash. Desactivarlo revoca el token.
+/// A device paired to a cash register. It authenticates with an opaque token known only to the device; its
+/// hash is stored here. Deactivating it revokes the token.
 /// </summary>
 public sealed class Device : AuditableEntity, ITenantEntity
 {
@@ -30,7 +30,7 @@ public sealed class Device : AuditableEntity, ITenantEntity
     public void Touch(DateTime now) => LastSeenAt = now;
 }
 
-/// <summary>Código de un solo uso, de vida corta, para vincular un equipo a una caja.</summary>
+/// <summary>One-time, short-lived code to pair a device to a cash register.</summary>
 public sealed class DevicePairingCode : AuditableEntity, ITenantEntity
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);

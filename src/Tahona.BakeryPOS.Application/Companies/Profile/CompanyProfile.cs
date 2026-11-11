@@ -30,10 +30,10 @@ public sealed record CompanyDto(
         RowVersions.Encode(c.RowVersion));
 }
 
-/// <summary>La empresa del token (HU-1.2).</summary>
+/// <summary>The token's company (US-1.2).</summary>
 public sealed record GetMyCompanyQuery : IRequest<Result<CompanyDto>>;
 
-/// <summary>Contacto y zona horaria; los datos fiscales los cambia la plataforma (afectan la facturación).</summary>
+/// <summary>Contact and time zone; the tax data is changed by the platform (it affects invoicing).</summary>
 public sealed record UpdateMyCompanyCommand(
     string? ExpectedVersion,
     string? TradeName,
@@ -86,7 +86,7 @@ public sealed class CompanyProfileHandler :
         if (version.IsFailure)
             return Result.Failure<CompanyDto>(version.Error);
 
-        // Company no es ITenantEntity (es el tenant): se busca siempre por la empresa del token.
+        // Company is not an ITenantEntity (it is the tenant): it is always looked up by the token's company.
         var companyId = _tenant.RequiredCompanyId;
         var company = await _db.Companies.FirstOrDefaultAsync(c => c.Id == companyId, ct);
         if (company is null)

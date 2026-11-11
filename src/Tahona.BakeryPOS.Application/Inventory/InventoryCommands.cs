@@ -21,25 +21,25 @@ public sealed record InitialStockLine(Guid ProductId, decimal Quantity);
 
 public sealed record CountLine(Guid ProductId, decimal Counted);
 
-/// <param name="Difference">Contado − saldo anterior; 0 = no generó ajuste.</param>
+/// <param name="Difference">Counted − previous balance; 0 = it generated no adjustment.</param>
 public sealed record CountResultLine(Guid ProductId, string ProductName, decimal Previous, decimal Counted, decimal Difference);
 
-/// <summary>Ubicaciones de una sucursal (o de todas las del alcance).</summary>
+/// <summary>Locations of a branch (or of all in the scope).</summary>
 public sealed record GetStockLocationsQuery(Guid? BranchId) : IRequest<Result<IReadOnlyList<StockLocationDto>>>;
 
 public sealed record CreateStockLocationCommand(Guid BranchId, string Code, string Name) : IRequest<Result<StockLocationDto>>;
 
 public sealed record GetAdjustmentReasonsQuery : IRequest<Result<IReadOnlyList<AdjustmentReasonDto>>>;
 
-/// <summary>Existencia inicial (HU-4.1): una sola vez por producto y ubicación; después, ajustes.</summary>
+/// <summary>Initial stock (US-4.1): only once per product and location; afterwards, adjustments.</summary>
 public sealed record RegisterInitialStockCommand(Guid LocationId, IReadOnlyList<InitialStockLine> Lines, string? Note)
     : IRequest<Result<IReadOnlyList<StockMovementDto>>>;
 
-/// <summary>Ajuste con motivo (HU-4.4). Cantidad con signo; queda autorizado por quien lo registra.</summary>
+/// <summary>Adjustment with a reason (US-4.4). Signed quantity; authorized by whoever records it.</summary>
 public sealed record RegisterAdjustmentCommand(Guid LocationId, Guid ProductId, decimal Quantity, Guid ReasonId, string? Note)
     : IRequest<Result<StockMovementDto>>;
 
-/// <summary>Conteo físico: ajusta cada producto a lo contado con el motivo "Conteo físico".</summary>
+/// <summary>Physical count: adjusts each product to the counted amount with the "Conteo físico" reason.</summary>
 public sealed record RegisterPhysicalCountCommand(Guid LocationId, IReadOnlyList<CountLine> Lines, string? Note)
     : IRequest<Result<IReadOnlyList<CountResultLine>>>;
 
@@ -143,7 +143,7 @@ public sealed class InventoryCommandsHandler :
         if (await _db.StockLocations.AnyAsync(l => l.BranchId == branch.Id && l.Code == code, ct))
             return Result.Failure<StockLocationDto>(Error.CodigoDuplicado);
 
-        // La primera ubicación de una sucursal (creada antes de la fase 4) queda como la de por defecto.
+        // The first location of a branch (created before phase 4) is left as the default one.
         var isDefault = !await _db.StockLocations.AnyAsync(l => l.BranchId == branch.Id && l.IsDefault, ct);
         var location = StockLocation.Create(_tenant.RequiredCompanyId, branch.Id, code, request.Name, isDefault);
         _db.StockLocations.Add(location);
@@ -165,7 +165,7 @@ public sealed class InventoryCommandsHandler :
         if (location.IsFailure)
             return Result.Failure<IReadOnlyList<StockMovementDto>>(location.Error);
 
-        // La clave del inicial es (ubicación, producto): ya registrado = usar un ajuste.
+        // The key of the initial stock is (location, product): already recorded = use an adjustment.
         var productIds = request.Lines.Select(l => l.ProductId).ToList();
         if (await _db.StockMovements.AnyAsync(m => m.Kind == StockMovementKind.Initial && m.SourceId == request.LocationId
                 && productIds.Contains(m.SourceLineId), ct))
@@ -240,7 +240,7 @@ public sealed class InventoryCommandsHandler :
             .ToList();
         var countId = Guid.CreateVersion7();
         IReadOnlyList<StockMovement> moved = [];
-        // Entradas y salidas son dos tipos de movimiento: se registran por separado con el mismo origen.
+        // Entries and exits are two movement types: they are recorded separately with the same source.
         foreach (var kind in new[] { StockMovementKind.AdjustmentIn, StockMovementKind.AdjustmentOut })
         {
             var lines = diffs.Where(d => kind == StockMovementKind.AdjustmentIn ? d.Difference > 0 : d.Difference < 0)
@@ -253,7 +253,7 @@ public sealed class InventoryCommandsHandler :
             moved = [.. moved, .. posted.Value];
         }
 
-        // Sin diferencias no hay movimientos que guardar.
+        // With no differences there are no movements to save.
         if (moved.Count > 0)
             await _db.SaveChangesAsync(ct);
 

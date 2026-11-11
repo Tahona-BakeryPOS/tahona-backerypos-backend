@@ -1,8 +1,8 @@
 namespace Tahona.BakeryPOS.Application.Common.Abstractions;
 
 /// <summary>
-/// Cifra y descifra secretos guardados en la base (llaves de Bold, credenciales de Siigo). Nunca se
-/// registran en logs ni se devuelven por la API.
+/// Encrypts and decrypts secrets stored in the database (Bold keys, Siigo credentials). They are never
+/// written to logs or returned by the API.
 /// </summary>
 public interface ISecretProtector
 {

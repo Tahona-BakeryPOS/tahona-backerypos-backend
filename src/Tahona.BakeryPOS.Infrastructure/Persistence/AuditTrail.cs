@@ -7,9 +7,9 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 
 /// <summary>
-/// Escribe en <c>aud.audit_logs</c> el antes y el después de cada cambio de una entidad auditable,
-/// en la misma transacción del cambio. Los valores sensibles (hashes de PIN o contraseña, credenciales)
-/// nunca se copian.
+/// Writes to <c>aud.audit_logs</c> the before and after of every change to an auditable entity,
+/// in the same transaction as the change. Sensitive values (PIN or password hashes, credentials)
+/// are never copied.
 /// </summary>
 internal static class AuditTrail
 {
@@ -52,12 +52,12 @@ internal static class AuditTrail
         return logs;
     }
 
-    /// <summary>Acciones del diseño: creacion, modificacion, eliminacion (borrado lógico).</summary>
+    /// <summary>Audit actions: create, update, delete (soft delete).</summary>
     private static string ActionOf(EntityEntry<AuditableEntity> entry)
     {
-        if (entry.State == EntityState.Added) return "creacion";
+        if (entry.State == EntityState.Added) return "create";
         var deletedAt = entry.Property(nameof(AuditableEntity.DeletedAt));
-        return deletedAt.IsModified && deletedAt.CurrentValue is not null ? "eliminacion" : "modificacion";
+        return deletedAt.IsModified && deletedAt.CurrentValue is not null ? "delete" : "update";
     }
 
     private static string Serialize(IEnumerable<PropertyEntry> props, Func<PropertyEntry, object?> value) =>

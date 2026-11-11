@@ -12,14 +12,14 @@ public sealed class JwtOptions
     public const string Section = "Jwt";
     public const int MinSecretLength = 32;
 
-    /// <summary>Nunca en archivos versionados: user-secrets en dev, variable Jwt__Secret en el resto.</summary>
+    /// <summary>Never in versioned files: user-secrets in dev, the Jwt__Secret variable elsewhere.</summary>
     public string Secret { get; set; } = string.Empty;
     public string Issuer { get; set; } = "BakeryPOS";
     public string Audience { get; set; } = "BakeryPOS.Client";
     public int AccessTokenMinutes { get; set; } = 60;
 }
 
-/// <summary>Tokens de acceso firmados con HS256. Lleva una sola empresa por token.</summary>
+/// <summary>Access tokens signed with HS256. It carries a single company per token.</summary>
 public sealed class JwtTokenService : IJwtTokenService
 {
     private readonly JwtOptions _options;
@@ -42,7 +42,7 @@ public sealed class JwtTokenService : IJwtTokenService
         if (request.CompanyId is { } companyId)
         {
             claims.Add(new Claim(HttpTenantContext.CompanyClaim, companyId.ToString()));
-            // Alcance por sucursal: "*" = todas; si no, una claim por sucursal. Sin empresa no hay alcance.
+            // Branch scope: "*" = all; otherwise, one claim per branch. Without a company there is no scope.
             if (request.BranchIds is null)
                 claims.Add(new Claim(HttpTenantContext.BranchClaim, HttpTenantContext.AllBranches));
             else

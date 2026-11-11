@@ -5,18 +5,18 @@ namespace Tahona.BakeryPOS.Domain.Catalog;
 
 public enum TaxKind
 {
-    /// <summary>IVA (código DIAN 01).</summary>
+    /// <summary>VAT (DIAN code 01).</summary>
     Iva,
-    /// <summary>Impuesto nacional al consumo (código DIAN 04).</summary>
+    /// <summary>National consumption tax (DIAN code 04).</summary>
     Inc,
-    /// <summary>Sin impuesto: bien excluido (código DIAN ZZ, "no aplica").</summary>
+    /// <summary>No tax: excluded good (DIAN code ZZ, "not applicable").</summary>
     None,
 }
 
 /// <summary>
-/// Impuesto de la empresa. La tarifa no se edita: cambiarla alteraría el precio de todos los productos
-/// que la usan; para otra tarifa se crea otro impuesto y se desactiva el anterior. Las ventas guardan
-/// copia de la tarifa aplicada.
+/// The company's tax. The rate is not edited: changing it would alter the price of all products
+/// that use it; for another rate a new tax is created and the previous one is deactivated. Sales store
+/// a copy of the rate applied.
 /// </summary>
 public sealed class Tax : AuditableEntity, ITenantEntity
 {
@@ -64,8 +64,8 @@ public sealed class Tax : AuditableEntity, ITenantEntity
 }
 
 /// <summary>
-/// Impuestos que se crean con cada empresa (HU-1.1). Supuesto razonable para una panadería:
-/// confirmar las tarifas con el contador (I-20).
+/// Taxes created with each company (US-1.1). A reasonable assumption for a bakery:
+/// confirm the rates with the accountant (I-20).
 /// </summary>
 public static class DefaultTaxes
 {
@@ -74,7 +74,7 @@ public static class DefaultTaxes
         ("IVA19", "IVA 19 %", TaxKind.Iva, 19m),
         ("IVA5", "IVA 5 %", TaxKind.Iva, 5m),
         ("IVA0", "IVA 0 % (exento)", TaxKind.Iva, 0m),
-        ("EXCLUIDO", "Excluido de IVA", TaxKind.None, 0m),
+        ("EXCLUDED", "Excluido de IVA", TaxKind.None, 0m),
         ("INC8", "Impuesto al consumo 8 %", TaxKind.Inc, 8m),
     ];
 }

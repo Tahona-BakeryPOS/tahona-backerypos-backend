@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Catalog.Taxes;
 
 /// <param name="Kind"><c>iva</c>, <c>inc</c> o <c>none</c>.</param>
-/// <param name="Version">ETag para If-Match en PUT.</param>
+/// <param name="Version">ETag for If-Match on PUT.</param>
 public sealed record TaxDto(Guid Id, string Code, string Name, string Kind, decimal Rate, string DianCode, bool IsActive, string Version)
 {
     public static TaxDto From(Tax t) =>
@@ -17,10 +17,10 @@ public sealed record TaxDto(Guid Id, string Code, string Name, string Kind, deci
 
 public sealed record GetTaxesQuery : IRequest<Result<IReadOnlyList<TaxDto>>>;
 
-/// <summary>Crea un impuesto. Código único en la empresa; la tarifa no se puede editar después.</summary>
+/// <summary>Creates a tax. Code unique within the company; the rate cannot be edited afterwards.</summary>
 public sealed record CreateTaxCommand(string Code, string Name, string Kind, decimal Rate) : IRequest<Result<TaxDto>>;
 
-/// <summary>Cambia el nombre o (des)activa un impuesto. Exige la versión leída (If-Match).</summary>
+/// <summary>Changes the name or (de)activates a tax. Requires the version read (If-Match).</summary>
 public sealed record UpdateTaxCommand(Guid Id, string? ExpectedVersion, string Name, bool IsActive) : IRequest<Result<TaxDto>>;
 
 public sealed class CreateTaxValidator : AbstractValidator<CreateTaxCommand>

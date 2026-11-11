@@ -1,8 +1,8 @@
 namespace Tahona.BakeryPOS.Application.Common.Abstractions;
 
 /// <summary>
-/// Registro de eventos entrantes de terceros (webhooks de pasarela o proveedor fiscal). Guarda el
-/// cuerpo crudo y deduplica por (proveedor, id del evento): un evento repetido no se procesa dos veces.
+/// Record of inbound third-party events (gateway or tax-provider webhooks). It stores the
+/// raw body and deduplicates by (provider, event id): a repeated event is not processed twice.
 /// </summary>
 public interface IInboundEventStore
 {

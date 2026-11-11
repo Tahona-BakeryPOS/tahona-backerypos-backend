@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Payments.Gateway;
 
 /// <summary>
-/// Estado de la integración con Bold por ambiente. Nunca incluye las llaves: solo si están configuradas.
+/// Status of the Bold integration per environment. It never includes the keys: only whether they are configured.
 /// </summary>
 public sealed record GatewayAccountDto(string Provider, string Environment, bool HasIdentityKey, bool HasSecretKey, string? SellerEmail,
     bool IsActive, DateTime? UpdatedAt);
@@ -17,23 +17,23 @@ public sealed record GatewayAccountDto(string Provider, string Environment, bool
 public sealed record GetGatewayAccountsQuery : IRequest<Result<IReadOnlyList<GatewayAccountDto>>>;
 
 /// <summary>
-/// Guarda las llaves de un ambiente (cifradas). Una llave null conserva la guardada. <paramref name="Activate"/>
-/// deja este ambiente como el activo de la empresa (y desactiva el otro).
+/// Stores the keys of an environment (encrypted). A null key keeps the stored one. <paramref name="Activate"/>
+/// makes this environment the company's active one (and deactivates the other).
 /// </summary>
 public sealed record SaveGatewayAccountCommand(string Environment, string? IdentityKey, string? SecretKey, string SellerEmail, bool Activate)
     : IRequest<Result<GatewayAccountDto>>;
 
-/// <summary>Datáfonos vinculados a la cuenta Bold del ambiente activo (consulta en vivo a Bold).</summary>
+/// <summary>Card terminals linked to the Bold account of the active environment (live query to Bold).</summary>
 public sealed record GetBoldTerminalsQuery : IRequest<Result<IReadOnlyList<BoldTerminal>>>;
 
-/// <summary>Métodos habilitados en la cuenta Bold del ambiente activo (consulta en vivo a Bold).</summary>
+/// <summary>Methods enabled on the Bold account of the active environment (live query to Bold).</summary>
 public sealed record GetBoldMethodsQuery : IRequest<Result<IReadOnlyList<BoldMethodStatus>>>;
 
 public sealed record RegisterTerminalDto(Guid CashRegisterId, string TerminalModel, string TerminalSerial);
 
 public sealed record GetRegisterTerminalsQuery : IRequest<Result<IReadOnlyList<RegisterTerminalDto>>>;
 
-/// <summary>Asigna el datáfono Bold de una caja (modelo y serial como los devuelve Bold).</summary>
+/// <summary>Assigns a register's Bold card terminal (model and serial as Bold returns them).</summary>
 public sealed record SetRegisterTerminalCommand(Guid CashRegisterId, string TerminalModel, string TerminalSerial) : IRequest<Result<RegisterTerminalDto>>;
 
 public sealed class SaveGatewayAccountValidator : AbstractValidator<SaveGatewayAccountCommand>
@@ -105,7 +105,7 @@ public sealed class GatewayIntegrationHandler :
 
         if (request.Activate)
         {
-            // Un solo ambiente activo: se desactiva el otro antes de activar este (índice único filtrado).
+            // A single active environment: the other is deactivated before activating this one (filtered unique index).
             foreach (var other in await _db.GatewayAccounts.Where(a => a.Id != account.Id && a.IsActive).ToListAsync(ct))
                 other.Deactivate();
             await _db.SaveChangesAsync(ct);

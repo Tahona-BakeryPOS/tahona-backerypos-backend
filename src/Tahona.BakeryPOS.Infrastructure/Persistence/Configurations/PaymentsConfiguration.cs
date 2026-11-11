@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
-/// <summary>Módulo Payments — esquema <c>pay</c>.</summary>
+/// <summary>Payments module — schema <c>pay</c>.</summary>
 internal sealed class PaymentMethodConfiguration : IEntityTypeConfiguration<PaymentMethod>
 {
     public void Configure(EntityTypeBuilder<PaymentMethod> builder)
@@ -82,7 +82,7 @@ internal sealed class PaymentAttemptConfiguration : IEntityTypeConfiguration<Pay
             .HasPrincipalKey(p => new { p.CompanyId, p.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(e => new { e.Provider, e.Reference }).IsUnique();
         builder.HasIndex(e => new { e.Provider, e.ExternalId }).IsUnique().HasFilter("\"external_id\" IS NOT NULL");
-        // Un solo intento abierto por pago (payment-integration.md §5).
+        // A single open attempt per payment (payment-integration.md §5).
         builder.HasIndex(e => e.PaymentId).IsUnique().HasFilter("\"status\" IN ('created','pending','unknown')")
             .HasDatabaseName("ux_payment_attempts_open_per_payment");
     }

@@ -4,9 +4,9 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Companies;
 
 /// <summary>
-/// Empresa cliente del SaaS (tenant). Es la raíz del aislamiento: todo dato de negocio cuelga de una.
-/// Solo el administrador de plataforma la da de alta (D-09); el propietario edita contacto y zona horaria.
-/// Los datos fiscales (NIT, régimen, responsabilidades) se fijan en el alta.
+/// SaaS customer company (tenant). It is the root of isolation: all business data hangs from one.
+/// Only the platform administrator onboards it (D-09); the owner edits contact and time zone.
+/// The tax data (NIT, regime, responsibilities) is set at onboarding.
 /// </summary>
 public sealed class Company : AuditableEntity
 {
@@ -61,7 +61,7 @@ public sealed class Company : AuditableEntity
         return company;
     }
 
-    /// <summary>Datos que el propietario puede cambiar (HU-1.2). La zona horaria define el "día" de reportes y cierres.</summary>
+    /// <summary>Data the owner can change (US-1.2). The time zone defines the "day" of reports and closings.</summary>
     public void UpdateContact(string? tradeName, string email, string? phone, string? address, string? cityCode, string? timeZone)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -86,10 +86,10 @@ public enum CompanyStatus
 }
 
 /// <summary>
-/// Códigos fiscales del anexo técnico de facturación electrónica de la DIAN (por verificar con el
-/// contador antes de la fase 7, D-05). Régimen: 48 responsable de IVA, 49 no responsable.
-/// Responsabilidades: O-13 gran contribuyente, O-15 autorretenedor, O-23 agente de retención de IVA,
-/// O-47 régimen simple de tributación, R-99-PN no aplica (otros).
+/// Tax codes from the DIAN electronic-invoicing technical annex (to verify with the
+/// accountant before phase 7, D-05). Regime: 48 VAT-responsible, 49 not responsible.
+/// Responsibilities: O-13 large taxpayer, O-15 self-withholder, O-23 VAT withholding agent,
+/// O-47 simple tax regime, R-99-PN not applicable (others).
 /// </summary>
 public static class TaxCodes
 {

@@ -8,7 +8,7 @@ public class OutboxBackoffTests
     [InlineData(1, 5)]
     [InlineData(2, 10)]
     [InlineData(3, 20)]
-    [InlineData(20, 3600)] // tope de 1 hora
+    [InlineData(20, 3600)] // 1-hour cap
     public void Backoff_is_exponential_with_a_cap(int attempt, int expectedSeconds)
     {
         Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), OutboxProcessor.Backoff(attempt));

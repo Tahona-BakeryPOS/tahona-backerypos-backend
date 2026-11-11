@@ -1,6 +1,6 @@
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Integration;
 
-/// <summary>Mensaje de la bandeja de salida (<c>int.outbox_messages</c>).</summary>
+/// <summary>Outbox message (<c>int.outbox_messages</c>).</summary>
 public sealed class OutboxMessage
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -24,7 +24,7 @@ public static class OutboxStatus
     public const string Failed = "failed";
 }
 
-/// <summary>Evento recibido de un tercero (<c>int.inbound_events</c>), deduplicado por proveedor e id.</summary>
+/// <summary>Event received from a third party (<c>int.inbound_events</c>), deduplicated by provider and id.</summary>
 public sealed class InboundEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -38,7 +38,7 @@ public sealed class InboundEvent
     public string? LastError { get; set; }
 }
 
-/// <summary>Respuesta guardada de una petición idempotente (<c>int.idempotency_requests</c>).</summary>
+/// <summary>Stored response of an idempotent request (<c>int.idempotency_requests</c>).</summary>
 public sealed class IdempotencyRecord
 {
     public Guid CompanyId { get; init; }
@@ -52,7 +52,7 @@ public sealed class IdempotencyRecord
     public DateTime? CompletedAt { get; set; }
 }
 
-/// <summary>Registro de auditoría (<c>aud.audit_logs</c>): solo inserción.</summary>
+/// <summary>Audit record (<c>aud.audit_logs</c>): insert-only.</summary>
 public sealed class AuditLog
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

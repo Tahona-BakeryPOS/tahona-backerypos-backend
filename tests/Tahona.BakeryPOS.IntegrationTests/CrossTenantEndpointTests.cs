@@ -8,9 +8,9 @@ using Tahona.BakeryPOS.Application.Identity.Users;
 namespace Tahona.BakeryPOS.IntegrationTests;
 
 /// <summary>
-/// Criterio de aceptación de la fase 2: dos empresas demo sin acceso cruzado, endpoint por endpoint.
-/// El propietario de A (token real, obtenido por login) usa identificadores válidos de B: todo responde
-/// 404 como si no existieran, y las listas solo traen lo de A.
+/// Phase 2 acceptance criterion: two demo companies without cross access, endpoint by endpoint.
+/// A's owner (a real token, obtained by login) uses valid identifiers of B: everything answers
+/// 404 as if they did not exist, and the lists only bring A's data.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public sealed class CrossTenantEndpointTests
@@ -27,7 +27,7 @@ public sealed class CrossTenantEndpointTests
 
     public static TheoryData<string, string, string> ForeignIdRequests => new()
     {
-        // método, ruta con marcadores de B, cuerpo JSON
+        // method, route with B's placeholders, JSON body
         { "GET", "/api/v1/sucursales/{branchB}", "" },
         { "PUT", "/api/v1/sucursales/{branchB}", """{"name":"Intrusa"}""" },
         { "POST", "/api/v1/sucursales/{branchB}/desactivar", "" },
@@ -95,7 +95,7 @@ public sealed class CrossTenantEndpointTests
     [Fact]
     public async Task Platform_admin_without_company_sees_no_company_data()
     {
-        var platform = _api.ClientFor(null, Tahona.BakeryPOS.Application.Common.Security.Permissions.PlataformaAdmin);
+        var platform = _api.ClientFor(null, Tahona.BakeryPOS.Application.Common.Security.Permissions.PlatformAdmin);
 
         Assert.Equal(HttpStatusCode.Forbidden, (await platform.GetAsync("/api/v1/usuarios")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await platform.GetAsync("/api/v1/empresa")).StatusCode);

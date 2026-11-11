@@ -10,10 +10,10 @@ namespace Tahona.BakeryPOS.Application.Cash.Registers;
 
 public sealed record CashRegisterDto(Guid Id, Guid BranchId, string Code, string Name, bool IsActive);
 
-/// <summary>Cajas de la empresa, opcionalmente de una sucursal.</summary>
+/// <summary>The company's cash registers, optionally of one branch.</summary>
 public sealed record GetCashRegistersQuery(Guid? BranchId) : IRequest<Result<IReadOnlyList<CashRegisterDto>>>;
 
-/// <summary>Crea una caja en una sucursal activa de la empresa. Código único por sucursal.</summary>
+/// <summary>Creates a cash register at an active branch of the company. Code unique per branch.</summary>
 public sealed record CreateCashRegisterCommand(Guid BranchId, string Code, string Name) : IRequest<Result<CashRegisterDto>>;
 
 public sealed class CreateCashRegisterValidator : AbstractValidator<CreateCashRegisterCommand>
@@ -54,7 +54,7 @@ public sealed class CashRegistersHandler :
 
     public async Task<Result<CashRegisterDto>> Handle(CreateCashRegisterCommand request, CancellationToken ct)
     {
-        // Una sucursal de otra empresa no existe para esta sesión: 404, igual que un id inventado.
+        // A branch of another company does not exist for this session: 404, the same as an invented id.
         var branch = await _branches.FindAsync(request.BranchId, ct);
         if (branch is null)
             return Result.Failure<CashRegisterDto>(Error.NotFound("Sucursal", request.BranchId));
@@ -72,7 +72,7 @@ public sealed class CashRegistersHandler :
     }
 }
 
-/// <summary>Lo que otros módulos pueden consultar de Cash.</summary>
+/// <summary>What other modules can query from Cash.</summary>
 public sealed class CashRegisterDirectory : ICashRegisterDirectory
 {
     private readonly IAppDbContext _db;

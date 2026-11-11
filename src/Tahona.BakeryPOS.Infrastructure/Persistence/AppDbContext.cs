@@ -17,9 +17,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 
 /// <summary>
-/// Contexto único sobre PostgreSQL. Aplica, para toda entidad <see cref="ITenantEntity"/>, el filtro
-/// global por la empresa de la sesión, y al guardar rechaza filas de otra empresa. Llena las columnas
-/// de auditoría, escribe el registro de auditoría y los mensajes de outbox en la misma transacción.
+/// A single context on PostgreSQL. It applies, for every <see cref="ITenantEntity"/>, the global
+/// filter by the session's company, and on saving it rejects rows of another company. It fills the
+/// audit columns, writes the audit log and the outbox messages in the same transaction.
 /// </summary>
 public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
 {
@@ -36,7 +36,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
         _correlation = correlation;
     }
 
-    /// <summary>Empresa usada por el filtro global. EF la evalúa en cada consulta.</summary>
+    /// <summary>Company used by the global filter. EF evaluates it on every query.</summary>
     public Guid? CurrentCompanyId => _tenant?.CompanyId;
 
     // Companies
@@ -107,7 +107,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
     {
         builder.Properties<decimal>().HavePrecision(18, 2);
         builder.Properties<string>().AreUnicode();
-        // Todas las fechas son UTC: timestamptz exige DateTime con Kind=Utc al escribir.
+        // All dates are UTC: timestamptz requires a DateTime with Kind=Utc when writing.
         builder.Properties<DateTime>().HaveColumnType("timestamp(3) with time zone").HaveConversion<UtcDateTimeConverter>();
     }
 
@@ -126,7 +126,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
         SnakeCaseNaming.Apply(modelBuilder);
     }
 
-    /// <summary>Filtros con nombre (EF Core 10): se pueden desactivar por separado con IgnoreQueryFilters([...]).</summary>
+    /// <summary>Named filters (EF Core 10): they can be turned off separately with IgnoreQueryFilters([...]).</summary>
     private void ApplyFilter(ModelBuilder modelBuilder, Type entityType, string name, string property, bool isTenant)
     {
         var e = Expression.Parameter(entityType, "e");
@@ -158,8 +158,8 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
                 entry.Entity.ModifiedAt = now;
                 entry.Entity.ModifiedBy = actor;
             }
-            // PostgreSQL no tiene rowversion: la versión la pone la aplicación en cada cambio (el valor
-            // original sigue siendo el de la condición WHERE, así la concurrencia optimista se mantiene).
+            // PostgreSQL has no rowversion: the application sets the version on every change (the original
+            // value is still the one in the WHERE condition, so optimistic concurrency is kept).
             if (entry.State is EntityState.Added or EntityState.Modified)
                 entry.Entity.RowVersion = RandomNumberGenerator.GetBytes(8);
         }
@@ -169,9 +169,9 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
     }
 
     /// <summary>
-    /// Con una sesión de empresa, toda fila de empresa que se agregue, modifique o borre debe ser de esa
-    /// empresa, y nunca puede cambiar de empresa. Los procesos internos (sin empresa en sesión, p. ej.
-    /// workers o webhooks) escriben con la empresa que ya trae cada entidad.
+    /// With a company session, every company row that is added, modified or deleted must belong to that
+    /// company, and it can never change company. Internal processes (no company in session, e.g.
+    /// workers or webhooks) write with the company each entity already carries.
     /// </summary>
     private void GuardTenantIsolation()
     {
@@ -189,7 +189,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
         }
     }
 
-    // ---- IOutbox: el mensaje se guarda con el próximo SaveChanges, en la misma transacción ----
+    // ---- IOutbox: the message is stored with the next SaveChanges, in the same transaction ----
     void IOutbox.Enqueue(string type, object payload)
     {
         var now = DateTime.UtcNow;
@@ -204,7 +204,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext, IOutbox
     }
 }
 
-/// <summary>Id de correlación de la petición actual (para auditoría).</summary>
+/// <summary>Correlation id of the current request (for audit).</summary>
 public interface ICorrelationIdAccessor
 {
     string? CorrelationId { get; }

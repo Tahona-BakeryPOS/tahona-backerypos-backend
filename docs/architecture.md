@@ -1,45 +1,42 @@
-# Arquitectura — Tahona.BakeryPOS MVP v1.1
+# Architecture — Tahona.BakeryPOS MVP v1.1
 
-Estado: **borrador para revisión**.
+Status: **draft for review**.
 
-## 1. Entorno inspeccionado (27/10/2026)
+## 1. Inspected environment (27/10/2026)
 
-| Herramienta | Encontrado | Uso propuesto |
+| Tool | Found | Proposed use |
 |---|---|---|
-| .NET SDK | 9.0.319 y 10.0.401 | **.NET 10 (LTS)**. .NET 9 es STS y su soporte termina en noviembre de 2026. |
+| .NET SDK | 9.0.319 and 10.0.401 | **.NET 10 (LTS)**. .NET 9 is STS and its support ends in November 2026. |
 | ASP.NET Core runtime | 8.0, 9.0, 10.0.12 | 10.0 |
-| Node.js | 26.12.1 | Desarrollo con 26; CI con la LTS vigente que soporte Angular 22 (verificar matriz oficial). |
-| Angular | 22.2 (en v1) | Angular 22, standalone, signals, zoneless (como v1) |
-| TypeScript | 6.0 | Según Angular 22 |
-| PostgreSQL | 17 (contenedor) | Desarrollo: contenedor `postgres:17-alpine` como en la v1 (I-18) |
-| Docker | 29.8 | Compose para PostgreSQL en desarrollo y pruebas de integración |
-| Git | 2.56 | Repo propio e independiente de cualquier cliente — ver D-13 |
-| Pruebas | xUnit (unitarias, integración y arquitectura) | + pruebas de integración con PostgreSQL real y E2E (ver testing-strategy) |
+| PostgreSQL | 17 (container) | Development: `postgres:17-alpine` container (I-18) |
+| Docker | 29.8 | Compose for PostgreSQL in development and integration tests |
+| Git | 2.56 | Own repo, independent of any client — see D-13 |
+| Tests | xUnit (unit, integration and architecture) | + integration tests with real PostgreSQL (see testing-strategy) |
 
-## 2. Estilo: monolito modular
+## 2. Style: modular monolith
 
-Un solo proceso ASP.NET Core y una sola base de datos, con **módulos de límites explícitos**. Cada
-módulo es dueño de sus tablas (esquema SQL propio) y expone a los demás solo comandos/consultas
-públicas o eventos; nunca entidades ni acceso directo a tablas ajenas.
+A single ASP.NET Core process and a single database, with **modules with explicit boundaries**. Each
+module owns its tables (its own SQL schema) and exposes to the others only public commands/queries
+or events; never entities or direct access to foreign tables.
 
-| Módulo | Esquema SQL | Responsabilidad |
+| Module | SQL schema | Responsibility |
 |---|---|---|
-| Companies | `org` | Empresas, sucursales, configuración, zona horaria |
-| Identity | `sec` | Usuarios, pertenencias, roles, permisos, dispositivos, sesiones |
-| Catalog | `cat` | Productos, categorías, unidades, impuestos, precios por sucursal, disponibilidad |
-| Inventory | `inv` | Ubicaciones, movimientos, saldos, ajustes, reconciliación |
-| Cash | `cash` | Cajas, sesiones de caja, movimientos de efectivo, cierres |
-| Sales | `sales` | Ventas, líneas, devoluciones, orquestación del proceso de venta |
-| Payments | `pay` | Pagos, intentos, eventos de pasarela, reembolsos, conciliación |
-| Invoicing | `fis` | Configuración fiscal, numeración, documentos, intentos de emisión |
-| Audit / Integration | `aud`, `int` | Registro de auditoría, bandeja de salida (outbox), eventos entrantes |
+| Companies | `org` | Companies, branches, configuration, time zone |
+| Identity | `sec` | Users, memberships, roles, permissions, devices, sessions |
+| Catalog | `cat` | Products, categories, units, taxes, per-branch prices, availability |
+| Inventory | `inv` | Locations, movements, balances, adjustments, reconciliation |
+| Cash | `cash` | Cash registers, cash sessions, cash movements, closings |
+| Sales | `sales` | Sales, lines, returns, orchestration of the sale process |
+| Payments | `pay` | Payments, attempts, gateway events, refunds, reconciliation |
+| Invoicing | `fis` | Tax configuration, numbering, documents, issuing attempts |
+| Audit / Integration | `aud`, `int` | Audit log, outbox, inbound events |
 
-### Estructura de la solución (propuesta)
+### Solution structure (proposed)
 ```
 backend/
   src/
     Tahona.BakeryPOS.Api/                 → host: controllers, auth, middlewares, OpenAPI
-    Tahona.BakeryPOS.SharedKernel/        → Result, Error, tipos de dinero, ids, interfaces comunes
+    Tahona.BakeryPOS.SharedKernel/        → Result, Error, money types, ids, common interfaces
     Modules/
       Companies/ Companies.Application  Companies.Domain  Companies.Infrastructure
       Identity/  …
@@ -47,101 +44,101 @@ backend/
       Inventory/ …
       Cash/      …
       Sales/     …
-      Payments/  … + Payments.Wompi   (adaptador de pasarela)
-      Invoicing/ … + Invoicing.<Proveedor> (adaptador fiscal, tras D-04)
-    Tahona.BakeryPOS.Infrastructure.Persistence → un solo DbContext con un esquema por módulo (decisión I-01)
+      Payments/  … + Payments.Wompi   (gateway adapter)
+      Invoicing/ … + Invoicing.<Provider> (tax adapter, after D-04)
+    Tahona.BakeryPOS.Infrastructure.Persistence → a single DbContext with one schema per module (decision I-01)
   tests/
-    *.UnitTests, *.IntegrationTests (PostgreSQL real), Architecture.Tests (límites entre módulos)
+    *.UnitTests, *.IntegrationTests (real PostgreSQL), Architecture.Tests (boundaries between modules)
 ```
-Alternativa más ligera (D-14): mantener los 4 proyectos de la v1 y separar módulos por carpeta,
-haciendo cumplir los límites con pruebas de arquitectura. Recomendado: **carpetas + pruebas de
-arquitectura** en el MVP; partir en proyectos solo si un módulo crece.
+Lighter alternative (D-14): keep the 4 projects of the previous system and split modules by folder,
+enforcing the boundaries with architecture tests. Recommended: **folders + architecture
+tests** in the MVP; split into projects only if a module grows.
 
-### Patrones que se conservan de la v1
-CQRS con MediatR · Result/`Error` en vez de excepciones para negocio · FluentValidation ·
-EF Core con proyección directa a DTO en consultas · auditoría automática en `SaveChangesAsync` ·
-permisos como claims con `[RequirePermission]` · UUID v7 como clave.
+### Patterns kept from the previous system
+CQRS with MediatR · Result/`Error` instead of exceptions for business rules · FluentValidation ·
+EF Core with direct DTO projection in queries · automatic audit in `SaveChangesAsync` ·
+permissions as claims with `[RequirePermission]` · UUID v7 as key.
 
-## 3. Multiempresa y seguridad
+## 3. Multi-company and security
 
-- **Aislamiento por fila**: toda tabla de negocio lleva `company_id`. Cada DbContext aplica un filtro
-  global `company_id = @empresaDelToken`. Las escrituras validan que las referencias (sucursal, caja,
-  producto) pertenezcan a la misma empresa (también con FK compuestas `(company_id, id)` donde aplica).
-- **Defensa en profundidad**: además del filtro, cada handler valida pertenencia y permisos; las
-  pruebas de aislamiento intentan leer y escribir con ids de otra empresa en **todos** los endpoints.
-- **Autenticación**:
-  - Backoffice: correo + contraseña (BCrypt) → JWT corto (15–60 min) + refresh token rotatorio
-    almacenado como hash. MFA fuera del MVP.
-  - Caja: dispositivo vinculado (token de dispositivo revocable) + PIN de cajero → JWT de sesión.
-  - Plataforma: rol de administrador de plataforma separado, sin acceso a datos de ventas.
-- **Autorización**: permiso + alcance (empresa, sucursal, caja) evaluados en backend en cada operación.
-- **Secretos**: `Jwt:Secret`, cadenas de conexión y llaves de plataforma por variables de entorno /
-  user-secrets / gestor de secretos. Credenciales de pasarela y proveedor fiscal **por empresa** se
-  guardan cifradas (ASP.NET Data Protection con llaves persistidas fuera de la base; en nube, Key
-  Vault). Nunca se registran en logs (ya hay un precedente: la v1 llegó a loguear el PIN).
+- **Row-level isolation**: every business table carries `company_id`. Each DbContext applies a global
+  filter `company_id = @tokenCompany`. Writes validate that the references (branch, register,
+  product) belong to the same company (also with composite FKs `(company_id, id)` where applicable).
+- **Defense in depth**: besides the filter, every handler validates ownership and permissions; the
+  isolation tests try to read and write with ids of another company on **every** endpoint.
+- **Authentication**:
+  - Backoffice: email + password (BCrypt) → short JWT (15–60 min) + rotating refresh token
+    stored as a hash. MFA is out of the MVP.
+  - Register: paired device (revocable device token) + cashier PIN → session JWT.
+  - Platform: a separate platform-administrator role, with no access to sales data.
+- **Authorization**: permission + scope (company, branch, register) evaluated in the backend on every operation.
+- **Secrets**: `Jwt:Secret`, connection strings and platform keys through environment variables /
+  user-secrets / a secrets manager. Gateway and tax-provider credentials **per company** are
+  stored encrypted (ASP.NET Data Protection with keys persisted outside the database; in the cloud, Key
+  Vault). They are never written to logs (there is a precedent: the previous system once logged the PIN).
 
-## 4. Flujo de venta: proceso persistente
+## 4. Sale flow: persistent process
 
-La venta no se resuelve en una sola transacción. Es un proceso con estados persistidos y pasos
-idempotentes; cada llamada externa ocurre **fuera** de transacciones SQL.
+A sale is not resolved in a single transaction. It is a process with persisted states and idempotent
+steps; every external call happens **outside** SQL transactions.
 
 ```
-[1] POST /ventas (Idempotency-Key)            → TX: venta 'borrador' + líneas con precios/impuestos congelados
-[2] POST /ventas/{id}/pagos (efectivo|pasarela)→ TX: intento de pago 'creado' (referencia única)
-      └─ si pasarela: fuera de TX → crear transacción en la pasarela → TX: guardar id externo, 'pendiente'
-[3] Webhook o consulta de estado              → TX: intento 'aprobado'/'rechazado' (+ evento entrante deduplicado)
-[4] Confirmación (cuando pagos aprobados = total) → TX única:
-        venta 'confirmada' + pagos aplicados + movimientos de inventario + movimiento de caja (efectivo)
-        + documento fiscal 'pendiente' + mensajes de outbox
-[5] Worker de facturación (outbox)            → fuera de TX: enviar al proveedor → TX: guardar intento/resultado
-[6] Worker de seguimiento                     → consultar estado de documentos/pagos 'desconocidos'
+[1] POST /ventas (Idempotency-Key)            → TX: 'draft' sale + lines with frozen prices/taxes
+[2] POST /ventas/{id}/pagos (cash|gateway)    → TX: payment attempt 'created' (unique reference)
+      └─ if gateway: outside TX → create the gateway transaction → TX: store external id, 'pending'
+[3] Webhook or status query                   → TX: attempt 'approved'/'declined' (+ deduplicated inbound event)
+[4] Confirmation (when approved payments = total) → single TX:
+        sale 'confirmed' + payments applied + inventory movements + cash movement (cash)
+        + fiscal document 'pending' + outbox messages
+[5] Invoicing worker (outbox)                 → outside TX: send to the provider → TX: store attempt/result
+[6] Follow-up worker                          → query the status of 'unknown' documents/payments
 ```
 
-Estados separados (detalle en `data-model.md`):
-- Venta: `borrador → pendiente_pago → confirmada → (anulada)`; `cancelada` si nunca se pagó.
-- Pago/intento: `creado → pendiente → aprobado | rechazado | cancelado | error | desconocido`.
-- Inventario de la venta: `no_aplicado → aplicado → (revertido)`.
-- Documento fiscal: `pendiente → enviando → aceptado | rechazado | desconocido | error_temporal`.
+Separate states (detail in `data-model.md`):
+- Sale: `draft → pending_payment → confirmed → (voided)`; `cancelled` if it was never paid.
+- Payment/attempt: `created → pending → approved | declined | cancelled | error | unknown`.
+- Sale inventory: `not_applied → applied → (reversed)`.
+- Fiscal document: `pending → submitting → accepted | rejected | unknown | temporary_error`.
 
-### Qué pasa si falla cada paso
+### What happens if each step fails
 
-| Falla | Efecto | Recuperación | Evita duplicado |
+| Failure | Effect | Recovery | Prevents duplicates |
 |---|---|---|---|
-| [1] se corta la red al crear | El cliente no sabe si se creó | Reintenta con la misma `Idempotency-Key` → devuelve la misma venta | Clave idempotente única por empresa |
-| [2] timeout al crear transacción en pasarela | Intento en `desconocido` | Worker consulta por id/referencia antes de cualquier reintento | Referencia = id del intento, única; no se crea otro intento hasta resolver |
-| [3] webhook no llega | Intento queda `pendiente` | Worker consulta la transacción cada N segundos hasta estado final o vencimiento | Transiciones solo hacia adelante; evento con id ya procesado se ignora |
-| [3] webhook duplicado o con firma inválida | — | Se responde 200 sin efecto / se rechaza y se audita | Tabla de eventos entrantes con id único |
-| [4] falla la transacción de confirmación | Pago aprobado pero venta sin confirmar | Worker reintenta la confirmación (idempotente) | `inventory_status`, clave de movimiento `(origen, línea)` única |
-| [4] pago aprobado de una venta cancelada/vencida | Dinero recibido sin venta | Se marca para **reembolso** y alerta en conciliación | Conciliación diaria |
-| [5] timeout al emitir documento | Documento `desconocido` | **Consultar estado** en el proveedor antes de reenviar | Mismo número/consecutivo e id de documento en el reintento |
-| [5] rechazo del proveedor/DIAN | Documento `rechazado` con motivo | Corrección y nuevo envío según procedimiento del proveedor | Nuevo intento enlazado al mismo documento |
-| Caída del proceso en cualquier punto | Estados intermedios | Workers retoman desde el estado persistido | Todos los pasos idempotentes |
+| [1] network drops on create | The client does not know whether it was created | Retries with the same `Idempotency-Key` → returns the same sale | Unique idempotent key per company |
+| [2] timeout creating the gateway transaction | Attempt in `unknown` | The worker queries by id/reference before any retry | Reference = attempt id, unique; no other attempt is created until resolved |
+| [3] webhook does not arrive | The attempt stays `pending` | The worker queries the transaction every N seconds until a final state or expiry | Transitions only move forward; an event with an already processed id is ignored |
+| [3] duplicate webhook or invalid signature | — | A 200 is returned with no effect / it is rejected and audited | Inbound events table with a unique id |
+| [4] the confirmation transaction fails | Payment approved but sale not confirmed | The worker retries the confirmation (idempotent) | `inventory_status`, unique movement key `(source, line)` |
+| [4] approved payment of a cancelled/expired sale | Money received without a sale | Flagged for **refund** and an alert in reconciliation | Daily reconciliation |
+| [5] timeout issuing the document | Document `unknown` | **Query the status** at the provider before resending | Same number/consecutive and document id on retry |
+| [5] provider/DIAN rejection | Document `rejected` with a reason | Correction and resubmission per the provider's procedure | New attempt linked to the same document |
+| Process crash at any point | Intermediate states | Workers resume from the persisted state | All steps idempotent |
 
-## 5. Integraciones
+## 5. Integrations
 
-- **Puertos y adaptadores**: `IPaymentGateway` e `IFiscalDocumentProvider` en Application; un
-  adaptador por proveedor en Infrastructure. Ningún módulo de negocio conoce al proveedor concreto.
-- **Outbox** (tabla `int.outbox_messages`) escrito en la misma transacción del cambio; un
-  `BackgroundService` lo publica con reintentos exponenciales y bloqueo por fila.
-- **Eventos entrantes** (`int.inbound_events`): cada webhook se guarda crudo, se valida la firma,
-  se deduplica por id del proveedor y se procesa de forma asíncrona.
-- **Sin simulaciones en producción**: los adaptadores de prueba (fakes) existen solo en pruebas; en
-  producción el arranque falla si el proveedor no está configurado.
+- **Ports and adapters**: `IPaymentGateway` and `IFiscalDocumentProvider` in Application; one
+  adapter per provider in Infrastructure. No business module knows the concrete provider.
+- **Outbox** (table `int.outbox_messages`) written in the same transaction as the change; a
+  `BackgroundService` publishes it with exponential retries and row locking.
+- **Inbound events** (`int.inbound_events`): each webhook is stored raw, its signature is validated,
+  it is deduplicated by the provider's id and processed asynchronously.
+- **No simulations in production**: test adapters (fakes) exist only in tests; in
+  production startup fails if the provider is not configured.
 
-## 6. Clientes del API
+## 6. API clients
 
-El backend no depende de ningún cliente: expone un API HTTP/JSON versionado (`/api/v1`, documento OpenAPI en
-`/openapi/v1.json`) y se compila, prueba y despliega por sí solo. Los clientes (por ejemplo, una PWA para el POS y el
-backoffice) viven en repositorios propios y dependen solo del contrato (`api-contracts.md`).
+The backend does not depend on any client: it exposes a versioned HTTP/JSON API (`/api/v1`, OpenAPI document at
+`/openapi/v1.json`) and is built, tested and deployed on its own. Clients (for example, a PWA for the POS and the
+backoffice) live in their own repositories and depend only on the contract (`api-contracts.md`).
 
-Lo que el API exige a cualquier cliente:
-- Requiere conexión: no existe modo sin conexión ni sincronización.
-- `Idempotency-Key` en los POST reintentables e `If-Match` en los PUT de datos maestros.
-- El estado del pago y del documento fiscal se consulta con *polling* corto.
-- Si el cliente corre en otro origen, ese origen se declara en `Cors:AllowedOrigins`.
+What the API requires of any client:
+- It requires a connection: there is no offline mode or synchronization.
+- `Idempotency-Key` on retryable POSTs and `If-Match` on master-data PUTs.
+- Payment and fiscal-document status is queried with short polling.
+- If the client runs on another origin, that origin is declared in `Cors:AllowedOrigins`.
 
-## 7. Despliegue (D-10)
+## 7. Deployment (D-10)
 
-Un VPS por ambiente con Docker Compose (`deploy/`): PostgreSQL, la API, las migraciones (bundle de `dotnet ef`, como paso
-previo y nunca al arrancar en producción) y Caddy como proxy HTTPS del API. No se construye ni se sirve ningún cliente.
-Guía de operación: `runbooks.md`.
+One VPS per environment with Docker Compose (`deploy/`): PostgreSQL, the API, the migrations (a `dotnet ef` bundle, as a prior
+step and never on startup in production) and Caddy as the API's HTTPS proxy. No client is built or served.
+Operations guide: `runbooks.md`.

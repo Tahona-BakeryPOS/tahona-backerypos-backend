@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 namespace Tahona.BakeryPOS.Application.Sales;
 
 /// <summary>
-/// Paso [4] de architecture.md §4: cuando los pagos aprobados cubren el total, en una sola transacción la
-/// venta queda confirmada con su número, se descuentan existencias, entra el efectivo a la gaveta y se crea
-/// la factura electrónica (con su mensaje de outbox). Idempotente: una venta confirmada no se repite.
+/// Step [4] of architecture.md §4: when the approved payments cover the total, in a single transaction the
+/// sale is confirmed with its number, stock is deducted, cash goes into the drawer and the electronic
+/// invoice is created (with its outbox message). Idempotent: a confirmed sale is not repeated.
 /// </summary>
 public sealed class SaleConfirmation
 {
@@ -34,7 +34,7 @@ public sealed class SaleConfirmation
         _logger = logger;
     }
 
-    /// <summary>Confirma si ya está pagada; si faltan pagos, solo actualiza el estado de pago. No guarda si no hay cambios.</summary>
+    /// <summary>Confirms if it is already paid; if payments are missing, it only updates the payment status. It does not save if there are no changes.</summary>
     public async Task<Result> TryConfirmAsync(Sale sale, CancellationToken ct)
     {
         if (!sale.IsOpen)
@@ -56,8 +56,8 @@ public sealed class SaleConfirmation
         if (!sale.Confirm(approvedTotal, counter.Next(), now))
             return Result.Success();
 
-        // Inventario: la política D-06 se revisó antes de cobrar. Si una carrera dejó sin existencias un producto
-        // "bloquear" y el pago ya está aprobado, se descuenta igual a nombre del cajero y se registra.
+        // Inventory: the D-06 policy was checked before charging. If a race left a "block" product
+        // without stock and the payment is already approved, it is deducted anyway in the cashier's name and recorded.
         var lines = sale.Lines.Select(l => (l.Id, l.ProductId, l.Quantity)).ToList();
         var posted = await _inventory.PostSaleAsync(sale.BranchId, sale.Id, lines, sale.StockAuthorizedBy, ct);
         if (posted.IsFailure && posted.Error.Code == Error.ExistenciasInsuficientes.Code)
@@ -72,7 +72,7 @@ public sealed class SaleConfirmation
         var cash = approved.Where(p => p.MethodKind == "cash").ToList();
         await _drawer.RecordSaleCashAsync(sale.CashSessionId, sale.Id, cash.Sum(p => p.AmountTendered ?? p.Amount), cash.Sum(p => p.ChangeAmount ?? 0), ct);
 
-        // D-05: factura electrónica en cada venta. Sin facturación activa la venta queda "no requerida" (I-25).
+        // D-17: electronic invoicing is optional per company. Without active invoicing the sale stays "not required" (I-25).
         if (await _fiscal.IsActiveAsync(ct))
         {
             var docId = await _fiscal.EnqueueSaleInvoiceAsync(new SaleFiscalSnapshot(sale.Id, now, sale.CustomerIdentification,

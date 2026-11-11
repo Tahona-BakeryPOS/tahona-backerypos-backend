@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Companies;
 
-/// <summary>Lo que otros módulos pueden consultar de Companies.</summary>
+/// <summary>What other modules can query from Companies.</summary>
 public sealed class CompanyDirectory : ICompanyDirectory, IBranchDirectory
 {
     private readonly IAppDbContext _db;

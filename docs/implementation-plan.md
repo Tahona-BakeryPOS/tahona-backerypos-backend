@@ -1,38 +1,38 @@
-# Plan de implementación — MVP v1.1
+# Implementation plan — MVP v1.1
 
-Empieza solo cuando se aprueben este diseño y las decisiones bloqueantes de cada fase
-([`decisions.md`](decisions.md)). Cada fase entrega API, pruebas, documentación y
-criterios de aceptación; se detiene si fallan pruebas críticas.
+It starts only once this design and the blocking decisions of each phase are approved
+([`decisions.md`](decisions.md)). Each phase delivers API, tests, documentation and
+acceptance criteria; it stops if critical tests fail.
 
-| # | Fase | Entregables | Reutiliza de v1 | Decisiones | Criterio de aceptación |
+| # | Phase | Deliverables | Reused from the previous system | Decisions | Acceptance criteria |
 |---|---|---|---|---|---|
-| 1 ✅ (pruebas locales; CI sin ejecutar en GitHub) | Fundación técnica y seguridad | .NET 10, PostgreSQL (I-18), módulos por carpeta, filtro por empresa, `Idempotency-Key`, outbox, inbound events, auditoría, OpenAPI, CI con PostgreSQL real, pruebas de arquitectura | Capas, Result, MediatR, auditoría automática, JWT, CI | D-01, D-02, D-13, D-14, D-16 | CI verde con migración inicial en PostgreSQL; prueba de aislamiento de ejemplo |
-| 2 ✅ backend (pruebas locales) | Empresas, sucursales y usuarios | Alta de empresas (plataforma), pertenencias, roles por sucursal, login backoffice + selección de empresa, refresh tokens, bloqueo de PIN | Backoffice: Empresa, Sucursales, Usuarios, vinculación de dispositivos | D-08, D-09 | Dos empresas demo sin acceso cruzado (pruebas por endpoint) |
-| 3 ✅ backend (compila; pruebas sin ejecutar) | Catálogo y precios | Productos, precio base y por sucursal con vigencia, disponibilidad por sucursal, impuestos con códigos DIAN | Catálogo, categorías, impuestos, `sale-math` | D-07 | Precio vigente correcto por sucursal y fecha (pruebas) |
-| 4 ✅ backend (compila; pruebas sin ejecutar) | Inventario básico | Ubicaciones, movimientos, saldos, inicial, ajustes autorizados, reconciliación, pantallas de existencias y movimientos | — | D-06 | Saldo = Σ movimientos; idempotencia; concurrencia |
-| 5 ✅ backend (compila; pruebas sin ejecutar) | Cajas y turnos | Sesiones de caja, movimientos, cierre con esperado (incluye reembolsos), bloqueo por pendientes | Turnos, caja, cierre (fix del cambio) | D-12 | Esperado correcto en escenarios mixtos |
-| 6 ✅ backend con Bold (compila; **falta la prueba en el sandbox de Bold**, criterio de aceptación) | Pasarela de pagos | Adaptador Wompi (o el elegido), intentos, webhooks firmados, worker de recuperación, conciliación, credenciales cifradas | Medios de pago | D-03 | Pruebas contra **sandbox real** + escenarios 2–6 |
-| 7 ✅ backend con Siigo (compila; **falta un documento aceptado en habilitación**, criterio de aceptación) | Facturación electrónica | Configuración fiscal, numeración, documentos, worker de emisión y consulta, artefactos, notas | — | D-04, D-05, D-15 | Documento aceptado en ambiente de pruebas con CUFE/CUDE verificable; escenarios 7–8 |
-| 8 ✅ backend (compila; pruebas sin ejecutar; **falta el E2E en los sandbox de Bold y Siigo**) | Integración completa del POS | Venta como proceso persistente, cobro con estado en vivo, comprobante con estado fiscal; se retira el modo offline | Pantallas del POS | — | E2E venta efectivo y Nequi/QR en sandbox |
-| 9 ✅ backend (compila; pruebas sin ejecutar; **nota crédito sin probar en habilitación de Siigo**) | Auditoría, devoluciones y consultas | Devoluciones con reembolso, inventario compensatorio y nota; anulaciones; consultas de pagos/documentos/movimientos | Ventas, auditoría | D-11 | Escenarios 10 y reembolsos |
-| 10 ✅ archivos y guías listos (compilan; **nada desplegado ni ejecutado**: E2E, carga y restauración pendientes en staging) | Pruebas integrales y despliegue | E2E completo, carga básica, bundle de migraciones, IaC/compose, runbooks de recuperación | Docker, CI | D-10 | Criterios de salida de `testing-strategy.md` |
+| 1 ✅ (local tests; CI not yet run on GitHub) | Technical foundation and security | .NET 10, PostgreSQL (I-18), modules by folder, company filter, `Idempotency-Key`, outbox, inbound events, audit, OpenAPI, CI with real PostgreSQL, architecture tests | Layers, Result, MediatR, automatic audit, JWT, CI | D-01, D-02, D-13, D-14, D-16 | Green CI with the initial migration on PostgreSQL; sample isolation test |
+| 2 ✅ backend (local tests) | Companies, branches and users | Company onboarding (platform), memberships, per-branch roles, backoffice login + company selection, refresh tokens, PIN lockout | Backoffice: Company, Branches, Users, device pairing | D-08, D-09 | Two demo companies without cross access (per-endpoint tests) |
+| 3 ✅ backend (compiles; tests not run) | Catalog and prices | Products, base and per-branch price with validity, per-branch availability, taxes with DIAN codes | Catalog, categories, taxes, `sale-math` | D-07 | Correct current price per branch and date (tests) |
+| 4 ✅ backend (compiles; tests not run) | Basic inventory | Locations, movements, balances, initial stock, authorized adjustments, reconciliation, stock and movement screens | — | D-06 | Balance = Σ movements; idempotency; concurrency |
+| 5 ✅ backend (compiles; tests not run) | Registers and shifts | Cash sessions, movements, closing with the expected amount (includes refunds), blocking on pending items | Shifts, cash, closing (change fix) | D-12 | Correct expected amount in mixed scenarios |
+| 6 ✅ backend with Bold (compiles; **the Bold sandbox test is missing**, an acceptance criterion) | Payment gateway | Wompi adapter (or the chosen one), attempts, signed webhooks, recovery worker, reconciliation, encrypted credentials | Payment methods | D-03 | Tests against the **real sandbox** + scenarios 2–6 |
+| 7 ✅ backend with Siigo (compiles; **an accepted document in the test environment is missing**, an acceptance criterion) | Electronic invoicing | Tax configuration, numbering, documents, issue and query worker, artifacts, notes | — | D-04, D-05, D-15 | Document accepted in the test environment with verifiable CUFE/CUDE; scenarios 7–8 |
+| 8 ✅ backend (compiles; tests not run; **the E2E in the Bold and Siigo sandboxes is missing**) | Full POS integration | Sale as a persistent process, payment with live status, receipt with tax status; offline mode removed | POS screens | — | E2E cash sale and Nequi/QR in the sandbox |
+| 9 ✅ backend (compiles; tests not run; **credit note not tested in the Siigo test environment**) | Audit, returns and queries | Returns with refund, compensating inventory and note; voids; payment/document/movement queries | Sales, audit | D-11 | Scenario 10 and refunds |
+| 10 ✅ files and guides ready (they build; **nothing deployed or run**: E2E, load and restore pending on staging) | End-to-end tests and deployment | Full E2E, basic load, migrations bundle, IaC/compose, recovery runbooks | Docker, CI | D-10 | Exit criteria of `testing-strategy.md` |
 
-## Dependencias nuevas a aprobar (D-16)
+## New dependencies to approve (D-16)
 
-| Paquete | Para qué |
+| Package | What for |
 |---|---|
-| Npgsql.EntityFrameworkCore.PostgreSQL | Proveedor PostgreSQL (igual que la v1, I-18) |
-| Testcontainers.PostgreSql | PostgreSQL real en pruebas de integración |
-| NetArchTest.Rules | Pruebas de límites entre módulos |
-| Microsoft.Extensions.Http.Resilience | Reintentos/timeouts hacia pasarela y proveedor fiscal |
-| Azure.Storage.Blobs (o equivalente) | Conservación de XML/PDF fiscales |
+| Npgsql.EntityFrameworkCore.PostgreSQL | PostgreSQL provider (I-18) |
+| Testcontainers.PostgreSql | Real PostgreSQL in integration tests |
+| NetArchTest.Rules | Module boundary tests |
+| Microsoft.Extensions.Http.Resilience | Retries/timeouts towards the gateway and the tax provider |
+| Azure.Storage.Blobs (or equivalent) | Retention of fiscal XML/PDF |
 
-## Riesgos principales
+## Main risks
 
-| Riesgo | Mitigación |
+| Risk | Mitigation |
 |---|---|
-| Normativa POS electrónico ambigua (UVT, anexo, calendario) | Validar con el contador antes de la fase 7 (D-05) |
-| Proveedor fiscal sin API adecuada para SaaS multi-NIT | Evaluar dos en sandbox antes de comprometer |
-| Pasarela sin reembolso por API para Nequi/QR | Reembolso manual registrado y aprobado |
-| Datáfono no integrable | Medio externo con referencia y conciliación manual |
-| Habilitación DIAN por cada empresa cliente alarga el onboarding | Incluir el estado de habilitación en el alta de empresas |
+| Ambiguous electronic POS regulation (UVT, annex, calendar) | Validate with the accountant before phase 7 (D-05) |
+| Tax provider without a suitable API for multi-NIT SaaS | Evaluate two in a sandbox before committing |
+| Gateway without an API refund for Nequi/QR | Manual refund recorded and approved |
+| Card terminal that cannot be integrated | External method with reference and manual reconciliation |
+| DIAN enablement for each client company lengthens onboarding | Include the enablement status in company onboarding |

@@ -4,8 +4,8 @@ using Tahona.BakeryPOS.Domain.Exceptions;
 namespace Tahona.BakeryPOS.Domain.Identity;
 
 /// <summary>
-/// Persona que usa el sistema. Es global (no pertenece a una empresa): llega a cada empresa por una
-/// <see cref="Membership"/> (D-08). Sin correo ni contraseña solo puede entrar a caja con PIN.
+/// A person who uses the system. Global (it does not belong to a company): it reaches each company through a
+/// <see cref="Membership"/> (D-08). Without an email or password it can only sign in to a cash register with a PIN.
 /// </summary>
 public sealed class User : AuditableEntity
 {
@@ -20,7 +20,7 @@ public sealed class User : AuditableEntity
 
     private User() { }
 
-    /// <param name="passwordHash">Hash de la contraseña de un solo uso; se exige cambiarla al entrar.</param>
+    /// <param name="passwordHash">Hash of the one-time password; changing it is required on first sign-in.</param>
     public static User Create(string fullName, string? email, string? passwordHash)
     {
         if (email is not null && passwordHash is null)
@@ -57,7 +57,7 @@ public sealed class User : AuditableEntity
 
     public bool IsLockedOut(DateTime now) => LockedUntil > now;
 
-    /// <summary>Cuenta un intento fallido; al quinto bloquea el acceso. Devuelve true si acaba de bloquear.</summary>
+    /// <summary>Counts a failed attempt; on the fifth it locks access. Returns true if it just locked.</summary>
     public bool RegisterFailedLogin(DateTime now)
     {
         FailedLogins++;
@@ -81,7 +81,7 @@ public sealed class User : AuditableEntity
     }
 }
 
-/// <summary>Bloqueo por intentos fallidos, igual para contraseña y PIN (HU-2.4).</summary>
+/// <summary>Lockout by failed attempts, the same for password and PIN (US-2.4).</summary>
 public static class LockoutPolicy
 {
     public const int MaxFailedAttempts = 5;

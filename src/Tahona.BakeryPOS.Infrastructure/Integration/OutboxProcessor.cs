@@ -21,9 +21,9 @@ public sealed class OutboxOptions
 }
 
 /// <summary>
-/// Entrega los mensajes de la bandeja de salida a su handler. Varias instancias de la API pueden
-/// correr a la vez: cada lote se reclama con un UPDATE que salta filas bloqueadas (FOR UPDATE SKIP
-/// LOCKED), así que un mensaje lo toma una sola instancia. Un mensaje bloqueado por un proceso caído se libera al vencer el bloqueo.
+/// Delivers outbox messages to their handler. Several API instances can
+/// run at once: each batch is claimed with an UPDATE that skips locked rows (FOR UPDATE SKIP
+/// LOCKED), so a message is taken by a single instance. A message locked by a dead process is released when the lock expires.
 /// </summary>
 public sealed class OutboxProcessor : BackgroundService
 {
@@ -60,7 +60,7 @@ public sealed class OutboxProcessor : BackgroundService
         }
     }
 
-    /// <summary>Reclama y procesa un lote. Público para las pruebas de integración.</summary>
+    /// <summary>Claims and processes a batch. Public for the integration tests.</summary>
     public async Task<int> ProcessBatchAsync(CancellationToken ct)
     {
         await using var scope = _scopes.CreateAsyncScope();
@@ -116,7 +116,7 @@ public sealed class OutboxProcessor : BackgroundService
             """).AsNoTracking().ToListAsync(ct);
     }
 
-    /// <summary>Reintentos exponenciales: 5 s, 10 s, 20 s… hasta 1 hora.</summary>
+    /// <summary>Exponential retries: 5 s, 10 s, 20 s… up to 1 hour.</summary>
     public static TimeSpan Backoff(int attempt) =>
         TimeSpan.FromSeconds(Math.Min(3600, 5 * Math.Pow(2, Math.Max(0, attempt - 1))));
 }

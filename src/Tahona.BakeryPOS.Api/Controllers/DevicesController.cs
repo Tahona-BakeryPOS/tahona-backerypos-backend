@@ -9,12 +9,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Tahona.BakeryPOS.Api.Controllers;
 
-/// <summary>Equipos vinculados de la empresa. Desactivar uno revoca su acceso.</summary>
+/// <summary>The company's paired devices. Deactivating one revokes its access.</summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/dispositivos")]
 [ApiVersion("1.0")]
 [Authorize]
-[RequirePermission(Permissions.OrganizacionGestionar)]
+[RequirePermission(Permissions.OrganizationManage)]
 public sealed class DevicesController : ControllerBase
 {
     private readonly ISender _mediator;

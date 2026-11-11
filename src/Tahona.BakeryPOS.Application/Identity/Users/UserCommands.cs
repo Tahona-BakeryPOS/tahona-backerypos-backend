@@ -13,23 +13,23 @@ namespace Tahona.BakeryPOS.Application.Identity.Users;
 public sealed record AssignmentInput(Guid RoleId, Guid? BranchId, DateTime? ValidFrom = null, DateTime? ValidTo = null);
 
 /// <summary>
-/// Crea un usuario en la empresa (HU-2.1). Con correo tiene acceso al backoffice; si el correo ya
-/// existe en la plataforma se agrega esa persona a la empresa (D-08) sin tocar su contraseña.
+/// Creates a user in the company (US-2.1). With an email they have backoffice access; if the email already
+/// exists on the platform that person is added to the company (D-08) without touching their password.
 /// </summary>
 public sealed record CreateUserCommand(string FullName, string? Email, string? Pin, IReadOnlyList<AssignmentInput> Assignments)
     : IRequest<Result<CreatedUserDto>>;
 
-/// <param name="TemporaryPassword">Contraseña de un solo uso; solo en esta respuesta y solo si el usuario es nuevo.</param>
+/// <param name="TemporaryPassword">One-time password; only in this response and only if the user is new.</param>
 public sealed record CreatedUserDto(UserDto User, string? TemporaryPassword);
 
-/// <summary>Edita nombre, estado y PIN del usuario en esta empresa. Exige la versión leída (If-Match).</summary>
+/// <summary>Edits the user's name, status and PIN in this company. Requires the version read (If-Match).</summary>
 public sealed record UpdateUserCommand(Guid UserId, string? ExpectedVersion, string FullName, bool IsActive, string? Pin)
     : IRequest<Result<UserDto>>;
 
 public sealed record AddAssignmentCommand(Guid UserId, Guid RoleId, Guid? BranchId, DateTime? ValidFrom, DateTime? ValidTo)
     : IRequest<Result<AssignmentDto>>;
 
-/// <summary>Quita una asignación cerrando su vigencia (no se borra).</summary>
+/// <summary>Removes an assignment by closing its validity (it is not deleted).</summary>
 public sealed record EndAssignmentCommand(Guid UserId, Guid AssignmentId) : IRequest<Result>;
 
 internal static class UserRules
@@ -218,7 +218,7 @@ public sealed class UserCommandsHandler :
         return Result.Success();
     }
 
-    /// <summary>Rol de la empresa y, si viene, sucursal activa de la empresa. Los de otra empresa no existen: 404.</summary>
+    /// <summary>Role of the company and, if given, an active branch of the company. Those of another company do not exist: 404.</summary>
     private async Task<Result<Role>> ValidateTargetAsync(Guid roleId, Guid? branchId, CancellationToken ct)
     {
         var role = await _db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roleId, ct);
@@ -236,8 +236,8 @@ public sealed class UserCommandsHandler :
     }
 
     /// <summary>
-    /// ¿Queda otro propietario vigente y activo si se quita esta pertenencia o esta asignación? Si lo
-    /// que se quita no es de propietario, la respuesta es siempre sí.
+    /// Does another current, active owner remain if this membership or this assignment is removed? If what
+    /// is removed is not an owner's, the answer is always yes.
     /// </summary>
     private async Task<bool> HasOtherActiveOwnerAsync(Guid? excludeMembershipId, Guid? excludeAssignmentId, CancellationToken ct)
     {

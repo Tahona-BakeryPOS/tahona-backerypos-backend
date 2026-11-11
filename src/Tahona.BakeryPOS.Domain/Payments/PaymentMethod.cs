@@ -5,17 +5,17 @@ namespace Tahona.BakeryPOS.Domain.Payments;
 
 public enum PaymentMethodKind
 {
-    /// <summary>Efectivo: entra a la gaveta (movimientos de caja), con cambio.</summary>
+    /// <summary>Cash: it goes into the drawer (cash movements), with change.</summary>
     Cash,
-    /// <summary>Cobrado por la pasarela (datáfono Bold): solo se aprueba con su webhook o a mano auditado (I-23).</summary>
+    /// <summary>Charged through the gateway (Bold card terminal): only approved by its webhook or audited by hand (I-23).</summary>
     Gateway,
-    /// <summary>Datáfono de otro proveedor, no integrado: referencia obligatoria y conciliación manual.</summary>
+    /// <summary>Card terminal of another provider, not integrated: mandatory reference and manual reconciliation.</summary>
     ExternalCard,
     /// <summary>Transferencia verificada a mano: referencia obligatoria.</summary>
     TransferManual,
 }
 
-/// <summary>Valores de <c>payment_method</c> de la API de datáfono de Bold (payment-integration.md §11).</summary>
+/// <summary>Values of <c>payment_method</c> in Bold's card-terminal API (payment-integration.md §11).</summary>
 public static class BoldMethods
 {
     public const string Card = "POS";
@@ -25,16 +25,16 @@ public static class BoldMethods
     public static readonly IReadOnlySet<string> All = new HashSet<string> { Card, Nequi, Qr };
 }
 
-/// <summary>Medio de pago de la empresa (Efectivo, Tarjeta Bold, Nequi, QR, Transferencia…).</summary>
+/// <summary>The company's payment method (Cash, Bold card, Nequi, QR, Transfer…).</summary>
 public sealed class PaymentMethod : AuditableEntity, ITenantEntity
 {
-    public const string CashCode = "EFECTIVO";
+    public const string CashCode = "CASH";
 
     public Guid CompanyId { get; private set; }
     public string Code { get; private set; } = string.Empty;
     public string Name { get; private set; } = string.Empty;
     public PaymentMethodKind Kind { get; private set; }
-    /// <summary>Solo con <see cref="PaymentMethodKind.Gateway"/>: método de la pasarela (<see cref="BoldMethods"/>).</summary>
+    /// <summary>Only with <see cref="PaymentMethodKind.Gateway"/>: the gateway method (<see cref="BoldMethods"/>).</summary>
     public string? GatewayMethod { get; private set; }
     public bool RequiresReference { get; private set; }
     public int DisplayOrder { get; private set; }
@@ -60,7 +60,7 @@ public sealed class PaymentMethod : AuditableEntity, ITenantEntity
         if (Kind == PaymentMethodKind.Cash && !isActive)
             throw new DomainException("VALIDACION", "El efectivo no se puede desactivar: la caja lo necesita.");
         Name = name.Trim();
-        // Datáfono externo y transferencia siempre llevan referencia; efectivo y pasarela no la piden.
+        // External card terminal and transfer always carry a reference; cash and gateway do not ask for one.
         RequiresReference = Kind is PaymentMethodKind.ExternalCard or PaymentMethodKind.TransferManual || requiresReference && Kind != PaymentMethodKind.Cash;
         DisplayOrder = displayOrder;
         IsActive = isActive;
@@ -79,15 +79,15 @@ public sealed class PaymentMethod : AuditableEntity, ITenantEntity
     }
 }
 
-/// <summary>Medios con que nace cada empresa (I-23). Los de Bold quedan inactivos hasta configurar la integración.</summary>
+/// <summary>Methods each company is born with (I-23). The Bold ones stay inactive until the integration is configured.</summary>
 public static class DefaultPaymentMethods
 {
     public static readonly IReadOnlyList<(string Code, string Name, PaymentMethodKind Kind, string? GatewayMethod, bool Active)> All =
     [
         (PaymentMethod.CashCode, "Efectivo", PaymentMethodKind.Cash, null, true),
-        ("BOLD_TARJETA", "Tarjeta (datáfono)", PaymentMethodKind.Gateway, BoldMethods.Card, false),
+        ("BOLD_CARD", "Tarjeta (datáfono)", PaymentMethodKind.Gateway, BoldMethods.Card, false),
         ("BOLD_NEQUI", "Nequi", PaymentMethodKind.Gateway, BoldMethods.Nequi, false),
         ("BOLD_QR", "QR", PaymentMethodKind.Gateway, BoldMethods.Qr, false),
-        ("TRANSFERENCIA", "Transferencia", PaymentMethodKind.TransferManual, null, true),
+        ("TRANSFER", "Transferencia", PaymentMethodKind.TransferManual, null, true),
     ];
 }

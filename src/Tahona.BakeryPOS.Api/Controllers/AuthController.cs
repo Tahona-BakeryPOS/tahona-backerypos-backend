@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>
-/// Sesiones. Backoffice: correo + contraseña → access token corto + refresh token rotatorio; con varias
-/// empresas se elige una (D-08). Caja: equipo vinculado (encabezado X-Device-Token) + PIN.
+/// Sessions. Backoffice: email + password → short access token + rotating refresh token; with several
+/// companies one is chosen (D-08). Cash register: paired device (X-Device-Token header) + PIN.
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}/auth")]
@@ -36,7 +36,7 @@ public sealed class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToActionResult(HttpContext);
 
-    /// <summary>Emite tokens para una empresa del usuario (también para cambiar de empresa).</summary>
+    /// <summary>Issues tokens for one of the user's companies (also to switch company).</summary>
     [HttpPost("select-company")]
     [Authorize]
     [ProducesResponseType<AuthSessionDto>(StatusCodes.Status200OK)]
@@ -58,7 +58,7 @@ public sealed class AuthController : ControllerBase
     public async Task<IActionResult> Logout([FromBody] LogoutCommand command, CancellationToken ct) =>
         (await _mediator.Send(command, ct)).ToActionResult(HttpContext);
 
-    /// <summary>Cambia la contraseña (obligatorio tras la de un solo uso) y devuelve una sesión nueva.</summary>
+    /// <summary>Changes the password (mandatory after the one-time one) and returns a new session.</summary>
     [HttpPost("cambiar-contrasena")]
     [Authorize]
     [ProducesResponseType<AuthSessionDto>(StatusCodes.Status200OK)]

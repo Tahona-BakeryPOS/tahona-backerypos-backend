@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Identity;
 
 /// <summary>
-/// Nombres de usuarios para mostrar en historiales. Solo devuelve usuarios con pertenencia en la empresa
-/// en sesión: un id de otra empresa no revela su nombre.
+/// User names to display in histories. It only returns users with a membership in the company
+/// in session: an id of another company does not reveal its name.
 /// </summary>
 public sealed class UserDirectory : IUserDirectory
 {

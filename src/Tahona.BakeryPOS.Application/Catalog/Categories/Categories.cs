@@ -7,15 +7,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Catalog.Categories;
 
-/// <param name="Version">ETag para If-Match en PUT.</param>
+/// <param name="Version">ETag for If-Match on PUT.</param>
 public sealed record CategoryDto(Guid Id, string Name, int DisplayOrder, bool IsActive, int ProductCount, string Version);
 
 public sealed record GetCategoriesQuery : IRequest<Result<IReadOnlyList<CategoryDto>>>;
 
-/// <summary>Crea una categoría. Nombre único en la empresa.</summary>
+/// <summary>Creates a category. Name unique within the company.</summary>
 public sealed record CreateCategoryCommand(string Name, int DisplayOrder) : IRequest<Result<CategoryDto>>;
 
-/// <summary>Renombra, reordena o (des)activa una categoría. Exige la versión leída (If-Match).</summary>
+/// <summary>Renames, reorders or (de)activates a category. Requires the version read (If-Match).</summary>
 public sealed record UpdateCategoryCommand(Guid Id, string? ExpectedVersion, string Name, int DisplayOrder, bool IsActive)
     : IRequest<Result<CategoryDto>>;
 
@@ -98,7 +98,7 @@ public sealed class CategoriesHandler :
         return Result.Success(ToDto(category, products));
     }
 
-    // PostgreSQL compara con mayúsculas: "Panes" y "panes" serían dos categorías distintas.
+    // PostgreSQL compares case-sensitively: "Panes" and "panes" would be two different categories.
     private Task<bool> NameTakenAsync(string name, Guid? except, CancellationToken ct) =>
         _db.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower() && c.Id != except, ct);
 

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Tahona.BakeryPOS.Infrastructure.Persistence.Configurations;
 
-/// <summary>Módulo Catalog — esquema <c>cat</c>.</summary>
+/// <summary>Catalog module — schema <c>cat</c>.</summary>
 internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 {
     public void Configure(EntityTypeBuilder<Category> builder)
@@ -38,7 +38,7 @@ internal sealed class UnitConfiguration : IEntityTypeConfiguration<Unit>
         builder.HasData(Units.All.Select(u => new Unit { Id = StableId(u.Code), Code = u.Code, Name = u.Name, Kind = u.Kind, DianCode = u.DianCode }));
     }
 
-    /// <summary>Id fijo derivado del código: la semilla no cambia entre migraciones.</summary>
+    /// <summary>Fixed id derived from the code: the seed does not change between migrations.</summary>
     internal static Guid StableId(string code) => new(SHA256.HashData(Encoding.UTF8.GetBytes("unit:" + code)).AsSpan(0, 16));
 }
 
@@ -99,9 +99,9 @@ internal sealed class ProductPriceConfiguration : IEntityTypeConfiguration<Produ
         builder.ConfigureAuditable();
         builder.HasOne<Product>().WithMany().HasForeignKey(e => new { e.CompanyId, e.ProductId })
             .HasPrincipalKey(p => new { p.CompanyId, p.Id }).OnDelete(DeleteBehavior.Restrict);
-        // branch_id NULL = precio base: FK simple (una compuesta con una parte nula no se valida).
+        // branch_id NULL = base price: a simple FK (a composite one with a null part is not validated).
         builder.HasOne<Branch>().WithMany().HasForeignKey(e => e.BranchId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
-        // Una sola vigencia por inicio; el no-solapamiento lo garantiza ProductPrice.Open.
+        // A single validity period per start; non-overlap is guaranteed by ProductPrice.Open.
         builder.HasIndex(e => new { e.CompanyId, e.ProductId, e.BranchId, e.ValidFrom }).IsUnique().AreNullsDistinct(false);
     }
 }

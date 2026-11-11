@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Tahona.BakeryPOS.Api.Controllers;
 
 /// <summary>
-/// Sesiones de caja (HU-5.2 a 5.4): abrir, ingresos y retiros, resumen del esperado y cierre. El retiro
-/// lo autoriza un superior enviando su propio token (permiso <c>caja.retiro</c>).
+/// Cash sessions (US-5.2 to 5.4): open, income and withdrawals, expected-amount summary and closing. A withdrawal
+/// is authorized by a supervisor sending their own token (permission <c>cash.withdrawal</c>).
 /// </summary>
 [ApiController]
 [Route("api/v{version:apiVersion}")]
@@ -28,58 +28,58 @@ public sealed class CashSessionsController : ControllerBase
 
     [HttpPost("cajas/{id:guid}/sesiones")]
     [Idempotent]
-    [RequirePermission(Permissions.TurnosAbrir)]
+    [RequirePermission(Permissions.ShiftsOpen)]
     [ProducesResponseType<CashSessionDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Open(Guid id, [FromBody] OpenSessionRequest body, CancellationToken ct) =>
         (await _mediator.Send(new OpenCashSessionCommand(id, body.OpeningAmount), ct)).ToCreatedResult(HttpContext);
 
     [HttpGet("cajas/{id:guid}/sesion-abierta")]
-    [RequirePermission(Permissions.TurnosAbrir)]
+    [RequirePermission(Permissions.ShiftsOpen)]
     [ProducesResponseType<CashSessionDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetOpen(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new GetOpenCashSessionQuery(id), ct)).ToActionResult(HttpContext);
 
     [HttpGet("motivos-caja")]
-    [RequirePermission(Permissions.CajaMovimientos)]
+    [RequirePermission(Permissions.CashMovements)]
     [ProducesResponseType<IReadOnlyList<CashReasonDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetReasons(CancellationToken ct) =>
         (await _mediator.Send(new GetCashReasonsQuery(), ct)).ToActionResult(HttpContext);
 
-    /// <summary><c>kind</c>: income o expense (este exige <c>caja.retiro</c> y no puede superar el esperado).</summary>
+    /// <summary><c>kind</c>: income or expense (the latter requires <c>cash.withdrawal</c> and cannot exceed the expected amount).</summary>
     [HttpPost("sesiones-caja/{id:guid}/movimientos")]
     [Idempotent]
-    [RequirePermission(Permissions.CajaMovimientos)]
+    [RequirePermission(Permissions.CashMovements)]
     [ProducesResponseType<CashMovementDto>(StatusCodes.Status201Created)]
     public async Task<IActionResult> RegisterMovement(Guid id, [FromBody] CashMovementRequest body, CancellationToken ct) =>
         (await _mediator.Send(new RegisterCashMovementCommand(id, body.Kind, body.Amount, body.ReasonId, body.Note), ct)).ToCreatedResult(HttpContext);
 
     [HttpGet("sesiones-caja/{id:guid}/movimientos")]
-    [RequirePermission(Permissions.CajaMovimientos)]
+    [RequirePermission(Permissions.CashMovements)]
     [ProducesResponseType<IReadOnlyList<CashMovementDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMovements(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new GetCashMovementsQuery(id), ct)).ToActionResult(HttpContext);
 
-    /// <summary>Esperado desglosado y pagos pendientes que bloquean el cierre (D-12).</summary>
+    /// <summary>Itemized expected amount and pending payments that block the close (D-12).</summary>
     [HttpGet("sesiones-caja/{id:guid}/resumen")]
-    [RequirePermission(Permissions.TurnosCerrar)]
+    [RequirePermission(Permissions.ShiftsClose)]
     [ProducesResponseType<CashSessionSummaryDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSummary(Guid id, CancellationToken ct) =>
         (await _mediator.Send(new GetCashSessionSummaryQuery(id), ct)).ToActionResult(HttpContext);
 
     [HttpPost("sesiones-caja/{id:guid}/cierre")]
     [Idempotent]
-    [RequirePermission(Permissions.TurnosCerrar)]
+    [RequirePermission(Permissions.ShiftsClose)]
     [ProducesResponseType<CashSessionDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Close(Guid id, [FromBody] CloseSessionRequest body, CancellationToken ct) =>
         (await _mediator.Send(new CloseCashSessionCommand(id, body.CountedAmount, body.Notes), ct)).ToActionResult(HttpContext);
 
-    /// <summary><c>estado</c>: open o closed; fechas sobre la apertura.</summary>
+    /// <summary><c>estado</c>: open or closed; dates refer to the opening.</summary>
     [HttpGet("sesiones-caja")]
-    [RequirePermission(Permissions.ReportesVer)]
+    [RequirePermission(Permissions.ReportsView)]
     [ProducesResponseType<IReadOnlyList<CashSessionDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta, [FromQuery] Guid? sucursalId,
         [FromQuery] string? estado, CancellationToken ct) =>

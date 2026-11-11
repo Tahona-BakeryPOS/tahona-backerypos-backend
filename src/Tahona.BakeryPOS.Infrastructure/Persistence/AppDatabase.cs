@@ -4,8 +4,8 @@ using Npgsql;
 namespace Tahona.BakeryPOS.Infrastructure.Persistence;
 
 /// <summary>
-/// Configuración de <see cref="AppDbContext"/> sobre PostgreSQL (único motor, igual que la v1).
-/// La cadena sale de <c>ConnectionStrings:DefaultConnection</c>.
+/// Configuration of <see cref="AppDbContext"/> on PostgreSQL (the only engine).
+/// The connection string comes from <c>ConnectionStrings:DefaultConnection</c>.
 /// </summary>
 public static class AppDatabase
 {
@@ -21,7 +21,7 @@ public static class AppDatabase
     public static DbContextOptions<AppDbContext> Options(string connection) =>
         (DbContextOptions<AppDbContext>)new DbContextOptionsBuilder<AppDbContext>().UseAppDatabase(connection).Options;
 
-    /// <summary>Violación de índice único (23505).</summary>
+    /// <summary>Unique index violation (23505).</summary>
     public static bool IsUniqueViolation(DbUpdateException exception) =>
         exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
 }

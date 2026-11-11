@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Tahona.BakeryPOS.Api.Extensions;
 
 /// <summary>
-/// Convierte Result/Result&lt;T&gt; en respuestas HTTP con el cuerpo de error estándar
+/// Converts Result/Result&lt;T&gt; into HTTP responses with the standard error body
 /// <c>{ codigo, mensaje, correlationId }</c>.
 /// </summary>
 public static class ResultExtensions

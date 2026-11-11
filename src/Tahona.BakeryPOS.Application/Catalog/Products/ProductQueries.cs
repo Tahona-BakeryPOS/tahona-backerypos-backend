@@ -9,13 +9,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Catalog.Products;
 
-/// <param name="BasePrice">Precio base vigente (null = sin precio).</param>
-/// <param name="BranchPrice">Precio propio de la sucursal consultada, si tiene uno vigente.</param>
-/// <param name="Price">Precio que rige: el de la sucursal o, si no hay, el base (HU-3.2).</param>
-/// <param name="PriceIncludesTax">Si <paramref name="Price"/> incluye el impuesto (D-07).</param>
-/// <param name="IsAvailable">Disponibilidad en la sucursal consultada (HU-3.3); sin sucursal, true.</param>
-/// <param name="NegativeStockPolicy">D-06: <c>allow</c> o <c>block</c> (solo aplica con <paramref name="TrackStock"/>).</param>
-/// <param name="Version">ETag para If-Match en PUT.</param>
+/// <param name="BasePrice">Current base price (null = no price).</param>
+/// <param name="BranchPrice">The queried branch's own price, if it has a current one.</param>
+/// <param name="Price">The price in force: the branch's or, if none, the base one (US-3.2).</param>
+/// <param name="PriceIncludesTax">Whether <paramref name="Price"/> includes the tax (D-07).</param>
+/// <param name="IsAvailable">Availability at the queried branch (US-3.3); without a branch, true.</param>
+/// <param name="NegativeStockPolicy">D-06: <c>allow</c> or <c>block</c> (only applies with <paramref name="TrackStock"/>).</param>
+/// <param name="Version">ETag for If-Match on PUT.</param>
 public sealed record ProductDto(
     Guid Id,
     string Sku,
@@ -39,19 +39,19 @@ public sealed record ProductDto(
     bool IsAvailable,
     string Version);
 
-/// <param name="BranchId">null = precio base de la empresa.</param>
+/// <param name="BranchId">null = the company's base price.</param>
 public sealed record ProductPriceDto(Guid Id, Guid? BranchId, decimal Amount, bool IncludesTax, DateTime ValidFrom, DateTime? ValidTo, bool IsCurrent);
 
 /// <summary>
-/// Productos con su precio vigente y disponibilidad en una sucursal (o solo el precio base sin ella).
-/// <paramref name="Search"/> busca en nombre, SKU y código de barras.
+/// Products with their current price and availability at a branch (or only the base price without one).
+/// <paramref name="Search"/> searches name, SKU and barcode.
 /// </summary>
 public sealed record GetProductsQuery(Guid? BranchId, string? Search, Guid? CategoryId, bool IncludeInactive, int Page = 1, int PageSize = 50)
     : IRequest<Result<PagedResult<ProductDto>>>;
 
 public sealed record GetProductByIdQuery(Guid Id, Guid? BranchId) : IRequest<Result<ProductDto>>;
 
-/// <summary>Historial de precios del producto: base y por sucursal, todas las vigencias.</summary>
+/// <summary>The product's price history: base and per branch, all validity periods.</summary>
 public sealed record GetProductPricesQuery(Guid ProductId) : IRequest<Result<IReadOnlyList<ProductPriceDto>>>;
 
 public sealed class GetProductsValidator : AbstractValidator<GetProductsQuery>
@@ -138,7 +138,7 @@ public sealed class ProductQueriesHandler :
     internal static ProductPriceDto ToDto(ProductPrice p, DateTime now) =>
         new(p.Id, p.BranchId, p.Amount, p.IncludesTax, p.ValidFrom, p.ValidTo, p.IsValidAt(now));
 
-    /// <summary>Una sucursal ajena o inventada responde 404; una fuera del alcance del token, 403.</summary>
+    /// <summary>A foreign or invented branch answers 404; one outside the token's scope, 403.</summary>
     private async Task<Result> CheckBranchAsync(Guid? branchId, CancellationToken ct)
     {
         if (branchId is not { } id)

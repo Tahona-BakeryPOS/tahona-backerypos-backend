@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.IntegrationTests;
 
-/// <summary>Alta de empresas, datos de la empresa, usuarios y asignaciones, con concurrencia por ETag.</summary>
+/// <summary>Company onboarding, company data, users and assignments, with ETag concurrency.</summary>
 [Collection(ApiCollection.Name)]
 public sealed class ManagementTests
 {
@@ -36,7 +36,7 @@ public sealed class ManagementTests
     [Fact]
     public async Task Duplicate_nit_and_invalid_check_digit_are_rejected()
     {
-        var platform = _api.ClientFor(null, Permissions.PlataformaAdmin);
+        var platform = _api.ClientFor(null, Permissions.PlatformAdmin);
         var duplicate = await platform.PostAsJsonAsync("/api/v1/plataforma/empresas", CompanyBody("800197268", 4));
         var badDv = await platform.PostAsJsonAsync("/api/v1/plataforma/empresas", CompanyBody("800197268", 5));
 

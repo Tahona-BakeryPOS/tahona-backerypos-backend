@@ -10,34 +10,34 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Sales;
 
-/// <param name="DiscountAmount">Descuento en dinero de la línea (requiere motivo y <c>ventas.descuento</c>).</param>
+/// <param name="DiscountAmount">The line's discount in money (requires a reason and <c>sales.discount</c>).</param>
 public sealed record SaleLineInput(Guid ProductId, decimal Quantity, decimal DiscountAmount = 0, string? DiscountReason = null);
 
 /// <summary>
-/// [1] Crea la venta en borrador en la caja indicada (debe tener sesión abierta). Precios e impuestos los
-/// pone el servidor con el precio vigente de la sucursal (D-07) y quedan congelados en la venta.
+/// [1] Creates the draft sale at the indicated register (it must have an open session). Prices and taxes are
+/// set by the server with the branch's current price (D-07) and are frozen on the sale.
 /// </summary>
 public sealed record CreateSaleCommand(Guid CashRegisterId, string? CustomerIdentification, IReadOnlyList<SaleLineInput> Lines)
     : IRequest<Result<SaleDto>>;
 
-/// <summary>Identifica al cliente (NIT o cédula para la factura) o lo deja como consumidor final (null).</summary>
+/// <summary>Identifies the customer (NIT or ID for the invoice) or leaves them as a final consumer (null).</summary>
 public sealed record SetSaleCustomerCommand(Guid SaleId, string? CustomerIdentification) : IRequest<Result<SaleDto>>;
 
 /// <summary>
-/// Autoriza vender productos con política "bloquear" sin existencias suficientes (D-06). Lo envía el superior
-/// que autoriza con su propio token (permiso <c>inventario.ajustar</c>); queda en la venta y en el movimiento.
+/// Authorizes selling "block"-policy products without enough stock (D-06). It is sent by the supervisor
+/// who authorizes with their own token (permission <c>inventory.adjust</c>); it is stored on the sale and on the movement.
 /// </summary>
 public sealed record AuthorizeSaleStockCommand(Guid SaleId) : IRequest<Result<SaleDto>>;
 
 /// <summary>
-/// [2] Agrega un pago. Efectivo (con recibido y cambio), transferencia o datáfono externo se aprueban al
-/// registrarse; si con eso se cubre el total, la venta se confirma en la misma petición. Bold envía el cobro al
-/// datáfono y la venta queda pendiente de pago hasta el webhook.
+/// [2] Adds a payment. Cash (with received amount and change), transfer or external card terminal are approved when
+/// recorded; if that covers the total, the sale is confirmed in the same request. Bold sends the charge to the
+/// card terminal and the sale stays pending payment until the webhook.
 /// </summary>
 public sealed record AddSalePaymentCommand(Guid SaleId, Guid PaymentMethodId, decimal Amount, decimal? AmountTendered, string? Reference)
     : IRequest<Result<SaleDto>>;
 
-/// <summary>Cancela una venta sin pagos aprobados ni en curso (nunca se cobró).</summary>
+/// <summary>Cancels a sale with no approved or in-progress payments (it was never charged).</summary>
 public sealed record CancelSaleCommand(Guid SaleId) : IRequest<Result<SaleDto>>;
 
 public sealed class CreateSaleValidator : AbstractValidator<CreateSaleCommand>
@@ -106,7 +106,7 @@ public sealed class SalesCommandsHandler :
             return Result.Failure<SaleDto>(Error.CajaCerrada with { Message = "La caja no tiene una sesión abierta." });
         if (!_tenant.CanAccessBranch(session.BranchId))
             return Result.Failure<SaleDto>(Error.SinAsignacionVigente);
-        if (request.Lines.Any(l => l.DiscountAmount > 0) && !_tenant.HasPermission(Permissions.VentasDescuento))
+        if (request.Lines.Any(l => l.DiscountAmount > 0) && !_tenant.HasPermission(Permissions.SalesDiscount))
             return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Aplicar descuentos requiere el permiso ventas.descuento." });
 
         var now = _clock.GetUtcNow().UtcDateTime;
@@ -142,7 +142,7 @@ public sealed class SalesCommandsHandler :
 
     public async Task<Result<SaleDto>> Handle(AuthorizeSaleStockCommand request, CancellationToken ct)
     {
-        if (!_tenant.HasPermission(Permissions.InventarioAjustar))
+        if (!_tenant.HasPermission(Permissions.InventoryAdjust))
             return Result.Failure<SaleDto>(Error.SinPermiso with { Message = "Autorizar vender sin existencias requiere el permiso inventario.ajustar." });
         var sale = await FindAsync(request.SaleId, ct);
         if (sale.IsFailure) return Result.Failure<SaleDto>(sale.Error);
@@ -169,7 +169,7 @@ public sealed class SalesCommandsHandler :
         if (request.Amount > remaining)
             return Result.Failure<SaleDto>(Error.Validation($"El monto supera lo que falta por pagar ({remaining:N2}). El excedente en efectivo va en 'recibido'."));
 
-        // D-06: antes de cobrar se revisan los productos "bloquear"; sin autorización no se cobra.
+        // D-06: before charging, "block" products are checked; without authorization it is not charged.
         if (sale.StockAuthorizedBy is null)
         {
             var shortages = await _inventory.ShortagesAsync(sale.BranchId, sale.Lines.Select(l => (l.ProductId, l.Quantity)).ToList(), ct);
@@ -223,8 +223,8 @@ public sealed class SalesCommandsHandler :
 }
 
 /// <summary>
-/// Un pago de venta se resolvió (webhook de Bold o resolución manual): se intenta confirmar la venta en
-/// segundo plano, dentro de la empresa del mensaje. Idempotente.
+/// A sale payment was resolved (Bold webhook or manual resolution): confirming the sale is attempted in the
+/// background, within the message's company. Idempotent.
 /// </summary>
 public sealed class SalePaymentResolvedHandler : IOutboxHandler
 {

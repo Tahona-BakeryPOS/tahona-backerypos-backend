@@ -20,13 +20,13 @@ using Testcontainers.PostgreSql;
 namespace Tahona.BakeryPOS.IntegrationTests;
 
 /// <summary>
-/// API real contra PostgreSQL real (contenedor de Testcontainers). Se crea una vez por colección:
-/// aplica las migraciones y da de alta dos empresas demo por los mismos endpoints que usa el producto
+/// Real API against real PostgreSQL (Testcontainers container). It is created once per collection:
+/// it applies the migrations and onboards two demo companies through the same endpoints the product uses
 /// (plataforma → propietario → sucursal → caja → equipo vinculado → cajero).
 /// </summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    // Secretos solo de pruebas (proceso efímero, base efímera); no sirven fuera de esta suite.
+    // Test-only secrets (ephemeral process, ephemeral database); they are useless outside this suite.
     private const string TestJwtSecret = "pruebas-integracion-bakerypos-0123456789abcdef";
     public const string OwnerPassword = "ClavePrueba2026";
     public const string CashierPin = "4321";
@@ -43,7 +43,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:DefaultConnection", ConnectionString);
         builder.UseSetting("Jwt:Secret", TestJwtSecret);
-        builder.UseSetting("Outbox:Enabled", "false"); // las pruebas procesan la bandeja a mano
+        builder.UseSetting("Outbox:Enabled", "false"); // the tests process the outbox by hand
         builder.UseSetting("RateLimiting:AuthPermitPerMinute", "100000");
         builder.ConfigureTestServices(services =>
         {
@@ -69,13 +69,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await _sql.DisposeAsync();
     }
 
-    /// <summary>Cliente con un token emitido a mano (usuario inventado) para probar permisos y alcance.</summary>
+    /// <summary>Client with a hand-issued token (invented user) to test permissions and scope.</summary>
     public HttpClient ClientFor(Guid? companyId, params string[] permissions)
     {
         var jwt = Services.GetRequiredService<IJwtTokenService>();
         var token = jwt.CreateAccessToken(new AccessTokenRequest(
             Guid.CreateVersion7(), "Usuario de prueba", companyId,
-            permissions.Length == 0 ? [Permissions.OrganizacionGestionar] : permissions));
+            permissions.Length == 0 ? [Permissions.OrganizationManage] : permissions));
         return ClientWithToken(token.Token);
     }
 
@@ -96,10 +96,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public AppDbContext NewContext(ITenantContext? tenant = null) =>
         new(AppDatabase.Options(ConnectionString), tenant);
 
-    /// <summary>Alta completa de una empresa demo por la API.</summary>
+    /// <summary>Full onboarding of a demo company through the API.</summary>
     private async Task<TenantSeed> OnboardAsync(string legalName, string nit, int dv, string suffix)
     {
-        var platform = ClientFor(null, Permissions.PlataformaAdmin);
+        var platform = ClientFor(null, Permissions.PlatformAdmin);
         var ownerEmail = $"propietario@{suffix}.test";
         var created = await ReadAsync<CreatedCompanyDto>(await platform.PostAsJsonAsync("/api/v1/plataforma/empresas", new
         {
@@ -107,7 +107,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             email = $"contacto@{suffix}.test", owner = new { fullName = $"Propietario {suffix.ToUpperInvariant()}", email = ownerEmail },
         }));
 
-        // Primer ingreso con la contraseña de un solo uso → cambio obligatorio → sesión en su única empresa.
+        // First sign-in with the one-time password → mandatory change → session in its only company.
         var first = await ReadAsync<AuthSessionDto>(await CreateClient().PostAsJsonAsync("/api/v1/auth/login",
             new { email = ownerEmail, password = created.Owner.TemporaryPassword }));
         var session = await ReadAsync<AuthSessionDto>(await ClientWithToken(first.AccessToken).PostAsJsonAsync(

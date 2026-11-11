@@ -10,10 +10,10 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace Tahona.BakeryPOS.Api.Filters;
 
 /// <summary>
-/// Exige <c>Idempotency-Key</c> y garantiza que reintentar la misma petición devuelva la misma
-/// respuesta sin repetir la operación. Misma clave con otro cuerpo → 409 IDEMPOTENCIA_CONFLICTO;
-/// misma clave aún en curso → 409 IDEMPOTENCIA_EN_CURSO. Las respuestas 2xx y 4xx se guardan; si la
-/// operación falla con 5xx o excepción, la clave se libera para que el cliente pueda reintentar.
+/// Requires <c>Idempotency-Key</c> and guarantees that retrying the same request returns the same
+/// response without repeating the operation. Same key with another body → 409 IDEMPOTENCIA_CONFLICTO;
+/// same key still in progress → 409 IDEMPOTENCIA_EN_CURSO. 2xx and 4xx responses are stored; if the
+/// operation fails with 5xx or an exception, the key is released so the client can retry.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
@@ -78,7 +78,7 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
         _ => (StatusCodes.Status500InternalServerError, null),
     };
 
-    /// <summary>Huella del contenido: ruta + argumentos del action (el cuerpo ya deserializado).</summary>
+    /// <summary>Content fingerprint: route + action arguments (the already deserialized body).</summary>
     private static string Hash(IDictionary<string, object?> arguments, PathString path)
     {
         var args = arguments

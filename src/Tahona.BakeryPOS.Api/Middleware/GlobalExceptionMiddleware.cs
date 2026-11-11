@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Api.Middleware;
 
 /// <summary>
-/// Última barrera: convierte excepciones en el cuerpo de error estándar. Los errores esperados de
-/// negocio viajan como Result; aquí llegan validaciones, reglas de dominio, concurrencia y fallas.
+/// Last barrier: converts exceptions into the standard error body. Expected business errors
+/// travel as Result; validations, domain rules, concurrency and failures arrive here.
 /// </summary>
 public sealed class GlobalExceptionMiddleware
 {
@@ -49,7 +49,7 @@ public sealed class GlobalExceptionMiddleware
             DomainException d => (ResultExtensions.StatusCodeOf(d.ErrorCode), ErrorBody.From(d.ErrorCode, d.Message, context)),
             DbUpdateConcurrencyException => (StatusCodes.Status412PreconditionFailed,
                 ErrorBody.From("CONFLICTO_VERSION", "El registro fue modificado por otro usuario. Recárgalo e intenta de nuevo.", context)),
-            // Un intento de escribir datos de otra empresa es un error de programación o un ataque: no se detalla.
+            // An attempt to write another company's data is a programming error or an attack: it is not detailed.
             GatewayUnavailableException g => (StatusCodes.Status503ServiceUnavailable,
                 ErrorBody.From("PROVEEDOR_NO_DISPONIBLE", g.Message, context)),
             TenantIsolationException => (StatusCodes.Status403Forbidden,

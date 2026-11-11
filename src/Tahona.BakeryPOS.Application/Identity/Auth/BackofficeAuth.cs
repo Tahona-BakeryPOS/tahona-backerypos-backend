@@ -9,21 +9,21 @@ using Microsoft.EntityFrameworkCore;
 namespace Tahona.BakeryPOS.Application.Identity.Auth;
 
 /// <summary>
-/// Correo + contraseña. Con una sola empresa entra directo; con varias (D-08) o siendo administrador
-/// de plataforma recibe una sesión sin empresa y elige con <see cref="SelectCompanyCommand"/>.
+/// Email + password. With a single company it signs in directly; with several (D-08) or as a platform
+/// administrator it receives a session with no company and chooses with <see cref="SelectCompanyCommand"/>.
 /// </summary>
 public sealed record LoginCommand(string Email, string Password) : IRequest<Result<AuthSessionDto>>;
 
-/// <summary>Emite tokens para una empresa del usuario. Sirve también para cambiar de empresa.</summary>
-/// <param name="RefreshToken">Refresh token de la sesión anterior, que queda revocado.</param>
+/// <summary>Issues tokens for one of the user's companies. Also used to switch company.</summary>
+/// <param name="RefreshToken">Refresh token of the previous session, which is revoked.</param>
 public sealed record SelectCompanyCommand(Guid CompanyId, string? RefreshToken) : IRequest<Result<AuthSessionDto>>;
 
-/// <summary>Rota el refresh token. Reusar uno ya rotado revoca todas las sesiones del usuario.</summary>
+/// <summary>Rotates the refresh token. Reusing one that was already rotated revokes all the user's sessions.</summary>
 public sealed record RefreshSessionCommand(string RefreshToken) : IRequest<Result<AuthSessionDto>>;
 
 public sealed record LogoutCommand(string RefreshToken) : IRequest<Result>;
 
-/// <summary>Cambia la contraseña (obligatorio tras la de un solo uso) y cierra las demás sesiones.</summary>
+/// <summary>Changes the password (mandatory after the one-time one) and closes the other sessions.</summary>
 public sealed record ChangePasswordCommand(string CurrentPassword, string NewPassword) : IRequest<Result<AuthSessionDto>>;
 
 public sealed class LoginValidator : AbstractValidator<LoginCommand>
@@ -130,7 +130,7 @@ public sealed class BackofficeAuthHandler :
 
         if (!token.IsActive(now))
         {
-            // Un token ya rotado que vuelve a aparecer fue copiado: se cierran todas las sesiones.
+            // A token that was already rotated and shows up again was copied: all sessions are closed.
             if (token.ReplacedById is not null)
             {
                 await _sessions.RevokeAllAsync(token.UserId, null, ct);
@@ -191,7 +191,7 @@ public sealed class BackofficeAuthHandler :
         return Result.Success(session);
     }
 
-    /// <summary>Verifica la contraseña aplicando el bloqueo por intentos; guarda el intento fallido.</summary>
+    /// <summary>Verifies the password applying the attempt lockout; stores the failed attempt.</summary>
     private async Task<Result> VerifyPasswordAsync(User user, string password, CancellationToken ct)
     {
         var now = Now;

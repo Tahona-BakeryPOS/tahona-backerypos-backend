@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tahona.BakeryPOS.Application.Identity.Users;
 
-/// <summary>Usuario visto desde una empresa: datos globales + su pertenencia y asignaciones en ella.</summary>
-/// <param name="Id">Id del usuario (global); otra empresa no lo ve aunque exista.</param>
-/// <param name="Version">ETag de la pertenencia para If-Match.</param>
+/// <summary>User seen from a company: global data + their membership and assignments in it.</summary>
+/// <param name="Id">The user's id (global); another company does not see it even if it exists.</param>
+/// <param name="Version">The membership's ETag for If-Match.</param>
 public sealed record UserDto(
     Guid Id,
     string FullName,
@@ -64,7 +64,7 @@ public sealed class UserQueriesHandler :
     }
 }
 
-/// <summary>Lectura de usuarios de la empresa en sesión (el filtro por empresa aplica a pertenencias y asignaciones).</summary>
+/// <summary>Reading the users of the company in session (the company filter applies to memberships and assignments).</summary>
 internal static class UserReader
 {
     public static async Task<IReadOnlyList<UserDto>> ReadAsync(IAppDbContext db, Guid? userId, DateTime now, CancellationToken ct)

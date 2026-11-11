@@ -16,20 +16,11 @@ Estado: **propuesta para revisión** (PostgreSQL, I-18).
 | Estados | `varchar` + `CHECK`; un estado por concepto (venta ≠ pago ≠ inventario ≠ documento) |
 | Idempotencia | Columnas `idempotency_key`/`external_id` con índice **único** filtrado |
 
-## Diagrama de relaciones (resumen)
+## Diagrama de relaciones
 
-```
-companies 1─* branches 1─* cash_registers 1─* devices
-companies 1─* memberships *─1 users            memberships 1─* role_assignments *─1 roles *─* permissions
-branches  1─* stock_locations 1─* stock_balances *─1 products
-products  *─1 categories, *─1 taxes, *─1 units ;  products 1─* product_prices (base o por sucursal)
-cash_registers 1─* cash_sessions 1─* cash_movements
-cash_sessions 1─* sales 1─* sale_lines ; sales 1─* payments 1─* payment_attempts
-sales 1─* returns 1─* return_lines ; returns 1─* refunds
-sales 1─* fiscal_documents (venta, nota) 1─* fiscal_submission_attempts
-stock_movements *─1 (sale_line | return_line | adjustment | initial)
-inbound_events, outbox_messages, audit_logs (transversales)
-```
+El diagrama actualizado y completo (44 tablas, 10 esquemas, con columnas, claves y relaciones) está en
+[`diagrama-base-de-datos.md`](diagrama-base-de-datos.md) y se ve directamente en GitHub. Se generó a partir del modelo
+implementado; las tablas de más abajo describen el diseño y sus reglas.
 
 ## Tablas
 

@@ -125,6 +125,7 @@ verifica que no haya cambios pendientes del modelo de EF Core.
 - [`docs/requirements.md`](docs/requirements.md) — requisitos
 - [`docs/architecture.md`](docs/architecture.md) — arquitectura
 - [`docs/data-model.md`](docs/data-model.md) — modelo de datos
+- [`docs/diagrama-base-de-datos.md`](docs/diagrama-base-de-datos.md) — diagrama de la base de datos (Mermaid)
 - [`docs/api-contracts.md`](docs/api-contracts.md) — contratos del API
 - [`docs/payment-integration.md`](docs/payment-integration.md) — pagos con Bold
 - [`docs/electronic-invoicing.md`](docs/electronic-invoicing.md) — facturación electrónica con Siigo
